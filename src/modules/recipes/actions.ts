@@ -1,0 +1,102 @@
+"use server";
+
+import { prisma } from "@/core/db";
+import { requireHousehold } from "@/core/auth/session";
+import { revalidatePath } from "next/cache";
+
+export async function getRecipes() {
+  const { householdId } = await requireHousehold();
+  return prisma.recipe.findMany({
+    where: { householdId },
+    include: {
+      ingredients: { include: { product: true } },
+      timers: true,
+      leftovers: true,
+    },
+    orderBy: { title: "asc" },
+  });
+}
+
+export async function createRecipe(formData: FormData) {
+  const { householdId } = await requireHousehold();
+  const title = formData.get("title") as string;
+  const instructions = formData.get("instructions") as string;
+  const servings = parseInt((formData.get("servings") as string) || "4", 10);
+  const ingredientsRaw = (formData.get("ingredients") as string) || "";
+  const timersRaw = (formData.get("timers") as string) || "";
+
+  const ingredients = ingredientsRaw.split("\n").filter(Boolean).map((line) => {
+    const [name, quantity] = line.split("|").map((s) => s.trim());
+    return { name, quantity: quantity || "1" };
+  });
+
+  const timers = timersRaw.split("\n").filter(Boolean).map((line) => {
+    const [label, minutes] = line.split("|").map((s) => s.trim());
+    return { label, minutes: parseInt(minutes, 10) || 5 };
+  });
+
+  await prisma.recipe.create({
+    data: {
+      householdId,
+      title,
+      instructions,
+      servings,
+      ingredients: { create: ingredients },
+      timers: { create: timers },
+    },
+  });
+  revalidatePath("/recipes");
+}
+
+export async function addLeftover(formData: FormData) {
+  const { householdId } = await requireHousehold();
+  await prisma.leftover.create({
+    data: {
+      householdId,
+      recipeId: (formData.get("recipeId") as string) || undefined,
+      name: formData.get("name") as string,
+      servings: parseInt((formData.get("servings") as string) || "1", 10),
+      expiresAt: formData.get("expiresAt")
+        ? new Date(formData.get("expiresAt") as string)
+        : undefined,
+    },
+  });
+  revalidatePath("/recipes");
+}
+
+export async function getBudgets() {
+  const { householdId } = await requireHousehold();
+  return prisma.budget.findMany({
+    where: { householdId },
+    include: { expenses: true },
+  });
+}
+
+export async function createBudget(formData: FormData) {
+  const { householdId } = await requireHousehold();
+  await prisma.budget.create({
+    data: {
+      householdId,
+      name: formData.get("name") as string,
+      category: formData.get("category") as string,
+      amount: parseFloat(formData.get("amount") as string),
+      period: (formData.get("period") as string) || "monthly",
+    },
+  });
+  revalidatePath("/budget");
+}
+
+export async function addExpense(formData: FormData) {
+  const { householdId } = await requireHousehold();
+  await prisma.expense.create({
+    data: {
+      householdId,
+      budgetId: (formData.get("budgetId") as string) || undefined,
+      description: formData.get("description") as string,
+      amount: parseFloat(formData.get("amount") as string),
+      category: (formData.get("category") as string) || undefined,
+      date: formData.get("date") ? new Date(formData.get("date") as string) : new Date(),
+    },
+  });
+  revalidatePath("/budget");
+}

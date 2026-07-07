@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HomeBase
 
-## Getting Started
+A self-hosted household management platform. Track inventory, manage tasks, care for plants and pets, plan shopping, schedule events, and integrate with smart home devices.
 
-First, run the development server:
+## Features
+
+- **Inventory** - Product tracking, barcode scanning, locations, low-stock alerts
+- **Shopping** - Smart lists with auto-population, store filtering, tags
+- **Tasks** - Recurring chores with timers, projects with checklists and photos
+- **Plants & Pets** - Watering schedules, appointments, feeding routines
+- **Calendar** - Events with reminders, guests, prep lists, "last time" tracking
+- **Routines** - Shared routines with dependencies, templates, gamification
+- **Recipes** - Instructions, multiple timers, inventory-linked ingredients, leftovers
+- **Budget** - Category budgets and expense tracking
+- **Delivery** - Package tracking with arrival alerts
+- **Messages** - Group chat, grocery/task requests, visitor preferences
+- **Smart Home** - Sensor readings, window recommendations, Philips Hue, cameras
+- **Module system** - Toggle features on/off per household
+- **PWA** - Installable web app with push notifications
+
+## Tech Stack
+
+- Next.js 16 (App Router) + TypeScript
+- PostgreSQL + Prisma
+- Auth.js (credentials)
+- Tailwind CSS + shadcn-style components
+- Docker Compose for self-hosting
+- node-cron worker for scheduled jobs
+
+## Quick Start (Development)
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL (or use Docker Compose)
+
+### Setup
 
 ```bash
+# Install dependencies
+npm install
+
+# Copy environment file
+cp .env.example .env
+
+# Start database (optional - if using Docker)
+docker compose up postgres -d
+
+# Push schema to database
+npm run db:push
+
+# Seed demo data
+npm run db:seed
+
+# Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# In another terminal, start background worker
+npm run worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Demo login:** `demo@homebase.local` / `demo1234`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production (Docker / NAS)
 
-## Learn More
+Full NAS guide: **[docs/nas-deploy.md](docs/nas-deploy.md)**
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env
+# Edit .env — set AUTH_SECRET, AUTH_URL (NAS IP), POSTGRES_PASSWORD
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+docker compose up -d --build
+docker compose exec app npx prisma db push
+docker compose exec app npm run db:seed   # optional
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Redeploy after changes (on NAS):
+./scripts/deploy.sh
 
-## Deploy on Vercel
+# Redeploy from your PC via SSH:
+# .\scripts\deploy-remote.ps1 -NasHost 192.168.1.50 -NasUser admin -NasPath /volume1/docker/homebase
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/           # Next.js routes
+  core/          # Auth, DB, modules, notifications, scheduler
+  modules/       # Feature-specific server actions
+  components/    # UI components
+prisma/          # Database schema
+worker/          # Background job process
+public/          # PWA manifest, service worker
+```
+
+## Environment Variables
+
+See `.env.example` for all options. Key variables:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Random secret for Auth.js |
+| `VAPID_PUBLIC_KEY` | Web Push public key |
+| `VAPID_PRIVATE_KEY` | Web Push private key |
+| `HUE_BRIDGE_IP` | Philips Hue bridge IP (optional) |
+| `HUE_USERNAME` | Hue API username (optional) |
+
+## License
+
+Private - for personal household use.

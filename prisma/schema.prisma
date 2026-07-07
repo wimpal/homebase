@@ -1,0 +1,741 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum ModuleId {
+  INVENTORY
+  SHOPPING
+  TASKS
+  PLANTS
+  PETS
+  CALENDAR
+  ROUTINES
+  RECIPES
+  BUDGET
+  DELIVERY
+  SMART_HOME
+  MESSAGING
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  REMINDER
+  LOW_STOCK
+  EXPIRY
+  DELIVERY
+  TASK
+}
+
+enum RequestType {
+  GROCERY
+  TASK
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+}
+
+enum DeviceType {
+  SENSOR
+  LIGHT
+  CAMERA
+  OTHER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  memberships       Membership[]
+  notifications     Notification[]
+  preferences       Preference[]
+  choreCompletions  ChoreCompletion[]
+  projectUpdates    ProjectUpdate[]
+  plantLogs         PlantLog[]
+  routineMembers    RoutineMember[]
+  routineCompletions RoutineTaskCompletion[]
+  messages          Message[]
+  requests          Request[]
+  points            UserPoints?
+  badges            UserBadge[]
+  pushSubscriptions PushSubscription[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      Membership[]
+  moduleSettings   ModuleSetting[]
+  notifications    Notification[]
+  preferences      Preference[]
+  locations        Location[]
+  products         Product[]
+  stockItems       StockItem[]
+  shoppingLists    ShoppingList[]
+  stores           Store[]
+  budgets          Budget[]
+  expenses         Expense[]
+  chores           Chore[]
+  projects         Project[]
+  plants           Plant[]
+  pets             Pet[]
+  calendarEvents   CalendarEvent[]
+  routines         Routine[]
+  routineTemplates RoutineTemplate[]
+  eventLogs        EventLog[]
+  recipes          Recipe[]
+  leftovers        Leftover[]
+  devices          Device[]
+  sensorReadings   SensorReading[]
+  messages         Message[]
+  requests         Request[]
+  visitorPrefs     VisitorPreference[]
+  deliveries       DeliveryPackage[]
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId])
+}
+
+model ModuleSetting {
+  id          String   @id @default(cuid())
+  householdId String
+  moduleId    ModuleId
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, moduleId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  householdId String
+  userId      String?
+  type        NotificationType @default(INFO)
+  title       String
+  message     String
+  read        Boolean          @default(false)
+  link        String?
+  createdAt   DateTime         @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Preference {
+  id          String @id @default(cuid())
+  userId      String
+  householdId String
+  key         String
+  value       String
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId, key])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Location {
+  id          String @id @default(cuid())
+  householdId String
+  name        String
+
+  household  Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  stockItems StockItem[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  category    String?
+  lowStockAt  Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household          Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  barcodes           Barcode[]
+  stockItems         StockItem[]
+  recipeIngredients  RecipeIngredient[]
+  shoppingItems      ShoppingItem[]
+}
+
+model Barcode {
+  id        String @id @default(cuid())
+  productId String
+  code      String @unique
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model StockItem {
+  id          String    @id @default(cuid())
+  householdId String
+  productId   String
+  locationId  String?
+  quantity    Int       @default(0)
+  expiryDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location  Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+}
+
+model ShoppingList {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String   @default("Shopping List")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+}
+
+model Store {
+  id          String @id @default(cuid())
+  householdId String
+  name        String
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+}
+
+model ShoppingItem {
+  id             String   @id @default(cuid())
+  shoppingListId String
+  productId      String?
+  name           String
+  quantity       Int      @default(1)
+  checked        Boolean  @default(false)
+  tags           String[]
+  storeId        String?
+  autoAdded      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  store        Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  category    String
+  amount      Float
+  period      String   @default("monthly")
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  householdId String
+  budgetId    String?
+  description String
+  amount      Float
+  category    String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  budget    Budget?   @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+}
+
+model Chore {
+  id           String    @id @default(cuid())
+  householdId  String
+  title        String
+  description  String?
+  intervalDays Int?
+  nextDue      DateTime?
+  deadline     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  household   Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  completions ChoreCompletion[]
+}
+
+model ChoreCompletion {
+  id          String   @id @default(cuid())
+  choreId     String
+  userId      String?
+  durationMin Int?
+  completedAt DateTime @default(now())
+  notes       String?
+
+  chore Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  steps     ProjectStep[]
+  updates   ProjectUpdate[]
+}
+
+model ProjectStep {
+  id        String  @id @default(cuid())
+  projectId String
+  title     String
+  completed Boolean @default(false)
+  order     Int     @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectUpdate {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String?
+  comment   String
+  photoUrl  String?
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Plant {
+  id             String    @id @default(cuid())
+  householdId    String
+  name           String
+  species        String?
+  wateringDays   Int       @default(7)
+  lastWatered    DateTime?
+  nextWatering   DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  logs      PlantLog[]
+}
+
+model PlantLog {
+  id        String   @id @default(cuid())
+  plantId   String
+  userId    String?
+  photoUrl  String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Pet {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  species     String?
+  breed       String?
+  birthDate   DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  household    Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  appointments PetAppointment[]
+  feedingRoutines FeedingRoutine[]
+}
+
+model PetAppointment {
+  id        String   @id @default(cuid())
+  petId     String
+  title     String
+  date      DateTime
+  location  String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+}
+
+model FeedingRoutine {
+  id        String @id @default(cuid())
+  petId     String
+  name      String
+  timeOfDay String
+  amount    String?
+  notes     String?
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+}
+
+model CalendarEvent {
+  id              String   @id @default(cuid())
+  householdId     String
+  title           String
+  description     String?
+  startAt         DateTime
+  endAt           DateTime?
+  atHome          Boolean  @default(true)
+  reminderMinutes Int      @default(60)
+  itemsNeeded     String[]
+  createdAt       DateTime @default(now())
+
+  household Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  guests    EventGuest[]
+}
+
+model EventGuest {
+  id      String @id @default(cuid())
+  eventId String
+  name    String
+  notes   String?
+
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Routine {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  members   RoutineMember[]
+  tasks     RoutineTask[]
+}
+
+model RoutineMember {
+  id        String @id @default(cuid())
+  routineId String
+  userId    String
+  role      String @default("member")
+
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([routineId, userId])
+}
+
+model RoutineTask {
+  id              String  @id @default(cuid())
+  routineId       String
+  title           String
+  notes           String?
+  attachmentUrl   String?
+  recurrence      String  @default("daily")
+  reminderMinutes Int?
+  points          Int     @default(10)
+  order           Int     @default(0)
+
+  routine     Routine                  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  dependsOn   RoutineTaskDependency[] @relation("DependentTask")
+  requiredBy  RoutineTaskDependency[]  @relation("RequiredTask")
+  completions RoutineTaskCompletion[]
+}
+
+model RoutineTaskDependency {
+  id              String @id @default(cuid())
+  taskId          String
+  dependsOnTaskId String
+
+  task          RoutineTask @relation("DependentTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask RoutineTask @relation("RequiredTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+}
+
+model RoutineTaskCompletion {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String?
+  durationMin Int?
+  completedAt DateTime @default(now())
+
+  task RoutineTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model RoutineTemplate {
+  id          String @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+
+  household Household            @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tasks     RoutineTemplateTask[]
+}
+
+model RoutineTemplateTask {
+  id         String @id @default(cuid())
+  templateId String
+  title      String
+  recurrence String @default("daily")
+  order      Int    @default(0)
+
+  template RoutineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model EventLog {
+  id          String   @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  occurredAt  DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model UserPoints {
+  id        String @id @default(cuid())
+  userId    String @unique
+  points    Int    @default(0)
+  streak    Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String @default("star")
+
+  users UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model Recipe {
+  id           String   @id @default(cuid())
+  householdId  String
+  title        String
+  instructions String
+  servings     Int      @default(4)
+  createdAt    DateTime @default(now())
+
+  household   Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  timers      RecipeTimer[]
+  leftovers   Leftover[]
+}
+
+model RecipeIngredient {
+  id        String @id @default(cuid())
+  recipeId  String
+  productId String?
+  name      String
+  quantity  String
+
+  recipe  Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model RecipeTimer {
+  id       String @id @default(cuid())
+  recipeId String
+  label    String
+  minutes  Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Leftover {
+  id          String    @id @default(cuid())
+  householdId String
+  recipeId    String?
+  name        String
+  servings    Int       @default(1)
+  frozenAt    DateTime  @default(now())
+  expiresAt   DateTime?
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  recipe    Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+}
+
+model Device {
+  id          String     @id @default(cuid())
+  householdId String
+  name        String
+  type        DeviceType @default(OTHER)
+  config      Json?
+  enabled     Boolean    @default(true)
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model SensorReading {
+  id          String   @id @default(cuid())
+  householdId String
+  deviceId    String?
+  temperature Float?
+  humidity    Float?
+  airQuality  Float?
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  householdId String
+  userId      String
+  content     String
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  householdId String
+  userId      String
+  type        RequestType
+  title       String
+  description String?
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VisitorPreference {
+  id          String @id @default(cuid())
+  householdId String
+  visitorName String
+  preferences Json
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, visitorName])
+}
+
+model DeliveryPackage {
+  id              String         @id @default(cuid())
+  householdId     String
+  carrier         String?
+  trackingNumber  String?
+  trackingUrl     String?
+  description     String?
+  status          DeliveryStatus @default(PENDING)
+  expectedDate    DateTime?
+  earliestTime    DateTime?
+  latestTime      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}

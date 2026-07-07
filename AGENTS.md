@@ -1,5 +1,379 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# HomeBase — Agent Guide
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This file orients coding agents working on **HomeBase**, a self-hosted household management PWA. Read this before making changes.
+
+---
+
+<!-- BEGIN:nextjs-agent-rules -->
+## Next.js version notice
+
+This is **Next.js 16** — APIs, conventions, and file structure may differ from your training data. Before writing Next.js code, read the relevant guide in `node_modules/next/dist/docs/` and heed deprecation notices.
+
+Notable in this repo:
+- App Router only (`src/app/`)
+- `middleware.ts` exists but Next 16 may warn about migrating to `proxy` — check docs before refactoring
+- `output: "standalone"` in `next.config.ts` for Docker
+- Server Actions body limit: 10 MB (for photo uploads)
 <!-- END:nextjs-agent-rules -->
+
+---
+
+## What this project is
+
+HomeBase helps households track inventory, chores, plants/pets, shopping, calendar events, routines, recipes, budget, deliveries, messaging, and smart-home devices. It is:
+
+- **Self-hosted** (Docker Compose: app + Postgres + Redis + worker)
+- **Multi-user** per household (ADMIN / MEMBER / GUEST roles)
+- **Modular** — households toggle features on/off; disabled modules are hidden and route-guarded
+- **PWA-capable** — manifest + service worker + optional Web Push
+
+Demo credentials (after seed): `demo@homebase.local` / `demo1234`
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| Language | TypeScript everywhere |
+| Framework | Next.js 16 App Router (React 19) |
+| Styling | Tailwind CSS v4 + hand-rolled shadcn-style components in `src/components/ui/` |
+| Database | PostgreSQL 16 |
+| ORM | Prisma **6.x** (do not upgrade to Prisma 7 without a migration plan) |
+| Auth | Auth.js v5 (`next-auth@5.0.0-beta.28`) — credentials provider, JWT sessions |
+| Jobs | `node-cron` in `worker/` (BullMQ/Redis installed but not wired yet) |
+| Push | `web-push` + VAPID keys |
+| Barcode | `@zxing/library` (camera-based, client component) |
+| Charts | Recharts (dashboard Today tile, smart-home trends) |
+| Validation | Zod is a dependency; most forms currently use `FormData` + server actions |
+
+Install with `npm install --legacy-peer-deps` if peer dependency conflicts appear (`next-auth` vs Next 16).
+
+---
+
+## Repository layout
+
+```
+src/
+  app/
+    (auth)/           # Login, register — no app shell
+    (app)/            # Authenticated pages — wrapped in AppShell
+      dashboard/      # Home feed, Today tile, todos, low stock
+      inventory/      # + InventoryClient.tsx (barcode scanner)
+      shopping/
+      tasks/          # + TasksClient.tsx (chore timer)
+      plants/ pets/ calendar/ routines/
+      recipes/        # + RecipesClient.tsx (timers)
+      budget/ delivery/ messages/
+      smart-home/     # + SmartHomeClient.tsx
+      settings/       # Module toggles, push setup, visitor prefs
+    api/
+      auth/           # Auth.js handlers + signout
+      push/subscribe/ # Save Web Push subscriptions
+      uploads/[...path]/  # Serve uploaded files
+  core/               # Cross-cutting infrastructure — prefer extending here
+    auth/             # config.ts (NextAuth), session.ts (requireHousehold)
+    db.ts             # Prisma singleton
+    modules/          # registry.ts, settings.ts, guard.ts
+    notifications/  # service.ts (home feed), push.ts (Web Push)
+    scheduler/        # node-cron jobs (low stock, expiry, etc.)
+    uploads/          # saveUpload() — local disk
+  modules/            # Feature server actions ("use server")
+    inventory/ shopping/ tasks/ homecare/
+    scheduling/ recipes/ social/ smarthome/
+  components/
+    ui/               # Button, Card, Input, etc. — match existing style
+    layout/           # AppShell, Sidebar
+    dashboard/        # TodayTile, HomeFeed
+  lib/                # Pure utilities (no "use server")
+    utils.ts budget.ts smarthome.ts
+  types/              # next-auth.d.ts module augmentation
+prisma/
+  schema.prisma       # Single source of truth for data model
+  seed.ts
+worker/
+  index.ts            # Starts scheduler — run via `npm run worker`
+public/
+  manifest.json sw.js icon.svg
+docker-compose.yml Dockerfile Dockerfile.worker
+```
+
+**Routing groups:** `(auth)` and `(app)` are organizational only — URLs are `/login`, `/dashboard`, `/inventory`, etc.
+
+---
+
+## Architecture principles
+
+### 1. Household is the tenancy boundary
+
+Almost every query must scope by `householdId`. Never trust client-supplied household IDs — always use:
+
+```ts
+const { householdId, userId, role } = await requireHousehold();
+```
+
+- `requireSession()` — logged in only
+- `requireHousehold()` — logged in + active membership
+- `requireAdmin()` — ADMIN role only (throws if not)
+
+Session carries `householdId` and `role` via JWT callbacks in `src/core/auth/config.ts`.
+
+### 2. Module system
+
+Modules are the primary extension point.
+
+| File | Responsibility |
+|------|----------------|
+| `src/core/modules/registry.ts` | UI metadata: name, icon, href, `defaultEnabled` |
+| `prisma/schema.prisma` → `enum ModuleId` | Database enum — must stay in sync |
+| `src/core/modules/settings.ts` | Per-household enable/disable (`ModuleSetting` table) |
+| `src/core/modules/guard.ts` | `requireModule(householdId, ModuleId.X)` → redirect to `/dashboard` |
+| `src/components/layout/Sidebar.tsx` | Renders only enabled modules |
+
+**Adding a new module checklist:**
+
+1. Add value to `ModuleId` enum in `prisma/schema.prisma`
+2. Add entry to `MODULE_REGISTRY` in `registry.ts`
+3. Run `npm run db:push` (or create a migration)
+4. Create `src/modules/<name>/actions.ts` with `"use server"`
+5. Create `src/app/(app)/<route>/page.tsx` — call `requireModule()` first
+6. Add client component (`*Client.tsx`) only if you need hooks, timers, camera, etc.
+7. If the module has background jobs, add checks in `src/core/scheduler/index.ts` (see `checkLowStock` for the `ModuleSetting` guard pattern)
+8. Seed / `initializeModuleSettings` will pick up new modules via `ALL_MODULE_IDS`
+
+### 3. Server actions vs API routes
+
+**Prefer server actions** for form mutations:
+
+- Place in `src/modules/<feature>/actions.ts`
+- Start file with `"use server"`
+- Call `requireHousehold()` at the top of mutating actions
+- End with `revalidatePath("/<route>")` for affected pages
+- **Form actions must return `void`** — do not return Prisma entities from actions used as `<form action={...}>`
+
+**Use API routes** for:
+
+- Auth.js (`/api/auth/*`)
+- Web Push subscription POST body
+- Static file serving (`/api/uploads/*`)
+- External webhooks (future)
+
+**Pure helpers** (sync utils, calculations) belong in `src/lib/` — **not** in `"use server"` files.
+
+### 4. Server vs client components
+
+| Server Component (default) | Client Component (`"use client"`) |
+|----------------------------|-----------------------------------|
+| Page shells, data fetching | Barcode scanner, timers, charts with interaction |
+| Forms that only use server actions | Push notification subscription |
+| `AppShell`, `Sidebar` (navigation) | `*Client.tsx` pages |
+
+Pattern used throughout:
+
+```
+page.tsx          → async server component, fetches data, checks auth/module
+FeatureClient.tsx → client interactivity
+actions.ts        → mutations
+```
+
+### 5. Notifications
+
+Use `createNotification()` from `src/core/notifications/service.ts`:
+
+- Writes to in-app **home feed** (`Notification` table)
+- Optionally sends Web Push if `userId` is set and VAPID is configured
+
+Background jobs in `src/core/scheduler/index.ts` create notifications for low stock, expiry, watering, deadlines, calendar reminders, and delivery windows.
+
+### 6. File uploads
+
+- `saveUpload(file, subdir)` in `src/core/uploads/service.ts`
+- Stored under `UPLOAD_DIR` (default: `<cwd>/uploads/`)
+- Served at `/api/uploads/<subdir>/<filename>`
+- Use `path.join(process.cwd(), "uploads")` — avoid relative `"./uploads"` in server code
+
+### 7. Background worker
+
+The worker is a **separate process** — it does not run inside `next dev` automatically.
+
+```bash
+npm run worker   # development
+# docker-compose service: worker
+```
+
+Scheduler uses `node-cron`. When adding jobs:
+
+- Guard by module enablement where relevant
+- Avoid duplicate notifications (see dedup patterns in `checkLowStock`, `checkCalendarReminders`)
+- Keep job functions exported from `scheduler/index.ts` if actions need to call them (e.g. `updatePlantWateringSchedule`)
+
+---
+
+## Database conventions
+
+- **Schema:** `prisma/schema.prisma` — comprehensive model already defined
+- **Client:** import `{ prisma }` from `@/core/db` (singleton with dev hot-reload guard)
+- **IDs:** `cuid()` by default
+- **Household scoping:** most tables have `householdId` — always filter on it
+- **Enums:** `Role`, `ModuleId`, `NotificationType`, `RequestStatus`, `DeliveryStatus`, `DeviceType`
+
+After schema changes:
+
+```bash
+npm run db:push      # dev prototyping
+npm run db:migrate   # prefer for production-tracked changes
+npm run db:generate  # regenerate client (also runs on postinstall/build)
+```
+
+**Pin Prisma to 6.x.** Prisma 7 removes `url` from schema files and will break this project.
+
+---
+
+## UI conventions
+
+- **Components:** `src/components/ui/` — Radix primitives + `cn()` from `@/lib/utils`
+- **Icons:** `lucide-react`
+- **Colors:** emerald primary (`bg-emerald-600`, `text-emerald-700`), zinc neutrals
+- **Cards:** standard pattern `Card` / `CardHeader` / `CardTitle` / `CardContent`
+- **Forms:** native `<form action={serverAction}>` — no react-hook-form yet
+- **Dark mode:** CSS variables in `globals.css` via `prefers-color-scheme`
+
+When adding UI, match existing pages (e.g. `inventory/page.tsx`, `dashboard/page.tsx`) rather than introducing new design systems.
+
+---
+
+## Auth flows
+
+| Route | Purpose |
+|-------|---------|
+| `/login` | Credentials sign-in |
+| `/register` | Creates user + household + module settings + default shopping list |
+| `/api/auth/[...nextauth]` | Auth.js handlers |
+| `/api/auth/signout` | POST sign-out (used by Sidebar) |
+
+Registration is in `registerUser()` inside `src/core/auth/config.ts` — it also seeds badges and calls `initializeModuleSettings()`.
+
+Middleware (`src/middleware.ts`) redirects unauthenticated users to `/login`. Public paths: login, register, auth API, manifest, service worker, uploads.
+
+---
+
+## Environment variables
+
+Copy `.env.example` → `.env`. Critical vars:
+
+| Variable | Used by |
+|----------|---------|
+| `DATABASE_URL` | Prisma |
+| `AUTH_SECRET` | Auth.js JWT |
+| `AUTH_URL` | Auth redirects / signout |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push (server) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Push subscription (client) |
+| `UPLOAD_DIR` | File uploads |
+| `HUE_BRIDGE_IP` / `HUE_USERNAME` | Philips Hue (optional) |
+| `REDIS_URL` | Reserved for future BullMQ |
+
+Never commit `.env`. `.env.example` is committed.
+
+---
+
+## Commands
+
+```bash
+npm install                  # deps (+ prisma generate via postinstall)
+npm run dev                  # Next.js dev server :3000
+npm run worker               # background scheduler (separate terminal)
+npm run build                # prisma generate + production build
+npm run lint                 # ESLint
+npm run db:push              # sync schema to DB
+npm run db:seed              # demo household + user
+docker compose up -d         # full stack
+```
+
+Verify changes with `npm run build` — TypeScript is strict about server action return types and form actions.
+
+---
+
+## Feature map (where to edit what)
+
+| Feature | Page | Actions | Notes |
+|---------|------|---------|-------|
+| Dashboard | `(app)/dashboard/` | tasks, inventory, notifications | TodayTile, HomeFeed |
+| Inventory | `(app)/inventory/` | `modules/inventory/` | BarcodeScanner client |
+| Shopping | `(app)/shopping/` | `modules/shopping/` | Auto low-stock via scheduler |
+| Tasks | `(app)/tasks/` | `modules/tasks/` | Timer in TasksClient |
+| Plants / Pets | `(app)/plants/`, `pets/` | `modules/homecare/` | Photo uploads |
+| Calendar | `(app)/calendar/` | `modules/scheduling/` | Event logs = "last time" |
+| Routines | `(app)/routines/` | `modules/scheduling/` | Gamification, templates |
+| Recipes | `(app)/recipes/` | `modules/recipes/` | Timers in RecipesClient |
+| Budget | `(app)/budget/` | `modules/recipes/` | `getBudgetRemaining` in `lib/budget.ts` |
+| Delivery | `(app)/delivery/` | `modules/social/` | Pre-delivery alerts in scheduler |
+| Messages | `(app)/messages/` | `modules/social/` | Requests need ADMIN to approve |
+| Smart Home | `(app)/smart-home/` | `modules/smarthome/` | Hue + cameras; utils in `lib/smarthome.ts` |
+| Settings | `(app)/settings/` | modules/settings, social | Module toggles |
+
+---
+
+## Common pitfalls (read before debugging)
+
+1. **Server action return types** — Actions used in `<form action={}>` must return `Promise<void>`. Return data only when calling from client via `startTransition` + manual invoke.
+
+2. **Sync exports in `"use server"` files** — Every export from a server actions file is treated as a server action and must be `async`. Put sync helpers in `src/lib/`.
+
+3. **`householdId` in session** — Only populated after login. New users get it via membership at registration. If missing, check JWT callback in auth config.
+
+4. **Worker not running** — Scheduled notifications won't fire in dev unless `npm run worker` is running.
+
+5. **Module disabled** — Page redirects to dashboard; sidebar hides link. Don't assume all modules are enabled in tests.
+
+6. **Prisma 7** — Do not `npm install prisma@latest` without migrating to `prisma.config.ts`.
+
+7. **next-auth peer deps** — May need `--legacy-peer-deps` on install.
+
+8. **Upload path tracing** — Build may warn about `path.join` in upload route; use `process.cwd()`-scoped paths.
+
+9. **iOS Web Push** — Requires installed PWA. Home feed is the reliable fallback.
+
+10. **Hue integration** — Requires local network access to bridge; config stored per `Device` record.
+
+---
+
+## What to optimize for
+
+- **Small, focused diffs** — Match existing patterns; don't introduce new abstractions for one-off use
+- **Household isolation** — Security-critical
+- **Module awareness** — New features should respect toggles
+- **Self-hosting** — Prefer local disk, env-based config, Docker-friendly defaults
+- **Agent-maintainability** — Clear file placement: `core/` for shared infra, `modules/` for feature logic, `app/` for routes
+
+---
+
+## What NOT to do
+
+- Do not edit `homebase_foundation_roadmap_*.plan.md` unless explicitly asked
+- Do not commit secrets (`.env`, VAPID private keys)
+- Do not bypass `requireHousehold()` for data access
+- Do not add features without considering the module registry
+- Do not replace hand-rolled UI components with a full shadcn CLI init without discussion — components are intentionally vendored in `src/components/ui/`
+- Do not force-push or amend commits unless the user explicitly requests it
+
+---
+
+## Suggested workflow for agents
+
+1. Read this file and skim the relevant `src/modules/<feature>/actions.ts` + page
+2. If touching data, check `prisma/schema.prisma` first
+3. Implement server action → page → client component (only if needed)
+4. Add `requireModule()` guard for new module routes
+5. Run `npm run build` to catch type errors
+6. If adding scheduled behavior, update `src/core/scheduler/index.ts` and document that worker must run
+
+For larger features, propose schema changes before wiring UI.
+
+---
+
+## Related docs
+
+- `README.md` — user-facing setup and feature list
+- `.env.example` — all configuration keys
+- `prisma/schema.prisma` — complete data model
+- `src/core/modules/registry.ts` — module definitions
