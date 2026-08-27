@@ -1,0 +1,27 @@
+---
+description: Cross-repo context for Homebase — always applied
+alwaysApply: true
+---
+
+You are working in Homebase, one of three repos in a household system whose shared
+context lives in the `project-control-heim` repo (added as a second folder in this
+workspace).
+
+ALWAYS, before writing code:
+- read `project-control-heim/ARCHITECTURE.md`, `CONVENTIONS.md`, `status/homebase.md`, `contracts/homebase.tools.yaml`
+- if `project-control-heim` is not in the workspace, stop and say so
+
+NEVER:
+- edit source in another repo
+- change a cross-repo interface by editing code — edit `project-control-heim/contracts/` first
+- invent a field, shape or tool name that crosses a repo boundary
+- commit secrets
+
+ALWAYS, before finishing:
+- rewrite `project-control-heim/status/homebase.md` (overwrite, don't append; fill in
+  "Notes for the next agent")
+- tick task checkboxes only for work that exists and runs
+- update `status:` for any tool you touched in `project-control-heim/contracts/homebase.tools.yaml`
+- run `python3 project-control-heim/scripts/validate.py`
+
+Say "unknown — verify" rather than guessing. Full rules: `AGENTS.md` in this repo.
