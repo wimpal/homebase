@@ -11,6 +11,7 @@ export async function getShoppingLists() {
     include: {
       items: { include: { store: true, product: true }, orderBy: { createdAt: "desc" } },
     },
+    orderBy: { createdAt: "asc" },
   });
 }
 
@@ -27,6 +28,13 @@ export async function addShoppingItem(formData: FormData) {
   const tags = ((formData.get("tags") as string) || "").split(",").map((t) => t.trim()).filter(Boolean);
   const storeId = (formData.get("storeId") as string) || undefined;
 
+  const list = await prisma.shoppingList.findFirst({
+    where: { id: listId, householdId },
+  });
+  if (!list) {
+    throw new Error("Shopping list not found");
+  }
+
   await prisma.shoppingItem.create({
     data: { shoppingListId: listId, name, quantity, tags, storeId },
   });
@@ -34,8 +42,20 @@ export async function addShoppingItem(formData: FormData) {
 }
 
 export async function toggleShoppingItem(formData: FormData) {
+  const { householdId } = await requireHousehold();
   const id = formData.get("id") as string;
   const checked = formData.get("checked") === "true";
+
+  const item = await prisma.shoppingItem.findFirst({
+    where: {
+      id,
+      shoppingList: { householdId },
+    },
+  });
+  if (!item) {
+    throw new Error("Shopping item not found");
+  }
+
   await prisma.shoppingItem.update({ where: { id }, data: { checked } });
   revalidatePath("/shopping");
 }
@@ -48,7 +68,19 @@ export async function createStore(formData: FormData) {
 }
 
 export async function deleteShoppingItem(formData: FormData) {
+  const { householdId } = await requireHousehold();
   const id = formData.get("id") as string;
+
+  const item = await prisma.shoppingItem.findFirst({
+    where: {
+      id,
+      shoppingList: { householdId },
+    },
+  });
+  if (!item) {
+    throw new Error("Shopping item not found");
+  }
+
   await prisma.shoppingItem.delete({ where: { id } });
   revalidatePath("/shopping");
 }

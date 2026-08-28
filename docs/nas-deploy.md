@@ -83,13 +83,43 @@ Register a household or use demo credentials if you ran seed: `demo@homebase.loc
 
 ### Option A — Deploy from your PC (recommended)
 
-On your Windows dev machine, from the project folder:
+From the repo root on Windows (NAS share reachable + SSH):
+
+```powershell
+npm run deploy:nas
+```
+
+Optional `.env` on your **Windows** machine (gitignored):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `NAS_HOST` | `192.168.0.170` | NAS IP |
+| `NAS_USER` | `wim` | SSH user |
+| `NAS_PATH` | `/volume1/docker/homebase` | Path on the NAS |
+| `NAS_SHARE` | `\\192.168.0.170\docker\homebase` | Windows SMB path to git checkout |
+| `NAS_BRANCH` | `main` | Branch to pull / archive |
+
+Variants:
+
+```powershell
+npm run deploy:nas -- -Push      # git push origin first
+npm run deploy:nas -- -UseScp    # no share: tarball via scp
+```
+
+Git Bash: `./scripts/deploy-nas.sh` (same flow).
+
+The script:
+
+1. `git pull` on the NAS SMB share (or scp tarball)
+2. SSH → `sudo docker compose up --build -d`
+3. `prisma db push` inside the app container
+4. Curl `/health` on port 3000
+
+Legacy alternative (SSH + on-NAS `deploy.sh` only):
 
 ```powershell
 .\scripts\deploy-remote.ps1 -NasHost 192.168.1.50 -NasUser admin -NasPath /volume1/docker/homebase
 ```
-
-This SSHs to the NAS, runs `git pull`, rebuilds containers, and applies schema updates.
 
 ### Option B — Deploy directly on the NAS
 

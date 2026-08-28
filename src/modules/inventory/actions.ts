@@ -2,12 +2,18 @@
 
 import { prisma } from "@/core/db";
 import { requireHousehold } from "@/core/auth/session";
+import { listInventory } from "@/domain/inventory";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
   const { householdId } = await requireHousehold();
+  const items = await listInventory(householdId);
+  const ids = items.map((item) => item.id);
+  if (ids.length === 0) {
+    return [];
+  }
   return prisma.product.findMany({
-    where: { householdId },
+    where: { id: { in: ids }, householdId },
     include: {
       stockItems: { include: { location: true } },
       barcodes: true,
@@ -87,12 +93,16 @@ export async function findProductByBarcode(code: string) {
 
 export async function getLowStockProducts() {
   const { householdId } = await requireHousehold();
-  const products = await prisma.product.findMany({
-    where: { householdId },
+  const lowStockIds = await listInventory(householdId, { low_stock_only: true });
+  if (lowStockIds.length === 0) {
+    return [];
+  }
+  return prisma.product.findMany({
+    where: {
+      householdId,
+      id: { in: lowStockIds.map((item) => item.id) },
+    },
     include: { stockItems: true },
-  });
-  return products.filter((p) => {
-    const total = p.stockItems.reduce((s, i) => s + i.quantity, 0);
-    return total <= p.lowStockAt;
+    orderBy: { name: "asc" },
   });
 }

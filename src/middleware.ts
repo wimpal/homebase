@@ -10,6 +10,7 @@ export async function middleware(request: NextRequest) {
   if (
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname === "/health" ||
+    pathname === "/mcp" ||
     pathname.startsWith("/_next") ||
     pathname === "/manifest.json" ||
     pathname === "/sw.js" ||
