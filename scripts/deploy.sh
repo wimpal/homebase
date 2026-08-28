@@ -8,7 +8,8 @@ echo "==> Building and restarting HomeBase..."
 docker compose up -d --build
 
 echo "==> Applying database schema..."
-docker compose exec -T app npx prisma db push
+# Use worker image — it has Prisma 6 CLI; app image does not (npx would fetch Prisma 7)
+docker compose exec -T worker npx prisma db push
 
 echo "==> Done. App should be live at ${AUTH_URL:-http://localhost:3000}"
 docker compose ps

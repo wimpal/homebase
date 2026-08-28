@@ -1,8 +1,18 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireAdmin, requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertRequest } from "@/core/tenancy/assertHouseholdResource";
+import { requireModule } from "@/core/modules/guard";
+import { ModuleId, Prisma, RequestStatus } from "@prisma/client";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
+
+const requestInputSchema = z.object({
+  type: z.enum(["GROCERY", "TASK"]),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2_000).optional(),
+});
 
 export async function getDeliveries() {
   const { householdId } = await requireHousehold();
@@ -13,7 +23,7 @@ export async function getDeliveries() {
 }
 
 export async function createDelivery(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.DELIVERY);
   await prisma.deliveryPackage.create({
     data: {
       householdId,
@@ -36,9 +46,14 @@ export async function createDelivery(formData: FormData) {
 }
 
 export async function updateDeliveryStatus(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.DELIVERY);
   const id = formData.get("id") as string;
-  const status = formData.get("status") as "PENDING" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "EXCEPTION";
-  await prisma.deliveryPackage.update({ where: { id }, data: { status } });
+  const deliveryStatus = z.enum(["PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "EXCEPTION"]).parse(formData.get("status"));
+  const result = await prisma.deliveryPackage.updateMany({
+    where: { id, householdId },
+    data: { status: deliveryStatus },
+  });
+  if (result.count === 0) throw new Error("Delivery not found");
   revalidatePath("/delivery");
 }
 
@@ -53,12 +68,13 @@ export async function getMessages() {
 }
 
 export async function sendMessage(formData: FormData) {
-  const { householdId, userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.MESSAGING);
+  const content = z.string().trim().min(1).max(4_000).parse(formData.get("content"));
   await prisma.message.create({
     data: {
       householdId,
       userId,
-      content: formData.get("content") as string,
+      content,
     },
   });
   revalidatePath("/messages");
@@ -74,22 +90,28 @@ export async function getRequests() {
 }
 
 export async function createRequest(formData: FormData) {
-  const { householdId, userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.MESSAGING);
+  const input = requestInputSchema.parse({
+    type: formData.get("type"),
+    title: formData.get("title"),
+    description: (formData.get("description") as string) || undefined,
+  });
   await prisma.request.create({
     data: {
       householdId,
       userId,
-      type: formData.get("type") as "GROCERY" | "TASK",
-      title: formData.get("title") as string,
-      description: (formData.get("description") as string) || undefined,
+      ...input,
     },
   });
   revalidatePath("/messages");
 }
 
 export async function updateRequestStatus(formData: FormData) {
+  const { householdId } = await requireAdmin();
+  await requireModule(householdId, ModuleId.MESSAGING);
   const id = formData.get("id") as string;
-  const status = formData.get("status") as "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  const status = z.nativeEnum(RequestStatus).parse(formData.get("status"));
+  await assertRequest(householdId, id);
   await prisma.request.update({ where: { id }, data: { status } });
   revalidatePath("/messages");
 }
@@ -100,14 +122,14 @@ export async function getVisitorPreferences() {
 }
 
 export async function saveVisitorPreference(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.MESSAGING);
   const visitorName = formData.get("visitorName") as string;
-  const preferences = JSON.parse((formData.get("preferences") as string) || "{}");
+  const preferences = z.record(z.unknown()).parse(JSON.parse((formData.get("preferences") as string) || "{}"));
 
   await prisma.visitorPreference.upsert({
     where: { householdId_visitorName: { householdId, visitorName } },
-    create: { householdId, visitorName, preferences },
-    update: { preferences },
+    create: { householdId, visitorName, preferences: preferences as Prisma.InputJsonValue },
+    update: { preferences: preferences as Prisma.InputJsonValue },
   });
   revalidatePath("/settings");
 }

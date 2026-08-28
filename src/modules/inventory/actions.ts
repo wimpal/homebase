@@ -1,8 +1,10 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertLocation, assertProduct } from "@/core/tenancy/assertHouseholdResource";
 import { listInventory } from "@/domain/inventory";
+import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
@@ -23,7 +25,7 @@ export async function getProducts() {
 }
 
 export async function createProduct(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const name = formData.get("name") as string;
   const category = (formData.get("category") as string) || undefined;
   const lowStockAt = parseInt((formData.get("lowStockAt") as string) || "1", 10);
@@ -33,6 +35,7 @@ export async function createProduct(formData: FormData) {
     ? new Date(formData.get("expiryDate") as string)
     : undefined;
   const barcode = (formData.get("barcode") as string) || undefined;
+  if (locationId) await assertLocation(householdId, locationId);
 
   await prisma.product.create({
     data: {
@@ -51,13 +54,15 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function addStock(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const productId = formData.get("productId") as string;
   const quantity = parseInt(formData.get("quantity") as string, 10);
   const locationId = (formData.get("locationId") as string) || undefined;
   const expiryDate = formData.get("expiryDate")
     ? new Date(formData.get("expiryDate") as string)
     : undefined;
+  await assertProduct(householdId, productId);
+  if (locationId) await assertLocation(householdId, locationId);
 
   await prisma.stockItem.create({
     data: { householdId, productId, quantity, locationId, expiryDate },
@@ -66,7 +71,7 @@ export async function addStock(formData: FormData) {
 }
 
 export async function createLocation(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const name = formData.get("name") as string;
   await prisma.location.create({ data: { householdId, name } });
   revalidatePath("/inventory");

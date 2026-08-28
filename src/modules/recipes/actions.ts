@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertBudget, assertRecipe } from "@/core/tenancy/assertHouseholdResource";
+import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function getRecipes() {
@@ -18,7 +20,7 @@ export async function getRecipes() {
 }
 
 export async function createRecipe(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const title = formData.get("title") as string;
   const instructions = formData.get("instructions") as string;
   const servings = parseInt((formData.get("servings") as string) || "4", 10);
@@ -49,11 +51,13 @@ export async function createRecipe(formData: FormData) {
 }
 
 export async function addLeftover(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
+  const recipeId = (formData.get("recipeId") as string) || undefined;
+  if (recipeId) await assertRecipe(householdId, recipeId);
   await prisma.leftover.create({
     data: {
       householdId,
-      recipeId: (formData.get("recipeId") as string) || undefined,
+      recipeId,
       name: formData.get("name") as string,
       servings: parseInt((formData.get("servings") as string) || "1", 10),
       expiresAt: formData.get("expiresAt")
@@ -73,7 +77,7 @@ export async function getBudgets() {
 }
 
 export async function createBudget(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.BUDGET);
   await prisma.budget.create({
     data: {
       householdId,
@@ -87,11 +91,13 @@ export async function createBudget(formData: FormData) {
 }
 
 export async function addExpense(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.BUDGET);
+  const budgetId = (formData.get("budgetId") as string) || undefined;
+  if (budgetId) await assertBudget(householdId, budgetId);
   await prisma.expense.create({
     data: {
       householdId,
-      budgetId: (formData.get("budgetId") as string) || undefined,
+      budgetId,
       description: formData.get("description") as string,
       amount: parseFloat(formData.get("amount") as string),
       category: (formData.get("category") as string) || undefined,

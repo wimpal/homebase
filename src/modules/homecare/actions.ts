@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertPet, assertPlant } from "@/core/tenancy/assertHouseholdResource";
+import { ModuleId } from "@prisma/client";
 import { updatePlantWateringSchedule } from "@/core/scheduler";
 import { revalidatePath } from "next/cache";
 import { saveUpload } from "@/core/uploads/service";
@@ -16,7 +18,7 @@ export async function getPlants() {
 }
 
 export async function createPlant(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.PLANTS);
   const name = formData.get("name") as string;
   const species = (formData.get("species") as string) || undefined;
   const wateringDays = parseInt((formData.get("wateringDays") as string) || "7", 10);
@@ -36,20 +38,21 @@ export async function createPlant(formData: FormData) {
 }
 
 export async function waterPlant(formData: FormData) {
-  const { userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.PLANTS);
   const plantId = formData.get("plantId") as string;
   const notes = (formData.get("notes") as string) || undefined;
   const photo = formData.get("photo") as File | null;
+  await assertPlant(householdId, plantId);
 
   let photoUrl: string | undefined;
   if (photo && photo.size > 0) {
-    photoUrl = await saveUpload(photo, "plants");
+    photoUrl = await saveUpload(photo, { householdId, subdir: "plants" });
   }
 
   await prisma.plantLog.create({
     data: { plantId, userId, notes, photoUrl },
   });
-  await updatePlantWateringSchedule(plantId);
+  await updatePlantWateringSchedule(plantId, householdId);
   revalidatePath("/plants");
 }
 
@@ -65,7 +68,7 @@ export async function getPets() {
 }
 
 export async function createPet(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
   await prisma.pet.create({
     data: {
       householdId,
@@ -82,7 +85,9 @@ export async function createPet(formData: FormData) {
 }
 
 export async function addPetAppointment(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
   const petId = formData.get("petId") as string;
+  await assertPet(householdId, petId);
   await prisma.petAppointment.create({
     data: {
       petId,
@@ -96,7 +101,9 @@ export async function addPetAppointment(formData: FormData) {
 }
 
 export async function addFeedingRoutine(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
   const petId = formData.get("petId") as string;
+  await assertPet(householdId, petId);
   await prisma.feedingRoutine.create({
     data: {
       petId,

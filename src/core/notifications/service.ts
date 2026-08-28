@@ -1,4 +1,5 @@
 import { NotificationType } from "@prisma/client";
+import { requireHousehold } from "@/core/auth/session";
 import { prisma } from "@/core/db";
 import { sendWebPush } from "./push";
 
@@ -43,10 +44,12 @@ export async function getNotifications(householdId: string, limit = 20) {
 }
 
 export async function markNotificationRead(id: string) {
-  return prisma.notification.update({
-    where: { id },
+  const { householdId } = await requireHousehold();
+  const result = await prisma.notification.updateMany({
+    where: { id, householdId },
     data: { read: true },
   });
+  if (result.count === 0) throw new Error("Notification not found");
 }
 
 export async function getUnreadCount(householdId: string) {

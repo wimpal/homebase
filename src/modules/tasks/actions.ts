@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertChore, assertProject } from "@/core/tenancy/assertHouseholdResource";
+import { ModuleId } from "@prisma/client";
 import { getAverageChoreDuration } from "@/core/scheduler";
 import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
@@ -19,7 +21,7 @@ export async function getChores() {
 }
 
 export async function createChore(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
   const intervalDays = formData.get("intervalDays")
@@ -43,14 +45,13 @@ export async function createChore(formData: FormData) {
 }
 
 export async function completeChore(formData: FormData) {
-  const { userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.TASKS);
   const choreId = formData.get("choreId") as string;
   const durationMin = formData.get("durationMin")
     ? parseInt(formData.get("durationMin") as string, 10)
     : undefined;
 
-  const chore = await prisma.chore.findUnique({ where: { id: choreId } });
-  if (!chore) return;
+  const chore = await assertChore(householdId, choreId);
 
   await prisma.choreCompletion.create({
     data: { choreId, userId, durationMin },
@@ -80,7 +81,7 @@ export async function getProjects() {
 }
 
 export async function createProject(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
   const steps = ((formData.get("steps") as string) || "").split("\n").filter(Boolean);
@@ -99,21 +100,27 @@ export async function createProject(formData: FormData) {
 }
 
 export async function toggleProjectStep(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
   const id = formData.get("id") as string;
   const completed = formData.get("completed") === "true";
-  await prisma.projectStep.update({ where: { id }, data: { completed } });
+  const result = await prisma.projectStep.updateMany({
+    where: { id, project: { householdId } },
+    data: { completed },
+  });
+  if (result.count === 0) throw new Error("Project step not found");
   revalidatePath("/tasks");
 }
 
 export async function addProjectUpdate(formData: FormData) {
-  const { userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.TASKS);
   const projectId = formData.get("projectId") as string;
   const comment = formData.get("comment") as string;
   const photo = formData.get("photo") as File | null;
+  await assertProject(householdId, projectId);
 
   let photoUrl: string | undefined;
   if (photo && photo.size > 0) {
-    photoUrl = await saveUpload(photo, "projects");
+    photoUrl = await saveUpload(photo, { householdId, subdir: "projects" });
   }
 
   await prisma.projectUpdate.create({

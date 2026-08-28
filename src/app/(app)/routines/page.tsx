@@ -18,12 +18,12 @@ import { ModuleId } from "@prisma/client";
 import { Trophy, Star } from "lucide-react";
 
 export default async function RoutinesPage() {
-  const { userId, householdId } = await requireHousehold();
+  const { householdId } = await requireHousehold();
   await requireModule(householdId, ModuleId.ROUTINES);
   const [routines, templates, gamification] = await Promise.all([
     getRoutines(),
     getRoutineTemplates(),
-    getUserGamification(userId),
+    getUserGamification(),
   ]);
 
   return (

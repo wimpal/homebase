@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/core/db";
-import { requireHousehold } from "@/core/auth/session";
+import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
+import { assertRoutine, assertRoutineTask } from "@/core/tenancy/assertHouseholdResource";
+import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function getCalendarEvents() {
@@ -14,7 +16,7 @@ export async function getCalendarEvents() {
 }
 
 export async function createCalendarEvent(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
   const startAt = new Date(formData.get("startAt") as string);
@@ -64,7 +66,7 @@ export async function getRoutines() {
 }
 
 export async function createRoutine(formData: FormData) {
-  const { householdId, userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.ROUTINES);
   const name = formData.get("name") as string;
   const description = (formData.get("description") as string) || undefined;
 
@@ -80,6 +82,7 @@ export async function createRoutine(formData: FormData) {
 }
 
 export async function addRoutineTask(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.ROUTINES);
   const routineId = formData.get("routineId") as string;
   const title = formData.get("title") as string;
   const recurrence = (formData.get("recurrence") as string) || "daily";
@@ -88,6 +91,11 @@ export async function addRoutineTask(formData: FormData) {
     : undefined;
   const points = parseInt((formData.get("points") as string) || "10", 10);
   const dependsOnTaskId = (formData.get("dependsOnTaskId") as string) || undefined;
+  await assertRoutine(householdId, routineId);
+  if (dependsOnTaskId) {
+    const dependency = await assertRoutineTask(householdId, dependsOnTaskId);
+    if (dependency.routineId !== routineId) throw new Error("Routine dependency must belong to the same routine");
+  }
 
   const task = await prisma.routineTask.create({
     data: { routineId, title, recurrence, reminderMinutes, points },
@@ -103,12 +111,13 @@ export async function addRoutineTask(formData: FormData) {
 }
 
 export async function completeRoutineTask(formData: FormData) {
-  const { userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.ROUTINES);
   const taskId = formData.get("taskId") as string;
   const durationMin = formData.get("durationMin")
     ? parseInt(formData.get("durationMin") as string, 10)
     : undefined;
 
+  await assertRoutineTask(householdId, taskId);
   const task = await prisma.routineTask.findUnique({
     where: { id: taskId },
     include: { dependsOn: { include: { dependsOnTask: { include: { completions: true } } } } },
@@ -158,10 +167,10 @@ export async function getRoutineTemplates() {
 }
 
 export async function createRoutineFromTemplate(formData: FormData) {
-  const { householdId, userId } = await requireHousehold();
+  const { householdId, userId } = await requireMutationAccess(ModuleId.ROUTINES);
   const templateId = formData.get("templateId") as string;
-  const template = await prisma.routineTemplate.findUnique({
-    where: { id: templateId },
+  const template = await prisma.routineTemplate.findFirst({
+    where: { id: templateId, householdId },
     include: { tasks: true },
   });
   if (!template) return;
@@ -193,7 +202,7 @@ export async function getEventLogs() {
 }
 
 export async function logEvent(formData: FormData) {
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
   await prisma.eventLog.create({
     data: {
       householdId,
@@ -207,7 +216,8 @@ export async function logEvent(formData: FormData) {
   revalidatePath("/calendar");
 }
 
-export async function getUserGamification(userId: string) {
+export async function getUserGamification() {
+  const { userId } = await requireHousehold();
   const points = await prisma.userPoints.findUnique({ where: { userId } });
   const badges = await prisma.userBadge.findMany({
     where: { userId },

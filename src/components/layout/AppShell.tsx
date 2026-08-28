@@ -8,7 +8,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar modules={modules} householdName={household.name} />
+      <Sidebar
+        modules={modules.map(({ id, name, href }) => ({ id, name, href }))}
+        householdName={household.name}
+      />
       <main className="flex-1 overflow-auto bg-zinc-50 p-6 dark:bg-zinc-900">
         {children}
       </main>

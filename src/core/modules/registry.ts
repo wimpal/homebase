@@ -25,6 +25,9 @@ export interface ModuleDefinition {
   defaultEnabled: boolean;
 }
 
+/** Serializable subset for passing from Server Components to client Sidebar */
+export type ModuleNavItem = Pick<ModuleDefinition, "id" | "name" | "href">;
+
 export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: ModuleId.INVENTORY,
@@ -123,6 +126,10 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     defaultEnabled: true,
   },
 ];
+
+export const MODULE_ICONS = Object.fromEntries(
+  MODULE_REGISTRY.map((m) => [m.id, m.icon])
+) as Record<ModuleId, LucideIcon>;
 
 export const DASHBOARD_MODULE: ModuleDefinition = {
   id: ModuleId.INVENTORY,

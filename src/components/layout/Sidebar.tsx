@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Home, Settings, LogOut } from "lucide-react";
-import type { ModuleDefinition } from "@/core/modules/registry";
+import { MODULE_ICONS, type ModuleNavItem } from "@/core/modules/registry";
 
 interface SidebarProps {
-  modules: ModuleDefinition[];
+  modules: ModuleNavItem[];
   householdName: string;
 }
 
@@ -16,7 +16,11 @@ export function Sidebar({ modules, householdName }: SidebarProps) {
 
   const links = [
     { href: "/dashboard", name: "Dashboard", icon: Home },
-    ...modules.map((m) => ({ href: m.href, name: m.name, icon: m.icon })),
+    ...modules.map((m) => ({
+      href: m.href,
+      name: m.name,
+      icon: MODULE_ICONS[m.id],
+    })),
     { href: "/settings", name: "Settings", icon: Settings },
   ];
 

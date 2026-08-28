@@ -1,5 +1,7 @@
 import { auth } from "@/core/auth/config";
 import { prisma } from "@/core/db";
+import { requireModule } from "@/core/modules/guard";
+import { ModuleId } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 export async function requireSession() {
@@ -46,5 +48,14 @@ export async function requireAdmin() {
   if (ctx.role !== "ADMIN") {
     throw new Error("Admin access required");
   }
+  return ctx;
+}
+
+export async function requireMutationAccess(moduleId: ModuleId) {
+  const ctx = await requireHousehold();
+  if (ctx.role === "GUEST") {
+    throw new Error("Guest accounts are read-only");
+  }
+  await requireModule(ctx.householdId, moduleId);
   return ctx;
 }

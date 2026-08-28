@@ -219,12 +219,12 @@ async function checkDeliveryAlerts() {
   }
 }
 
-export async function updatePlantWateringSchedule(plantId: string) {
-  const plant = await prisma.plant.findUnique({ where: { id: plantId } });
+export async function updatePlantWateringSchedule(plantId: string, householdId: string) {
+  const plant = await prisma.plant.findFirst({ where: { id: plantId, householdId } });
   if (!plant) return;
 
-  await prisma.plant.update({
-    where: { id: plantId },
+  await prisma.plant.updateMany({
+    where: { id: plantId, householdId },
     data: {
       lastWatered: new Date(),
       nextWatering: addDays(new Date(), plant.wateringDays),

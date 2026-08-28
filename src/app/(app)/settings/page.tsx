@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MODULE_REGISTRY } from "@/core/modules/registry";
 import { getEnabledModules, toggleModule } from "@/core/modules/settings";
-import { requireHousehold } from "@/core/auth/session";
+import { requireAdmin, requireHousehold } from "@/core/auth/session";
 import { getVisitorPreferences, saveVisitorPreference } from "@/modules/social/actions";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -13,7 +13,7 @@ import { PushNotificationSetup } from "./PushNotificationSetup";
 
 async function handleToggleModule(formData: FormData) {
   "use server";
-  const { householdId } = await requireHousehold();
+  const { householdId } = await requireAdmin();
   const moduleId = formData.get("moduleId") as ModuleId;
   const enabled = formData.get("enabled") === "true";
   await toggleModule(householdId, moduleId, enabled);
