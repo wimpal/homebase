@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
-import { getInventory, listInventory } from "@/domain/inventory";
-import { listShoppingItems } from "@/domain/shopping";
+import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
+import { addShoppingListItem, listShoppingItems } from "@/domain/shopping";
 
 function toolJson(value: unknown) {
   return {
@@ -65,6 +65,32 @@ export function createMcpServer(householdId: string): McpServer {
   );
 
   server.registerTool(
+    "homebase.inventory.update",
+    {
+      description:
+        'Set or adjust inventory quantity. Use delta for "we used two" and quantity for "we have four left". Exactly one of quantity or delta.',
+      inputSchema: {
+        id: z.string().describe("Product id"),
+        quantity: z
+          .number()
+          .optional()
+          .describe("Absolute on-hand total to set"),
+        delta: z
+          .number()
+          .optional()
+          .describe("Change to apply to current total, e.g. -2"),
+      },
+    },
+    async (input) => {
+      const result = await updateInventory(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
     "homebase.shopping_list.list",
     {
       description:
@@ -82,6 +108,32 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async (input) => {
       const result = await listShoppingItems(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.shopping_list.add_item",
+    {
+      description:
+        "Add an item to the household primary shopping list. Matches name to a known inventory product when possible.",
+      inputSchema: {
+        name: z.string().describe("Item name"),
+        quantity: z
+          .number()
+          .optional()
+          .describe("Quantity to buy, default 1"),
+        unit: z
+          .string()
+          .optional()
+          .describe("Unit hint, e.g. pcs or kg (informational only)"),
+      },
+    },
+    async (input) => {
+      const result = await addShoppingListItem(householdId, input);
       if (isDomainError(result)) {
         return toolError(result);
       }

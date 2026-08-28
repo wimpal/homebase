@@ -1,11 +1,12 @@
 /**
- * Smoke test for Homebase MCP at /mcp (T-004).
+ * Smoke test for Homebase MCP at /mcp (T-004 read + T-012 write).
  * Requires: dev server running, SERVICE_TOKEN + MCP_HOUSEHOLD_ID in .env
  *
  * Usage: npm run mcp:smoke
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { PrismaClient } from "@prisma/client";
 
 function loadDotEnv() {
   try {
@@ -36,6 +37,12 @@ loadDotEnv();
 
 const BASE_URL = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const TOKEN = process.env.SERVICE_TOKEN?.trim();
+const HOUSEHOLD_ID = process.env.MCP_HOUSEHOLD_ID?.trim();
+
+type ToolResult = {
+  isError?: boolean;
+  content?: { type: string; text: string }[];
+};
 
 async function mcpPost(
   body: string,
@@ -70,9 +77,41 @@ function ok(message: string) {
   console.log(`OK: ${message}`);
 }
 
+function parseToolPayload(result: ToolResult | undefined): unknown {
+  const text = result?.content?.[0]?.text;
+  if (!text) {
+    fail("tool result missing content text");
+  }
+  return parseJson(text);
+}
+
+async function callTool(
+  id: number,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const { status, body } = await mcpPost(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method: "tools/call",
+      params: { name, arguments: args },
+    }),
+    TOKEN,
+  );
+  if (status !== 200) {
+    fail(`${name} failed (${status}): ${body}`);
+  }
+  const json = parseJson(body) as { result?: ToolResult };
+  return json.result ?? {};
+}
+
 async function main() {
   if (!TOKEN) {
     fail("SERVICE_TOKEN is not set in the environment");
+  }
+  if (!HOUSEHOLD_ID) {
+    fail("MCP_HOUSEHOLD_ID is not set in the environment");
   }
 
   const { status: noAuthStatus } = await mcpPost(
@@ -133,58 +172,134 @@ async function main() {
   const expected = [
     "homebase.inventory.get",
     "homebase.inventory.list",
+    "homebase.inventory.update",
+    "homebase.shopping_list.add_item",
     "homebase.shopping_list.list",
   ];
-  if (names.length !== 3 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 5 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 3 homebase tools");
+  ok("tools/list returns exactly 5 homebase tools");
 
-  const { status: invStatus, body: invRes } = await mcpPost(
-    JSON.stringify({
-      jsonrpc: "2.0",
-      id: 3,
-      method: "tools/call",
-      params: {
-        name: "homebase.inventory.list",
-        arguments: { low_stock_only: true },
-      },
-    }),
-    TOKEN,
-  );
-  if (invStatus !== 200) {
-    fail(`inventory.list failed (${invStatus}): ${invRes}`);
-  }
-  const invJson = parseJson(invRes) as {
-    result?: { isError?: boolean; content?: { text: string }[] };
-  };
-  if (invJson.result?.isError) {
-    fail(`inventory.list tool error: ${invRes}`);
+  const invListResult = await callTool(3, "homebase.inventory.list", {
+    low_stock_only: true,
+  });
+  if (invListResult.isError) {
+    fail("homebase.inventory.list tool error");
   }
   ok("homebase.inventory.list (low_stock_only)");
 
-  const { status: shopStatus, body: shopRes } = await mcpPost(
-    JSON.stringify({
-      jsonrpc: "2.0",
-      id: 4,
-      method: "tools/call",
-      params: {
-        name: "homebase.shopping_list.list",
-        arguments: {},
-      },
-    }),
-    TOKEN,
-  );
-  if (shopStatus !== 200) {
-    fail(`shopping_list.list failed (${shopStatus}): ${shopRes}`);
-  }
-  const shopJson = parseJson(shopRes) as {
-    result?: { isError?: boolean };
-  };
-  if (shopJson.result?.isError) {
-    fail(`shopping_list.list tool error: ${shopRes}`);
+  const shopListResult = await callTool(4, "homebase.shopping_list.list", {});
+  if (shopListResult.isError) {
+    fail("homebase.shopping_list.list tool error");
   }
   ok("homebase.shopping_list.list");
+
+  const smokeItemName = `mcp-smoke-${Date.now()}`;
+  const addResult = await callTool(5, "homebase.shopping_list.add_item", {
+    name: smokeItemName,
+    quantity: 2,
+  });
+  if (addResult.isError) {
+    fail("homebase.shopping_list.add_item tool error");
+  }
+  const added = parseToolPayload(addResult) as {
+    id: string;
+    name: string;
+    quantity: number;
+  };
+  if (added.name !== smokeItemName || added.quantity !== 2) {
+    fail(`add_item returned unexpected payload: ${JSON.stringify(added)}`);
+  }
+
+  const shopAfterAdd = await callTool(6, "homebase.shopping_list.list", {});
+  if (shopAfterAdd.isError) {
+    fail("shopping_list.list after add_item failed");
+  }
+  const shopItems = parseToolPayload(shopAfterAdd) as { name: string }[];
+  if (!shopItems.some((item) => item.name === smokeItemName)) {
+    fail(`added item ${smokeItemName} not found on shopping list`);
+  }
+  ok("homebase.shopping_list.add_item");
+
+  const prisma = new PrismaClient();
+  const productName = `mcp-smoke-product-${Date.now()}`;
+  let productId: string | undefined;
+
+  try {
+    const product = await prisma.product.create({
+      data: {
+        householdId: HOUSEHOLD_ID,
+        name: productName,
+        stockItems: {
+          create: { householdId: HOUSEHOLD_ID, quantity: 5 },
+        },
+      },
+    });
+    productId = product.id;
+
+    const deltaResult = await callTool(7, "homebase.inventory.update", {
+      id: productId,
+      delta: -1,
+    });
+    if (deltaResult.isError) {
+      fail("homebase.inventory.update (delta) tool error");
+    }
+    const afterDelta = parseToolPayload(deltaResult) as { quantity: number };
+    if (afterDelta.quantity !== 4) {
+      fail(`expected quantity 4 after delta -1, got ${afterDelta.quantity}`);
+    }
+    ok("homebase.inventory.update (delta)");
+
+    const qtyResult = await callTool(8, "homebase.inventory.update", {
+      id: productId,
+      quantity: 2,
+    });
+    if (qtyResult.isError) {
+      fail("homebase.inventory.update (quantity) tool error");
+    }
+    const afterQty = parseToolPayload(qtyResult) as { quantity: number };
+    if (afterQty.quantity !== 2) {
+      fail(`expected quantity 2 after set, got ${afterQty.quantity}`);
+    }
+
+    const getResult = await callTool(9, "homebase.inventory.get", {
+      id: productId,
+    });
+    if (getResult.isError) {
+      fail("homebase.inventory.get after update failed");
+    }
+    const got = parseToolPayload(getResult) as { quantity: number };
+    if (got.quantity !== 2) {
+      fail(`inventory.get quantity mismatch: ${got.quantity}`);
+    }
+    ok("homebase.inventory.update (quantity)");
+
+    const badResult = await callTool(10, "homebase.inventory.update", {
+      id: productId,
+      quantity: 2,
+      delta: -1,
+    });
+    if (!badResult.isError) {
+      fail("expected invalid_input when both quantity and delta provided");
+    }
+    const badPayload = parseToolPayload(badResult) as {
+      error?: { code: string };
+    };
+    if (badPayload.error?.code !== "invalid_input") {
+      fail(
+        `expected invalid_input error code, got ${JSON.stringify(badPayload)}`,
+      );
+    }
+    ok("homebase.inventory.update rejects both quantity and delta");
+  } finally {
+    if (productId) {
+      await prisma.product.deleteMany({
+        where: { id: productId, householdId: HOUSEHOLD_ID },
+      });
+    }
+    await prisma.$disconnect();
+  }
 
   console.log("\nAll MCP smoke checks passed.");
 }

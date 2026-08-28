@@ -2,6 +2,7 @@ export { DomainError, isDomainError } from "@/domain/error";
 export { getInventory } from "./get";
 export { listInventory, listLowStockProductIds } from "./list";
 export { isLowStock, totalQuantity } from "./low-stock";
+export { updateInventory } from "./update";
 export type {
   InventoryDetail,
   InventoryListItem,
@@ -9,3 +10,4 @@ export type {
   LocationQuantity,
   StockItemDetail,
 } from "./types";
+export type { UpdateInventoryInput } from "./update";

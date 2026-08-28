@@ -3,6 +3,8 @@
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertShoppingList, assertStore } from "@/core/tenancy/assertHouseholdResource";
+import { addShoppingListItem } from "@/domain/shopping";
+import { isDomainError } from "@/domain/error";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -32,9 +34,16 @@ export async function addShoppingItem(formData: FormData) {
   await assertShoppingList(householdId, listId);
   if (storeId) await assertStore(householdId, storeId);
 
-  await prisma.shoppingItem.create({
-    data: { shoppingListId: listId, name, quantity, tags, storeId },
+  const result = await addShoppingListItem(householdId, {
+    name,
+    quantity,
+    tags,
+    shopping_list_id: listId,
+    store_id: storeId,
   });
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
   revalidatePath("/shopping");
 }
 

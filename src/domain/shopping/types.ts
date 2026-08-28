@@ -13,3 +13,14 @@ export interface ListShoppingInput {
   /** @deprecated use include_checked */
   include_done?: boolean;
 }
+
+export interface AddShoppingItemInput {
+  name: string;
+  quantity?: number;
+  /** Accepted per MCP contract; no column in schema — ignored. */
+  unit?: string;
+  /** UI override; MCP uses primary list via resolvePrimaryListId. */
+  shopping_list_id?: string;
+  tags?: string[];
+  store_id?: string;
+}
