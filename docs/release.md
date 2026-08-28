@@ -31,7 +31,7 @@ Run these steps in order before tagging:
 
 1. **Confirm the phase exit gate** in [roadmap.md](roadmap.md) is met for the target release.
 2. **Apply schema changes:**
-   - Today: `npm run db:push` (dev) or `docker compose exec app npx prisma db push` (NAS)
+   - Today: `npm run db:push` (dev) or `docker compose exec worker npx prisma db push` (NAS)
    - After Phase 2: `prisma migrate deploy` replaces `db push` in production
 3. **Quality gates:** `npm run lint` and `npm run build`
 4. **Tests:** run automated tests when they exist (Phase 2); until then, manual smoke only

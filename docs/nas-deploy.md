@@ -67,7 +67,7 @@ Or manually:
 
 ```bash
 docker compose up -d --build
-docker compose exec app npx prisma db push
+docker compose exec worker npx prisma db push
 docker compose exec app npm run db:seed   # optional demo data
 ```
 
@@ -112,7 +112,7 @@ The script:
 
 1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
 2. SSH → `sudo docker compose up --build -d`
-3. `prisma db push` inside the app container
+3. `prisma db push` inside the **worker** container (app image has no Prisma 6 CLI — `npx` would fetch Prisma 7)
 4. Curl `/health` on port 3000
 
 Legacy alternative (SSH + on-NAS `deploy.sh` only):

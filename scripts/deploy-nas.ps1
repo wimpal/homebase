@@ -95,7 +95,7 @@ function Get-DockerRemoteCmd {
         "set -eu && " +
         "cd '$NasPath' && " +
         "sudo docker compose up --build -d && " +
-        "sudo docker compose exec -T app npx prisma db push && " +
+        "sudo docker compose exec -T worker npx prisma db push && " +
         "sudo docker compose logs --tail=30 && " +
         "sleep 2 && " +
         "curl -sf http://127.0.0.1:3000/health"

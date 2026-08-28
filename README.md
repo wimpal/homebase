@@ -72,7 +72,7 @@ cp .env.example .env
 # Edit .env — set AUTH_SECRET, AUTH_URL (NAS IP), POSTGRES_PASSWORD
 
 docker compose up -d --build
-docker compose exec app npx prisma db push
+docker compose exec worker npx prisma db push
 docker compose exec app npm run db:seed   # optional
 
 # Redeploy after changes (on NAS):
