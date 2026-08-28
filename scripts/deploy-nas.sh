@@ -62,6 +62,14 @@ else
     exit 1
   fi
   echo "Pulling $NAS_BRANCH on NAS share $NAS_SHARE ..."
+  dirty="$(git -C "$NAS_SHARE" status --porcelain || true)"
+  if [ -n "$dirty" ]; then
+    echo "NAS share has local modifications (will block pull):" >&2
+    git -C "$NAS_SHARE" status --short >&2
+    echo "" >&2
+    echo "Deploy aborted. Review files on $NAS_SHARE, then commit/stash/discard manually." >&2
+    exit 1
+  fi
   git -C "$NAS_SHARE" fetch origin "$NAS_BRANCH"
   git -C "$NAS_SHARE" checkout "$NAS_BRANCH"
   git -C "$NAS_SHARE" pull --ff-only origin "$NAS_BRANCH"

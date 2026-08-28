@@ -110,7 +110,7 @@ Git Bash: `./scripts/deploy-nas.sh` (same flow).
 
 The script:
 
-1. `git pull` on the NAS SMB share (or scp tarball)
+1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
 2. SSH → `sudo docker compose up --build -d`
 3. `prisma db push` inside the app container
 4. Curl `/health` on port 3000

@@ -123,6 +123,22 @@ function Invoke-DockerOnNas {
 
 function Deploy-ViaShare {
     Write-Host "Pulling $Branch on NAS share $NasShare ..."
+    $dirty = & git -C $NasShare status --porcelain
+    if ($dirty) {
+        Write-Host ""
+        Write-Host "NAS share has local modifications (will block pull):" -ForegroundColor Yellow
+        & git -C $NasShare status --short
+        Write-Host ""
+        Write-Error @"
+Deploy aborted — the NAS share is not a clean git checkout.
+Review the files above on $NasShare. Either:
+  - commit and push them from the NAS (if intentional), or
+  - discard manually: git -C '$NasShare' checkout -- .
+  - stash: git -C '$NasShare' stash push -m 'pre-deploy'
+Then re-run npm run deploy:nas
+"@
+        exit 1
+    }
     Invoke-Git -WorkTree $NasShare @("fetch", "origin", $Branch)
     Invoke-Git -WorkTree $NasShare @("checkout", $Branch)
     Invoke-Git -WorkTree $NasShare @("pull", "--ff-only", "origin", $Branch)
