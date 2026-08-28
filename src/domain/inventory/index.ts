@@ -10,4 +10,4 @@ export type {
   LocationQuantity,
   StockItemDetail,
 } from "./types";
-export type { UpdateInventoryInput } from "./update";
+export type { InventoryDetailWithChange, UpdateInventoryInput } from "./update";

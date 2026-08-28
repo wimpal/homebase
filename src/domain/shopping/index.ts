@@ -5,4 +5,5 @@ export type {
   AddShoppingItemInput,
   ListShoppingInput,
   ShoppingListItem,
+  ShoppingListItemWithChange,
 } from "./types";

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
+import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
 import { addShoppingListItem, listShoppingItems } from "@/domain/shopping";
 
@@ -82,7 +83,10 @@ export function createMcpServer(householdId: string): McpServer {
       },
     },
     async (input) => {
-      const result = await updateInventory(householdId, input);
+      const result = await updateInventory(householdId, {
+        ...input,
+        mcp_audit: { tool_name: "homebase.inventory.update" },
+      });
       if (isDomainError(result)) {
         return toolError(result);
       }
@@ -133,7 +137,51 @@ export function createMcpServer(householdId: string): McpServer {
       },
     },
     async (input) => {
-      const result = await addShoppingListItem(householdId, input);
+      const result = await addShoppingListItem(householdId, {
+        ...input,
+        mcp_audit: { tool_name: "homebase.shopping_list.add_item" },
+      });
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.changes.list",
+    {
+      description:
+        "List recent MCP write operations (audit log). Use to find change_id before reverting a mistaken add or inventory update.",
+      inputSchema: {
+        limit: z
+          .number()
+          .int()
+          .optional()
+          .describe("Max rows to return (default 20, max 100)"),
+        include_reverted: z
+          .boolean()
+          .optional()
+          .describe("Include already-reverted changes"),
+      },
+    },
+    async (input) => {
+      const rows = await listMcpChanges(householdId, input);
+      return toolJson(rows);
+    },
+  );
+
+  server.registerTool(
+    "homebase.changes.revert",
+    {
+      description:
+        "Undo an MCP write by change_id from add_item or inventory.update. Audit row is kept with reverted_at set.",
+      inputSchema: {
+        change_id: z.string().describe("change_id from a write tool response"),
+      },
+    },
+    async ({ change_id }) => {
+      const result = await revertMcpChange(householdId, change_id);
       if (isDomainError(result)) {
         return toolError(result);
       }

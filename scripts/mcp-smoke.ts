@@ -1,5 +1,5 @@
 /**
- * Smoke test for Homebase MCP at /mcp (T-004 read + T-012 write).
+ * Smoke test for Homebase MCP at /mcp (T-004 read + T-012 write + T-013 change log).
  * Requires: dev server running, SERVICE_TOKEN + MCP_HOUSEHOLD_ID in .env
  *
  * Usage: npm run mcp:smoke
@@ -170,16 +170,18 @@ async function main() {
   const tools = listJson.result?.tools ?? [];
   const names = tools.map((t) => t.name).sort();
   const expected = [
+    "homebase.changes.list",
+    "homebase.changes.revert",
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
     "homebase.shopping_list.add_item",
     "homebase.shopping_list.list",
   ];
-  if (names.length !== 5 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 7 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 5 homebase tools");
+  ok("tools/list returns exactly 7 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -204,10 +206,14 @@ async function main() {
     fail("homebase.shopping_list.add_item tool error");
   }
   const added = parseToolPayload(addResult) as {
+    change_id: string;
     id: string;
     name: string;
     quantity: number;
   };
+  if (!added.change_id) {
+    fail("add_item missing change_id");
+  }
   if (added.name !== smokeItemName || added.quantity !== 2) {
     fail(`add_item returned unexpected payload: ${JSON.stringify(added)}`);
   }
@@ -220,7 +226,49 @@ async function main() {
   if (!shopItems.some((item) => item.name === smokeItemName)) {
     fail(`added item ${smokeItemName} not found on shopping list`);
   }
-  ok("homebase.shopping_list.add_item");
+
+  const changesAfterAdd = await callTool(7, "homebase.changes.list", {
+    limit: 10,
+  });
+  if (changesAfterAdd.isError) {
+    fail("changes.list after add_item failed");
+  }
+  const changeRows = parseToolPayload(changesAfterAdd) as {
+    change_id: string;
+  }[];
+  if (!changeRows.some((row) => row.change_id === added.change_id)) {
+    fail("change log missing add_item entry");
+  }
+
+  const revertedAdd = await callTool(8, "homebase.changes.revert", {
+    change_id: added.change_id,
+  });
+  if (revertedAdd.isError) {
+    fail("changes.revert (add_item) tool error");
+  }
+  const revertPayload = parseToolPayload(revertedAdd) as {
+    change_id: string;
+    reverted_at?: string;
+  };
+  if (revertPayload.change_id !== added.change_id || !revertPayload.reverted_at) {
+    fail(`unexpected revert payload: ${JSON.stringify(revertPayload)}`);
+  }
+
+  const shopAfterRevert = await callTool(9, "homebase.shopping_list.list", {});
+  const shopAfterRevertItems = parseToolPayload(shopAfterRevert) as {
+    name: string;
+  }[];
+  if (shopAfterRevertItems.some((item) => item.name === smokeItemName)) {
+    fail("shopping item still on list after revert");
+  }
+
+  const doubleRevert = await callTool(10, "homebase.changes.revert", {
+    change_id: added.change_id,
+  });
+  if (!doubleRevert.isError) {
+    fail("expected invalid_input on second revert");
+  }
+  ok("add_item → changes.list → revert round-trip");
 
   const prisma = new PrismaClient();
   const productName = `mcp-smoke-product-${Date.now()}`;
@@ -238,20 +286,42 @@ async function main() {
     });
     productId = product.id;
 
-    const deltaResult = await callTool(7, "homebase.inventory.update", {
+    const deltaResult = await callTool(11, "homebase.inventory.update", {
       id: productId,
       delta: -1,
     });
     if (deltaResult.isError) {
       fail("homebase.inventory.update (delta) tool error");
     }
-    const afterDelta = parseToolPayload(deltaResult) as { quantity: number };
+    const afterDelta = parseToolPayload(deltaResult) as {
+      change_id: string;
+      quantity: number;
+    };
+    if (!afterDelta.change_id) {
+      fail("inventory.update missing change_id");
+    }
     if (afterDelta.quantity !== 4) {
       fail(`expected quantity 4 after delta -1, got ${afterDelta.quantity}`);
     }
     ok("homebase.inventory.update (delta)");
 
-    const qtyResult = await callTool(8, "homebase.inventory.update", {
+    const invRevert = await callTool(12, "homebase.changes.revert", {
+      change_id: afterDelta.change_id,
+    });
+    if (invRevert.isError) {
+      fail("changes.revert (inventory) tool error");
+    }
+
+    const gotAfterRevert = await callTool(13, "homebase.inventory.get", {
+      id: productId,
+    });
+    const restored = parseToolPayload(gotAfterRevert) as { quantity: number };
+    if (restored.quantity !== 5) {
+      fail(`expected quantity 5 after inventory revert, got ${restored.quantity}`);
+    }
+    ok("inventory.update → revert restores quantity");
+
+    const qtyResult = await callTool(14, "homebase.inventory.update", {
       id: productId,
       quantity: 2,
     });
@@ -262,20 +332,9 @@ async function main() {
     if (afterQty.quantity !== 2) {
       fail(`expected quantity 2 after set, got ${afterQty.quantity}`);
     }
-
-    const getResult = await callTool(9, "homebase.inventory.get", {
-      id: productId,
-    });
-    if (getResult.isError) {
-      fail("homebase.inventory.get after update failed");
-    }
-    const got = parseToolPayload(getResult) as { quantity: number };
-    if (got.quantity !== 2) {
-      fail(`inventory.get quantity mismatch: ${got.quantity}`);
-    }
     ok("homebase.inventory.update (quantity)");
 
-    const badResult = await callTool(10, "homebase.inventory.update", {
+    const badResult = await callTool(15, "homebase.inventory.update", {
       id: productId,
       quantity: 2,
       delta: -1,

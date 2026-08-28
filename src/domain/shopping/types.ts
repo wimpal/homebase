@@ -23,4 +23,10 @@ export interface AddShoppingItemInput {
   shopping_list_id?: string;
   tags?: string[];
   store_id?: string;
+  /** When set, append an MCP audit row and return change_id. */
+  mcp_audit?: { tool_name: string };
 }
+
+export type ShoppingListItemWithChange = ShoppingListItem & {
+  change_id?: string;
+};

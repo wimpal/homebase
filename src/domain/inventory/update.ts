@@ -1,4 +1,6 @@
 import { prisma } from "@/core/db";
+import { recordMcpChange } from "@/domain/changes";
+import type { InventorySnapshot } from "@/domain/changes/types";
 import { DomainError, isDomainError } from "@/domain/error";
 import { getInventory } from "./get";
 import { totalQuantity } from "./low-stock";
@@ -8,7 +10,13 @@ export interface UpdateInventoryInput {
   id: string;
   quantity?: number;
   delta?: number;
+  /** When set, append an MCP audit row and return change_id. */
+  mcp_audit?: { tool_name: string };
 }
+
+export type InventoryDetailWithChange = InventoryDetail & {
+  change_id?: string;
+};
 
 function hasQuantity(value: number | undefined): boolean {
   return value !== undefined && value !== null;
@@ -28,15 +36,30 @@ function pickPrimaryStockItem<
   })[0];
 }
 
+function toSnapshot(
+  productId: string,
+  stockItems: { id: string; quantity: number }[],
+): InventorySnapshot {
+  return {
+    product_id: productId,
+    total: stockItems.reduce((sum, item) => sum + item.quantity, 0),
+    stock_items: stockItems.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+    })),
+  };
+}
+
 /**
  * MCP inventory.update adjusts one primary stock row (highest quantity, earliest
  * createdAt on tie). Other location rows are unchanged — multi-location totals may
- * not match `quantity` when several stock rows exist.
+ * not match `quantity` when several stock rows exist. Revert restores the before
+ * snapshot stored in the audit payload.
  */
 export async function updateInventory(
   householdId: string,
   input: UpdateInventoryInput,
-): Promise<InventoryDetail | DomainError> {
+): Promise<InventoryDetailWithChange | DomainError> {
   const hasQty = hasQuantity(input.quantity);
   const hasDelta = hasQuantity(input.delta);
   if (hasQty === hasDelta) {
@@ -54,6 +77,7 @@ export async function updateInventory(
     return DomainError.notFound(`No inventory product with id ${input.id}.`);
   }
 
+  const beforeSnapshot = toSnapshot(product.id, product.stockItems);
   const currentTotal = totalQuantity(product);
   const targetTotal = hasQty
     ? input.quantity!
@@ -110,5 +134,32 @@ export async function updateInventory(
   if (isDomainError(result)) {
     return result;
   }
+
+  if (input.mcp_audit) {
+    const afterProduct = await prisma.product.findFirst({
+      where: { id: product.id, householdId },
+      include: { stockItems: true },
+    });
+    const afterSnapshot = afterProduct
+      ? toSnapshot(afterProduct.id, afterProduct.stockItems)
+      : toSnapshot(product.id, []);
+
+    const change_id = await recordMcpChange(householdId, {
+      tool_name: input.mcp_audit.tool_name,
+      entity_type: "inventory_update",
+      entity_id: product.id,
+      payload: {
+        input: {
+          id: input.id,
+          ...(hasQty ? { quantity: input.quantity } : { delta: input.delta }),
+        },
+        product_name: product.name,
+        before: beforeSnapshot,
+        after: afterSnapshot,
+      },
+    });
+    return { ...result, change_id };
+  }
+
   return result;
 }

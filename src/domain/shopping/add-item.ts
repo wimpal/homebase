@@ -1,7 +1,12 @@
 import { prisma } from "@/core/db";
+import { recordMcpChange } from "@/domain/changes";
 import { DomainError, isDomainError } from "@/domain/error";
 import { resolvePrimaryListId } from "./primary-list";
-import type { AddShoppingItemInput, ShoppingListItem } from "./types";
+import type {
+  AddShoppingItemInput,
+  ShoppingListItem,
+  ShoppingListItemWithChange,
+} from "./types";
 
 function toShoppingListItem(item: {
   id: string;
@@ -38,7 +43,7 @@ async function matchProductId(
 export async function addShoppingListItem(
   householdId: string,
   input: AddShoppingItemInput,
-): Promise<ShoppingListItem | DomainError> {
+): Promise<ShoppingListItemWithChange | DomainError> {
   const name = input.name.trim();
   if (!name) {
     return DomainError.invalidInput("name is required.");
@@ -82,5 +87,24 @@ export async function addShoppingListItem(
     include: { store: true },
   });
 
-  return toShoppingListItem(item);
+  const created = toShoppingListItem(item);
+
+  if (input.mcp_audit) {
+    const change_id = await recordMcpChange(householdId, {
+      tool_name: input.mcp_audit.tool_name,
+      entity_type: "shopping_item",
+      entity_id: item.id,
+      payload: {
+        input: { name, quantity: Math.round(quantity), unit: input.unit },
+        created: {
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+        },
+      },
+    });
+    return { ...created, change_id };
+  }
+
+  return created;
 }

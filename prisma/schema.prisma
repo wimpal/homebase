@@ -160,6 +160,22 @@ model Household {
   requests         Request[]
   visitorPrefs     VisitorPreference[]
   deliveries       DeliveryPackage[]
+  mcpChangeLogs    McpChangeLog[]
+}
+
+model McpChangeLog {
+  id          String    @id @default(cuid())
+  householdId String
+  toolName    String
+  entityType  String
+  entityId    String
+  payloadJson Json
+  createdAt   DateTime  @default(now())
+  revertedAt  DateTime?
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, createdAt(sort: Desc)])
 }
 
 model Membership {
