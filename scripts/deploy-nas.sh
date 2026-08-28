@@ -42,7 +42,7 @@ if [ -f "$ROOT/.env" ]; then
 fi
 
 REMOTE="${NAS_USER}@${NAS_HOST}"
-DOCKER_CMD="set -eu && cd '$NAS_PATH' && sudo docker compose up --build -d && sudo docker compose exec -T worker npx prisma db push && sudo docker compose logs --tail=30 && sleep 2 && curl -sf http://127.0.0.1:3000/health"
+DOCKER_CMD="set -eu && cd '$NAS_PATH' && docker compose up --build -d && docker compose exec -T worker npx prisma db push && docker compose logs --tail=30 && sleep 2 && curl -sf http://127.0.0.1:3000/health"
 
 if [ "$PUSH" -eq 1 ]; then
   echo "Pushing $NAS_BRANCH to origin from $ROOT ..."
@@ -55,7 +55,7 @@ if [ "$USE_SCP" -eq 1 ]; then
   REMOTE_TAR="/tmp/homebase-deploy.tar.gz"
   git -C "$ROOT" archive --format=tar.gz -o "$LOCAL_TAR" "$NAS_BRANCH"
   scp -P "$NAS_SSH_PORT" "$LOCAL_TAR" "${REMOTE}:${REMOTE_TAR}"
-  ssh -p "$NAS_SSH_PORT" -t "$REMOTE" "set -eu && mkdir -p '$NAS_PATH' && cd '$NAS_PATH' && tar xzf '$REMOTE_TAR' && rm -f '$REMOTE_TAR' && sudo docker compose up --build -d && sudo docker compose exec -T worker npx prisma db push && sudo docker compose logs --tail=30 && sleep 2 && curl -sf http://127.0.0.1:3000/health"
+  ssh -p "$NAS_SSH_PORT" "$REMOTE" "set -eu && mkdir -p '$NAS_PATH' && cd '$NAS_PATH' && tar xzf '$REMOTE_TAR' && rm -f '$REMOTE_TAR' && docker compose up --build -d && docker compose exec -T worker npx prisma db push && docker compose logs --tail=30 && sleep 2 && curl -sf http://127.0.0.1:3000/health"
 else
   if [ ! -d "$NAS_SHARE/.git" ]; then
     echo "No git repo at $NAS_SHARE — open the share in Explorer or use --scp." >&2
@@ -74,7 +74,7 @@ else
   git -C "$NAS_SHARE" checkout "$NAS_BRANCH"
   git -C "$NAS_SHARE" pull --ff-only origin "$NAS_BRANCH"
   echo "Building on NAS (${REMOTE}:${NAS_PATH})..."
-  ssh -p "$NAS_SSH_PORT" -t "$REMOTE" "$DOCKER_CMD"
+  ssh -p "$NAS_SSH_PORT" "$REMOTE" "$DOCKER_CMD"
 fi
 
 echo ""

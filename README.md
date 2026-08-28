@@ -65,7 +65,9 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Production (Docker / NAS)
 
-Full NAS guide: **[docs/nas-deploy.md](docs/nas-deploy.md)**
+- NAS app setup: **[docs/nas-deploy.md](docs/nas-deploy.md)**
+- **Backup & restore:** **[docs/backup-restore.md](docs/backup-restore.md)** — daily `backup-nas.sh`, restore drill
+- **New PC / automated deploy:** **[docs/nas-pc-setup.md](docs/nas-pc-setup.md)** — SSH key, `docker` group, `npm run deploy:nas`
 
 ```bash
 cp .env.example .env
@@ -77,9 +79,13 @@ docker compose exec app npm run db:seed   # optional
 
 # Redeploy after changes (on NAS):
 ./scripts/deploy.sh
+```
 
-# Redeploy from your PC via SSH:
-# .\scripts\deploy-remote.ps1 -NasHost 192.168.1.50 -NasUser admin -NasPath /volume1/docker/homebase
+**Redeploy from Windows** (after [PC setup](docs/nas-pc-setup.md)):
+
+```powershell
+cd D:\Dev\Projects\Homebase
+npm run deploy:nas
 ```
 
 ## Roadmap

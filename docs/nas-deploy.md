@@ -83,7 +83,10 @@ Register a household or use demo credentials if you ran seed: `demo@homebase.loc
 
 ### Option A — Deploy from your PC (recommended)
 
-From the repo root on Windows (NAS share reachable + SSH):
+**New PC?** One-time SSH key + Docker group setup:
+**[docs/nas-pc-setup.md](nas-pc-setup.md)** (checklist at the bottom).
+
+From the repo root on Windows (NAS share reachable + SSH key auth working):
 
 ```powershell
 npm run deploy:nas
@@ -111,7 +114,7 @@ Git Bash: `./scripts/deploy-nas.sh` (same flow).
 The script:
 
 1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
-2. SSH → `sudo docker compose up --build -d`
+2. SSH → `docker compose up --build -d`
 3. `prisma db push` inside the **worker** container (app image has no Prisma 6 CLI — `npx` would fetch Prisma 7)
 4. Curl `/health` on port 3000
 
@@ -164,19 +167,12 @@ For `https://homebase.yourdomain.local` and PWA install on phones:
 
 ## Backup
 
-Back up these Docker volumes periodically:
+Daily backups use **`scripts/backup-nas.sh`** → `/volume1/Docker-backups/homebase/` (off the live
+compose tree). Postgres is dumped online (`pg_dump`); uploads are archived from the Docker
+volume. No downtime required.
 
-- `postgres_data` — all household data
-- `uploads_data` — photos (plants, projects, etc.)
-
-Example:
-
-```bash
-docker compose down
-# Copy volume data from Docker's volume directory, or:
-docker run --rm -v homebase_postgres_data:/data -v $(pwd)/backup:/backup alpine tar czf /backup/postgres.tar.gz /data
-docker compose up -d
-```
+Full schedule, retention, restore drill, and disaster recovery:
+**[docs/backup-restore.md](backup-restore.md)**
 
 ---
 
@@ -184,6 +180,8 @@ docker compose up -d
 
 | Problem | Fix |
 |---------|-----|
+| Deploy asks for SSH password | Set up SSH key auth — see **[nas-pc-setup.md](nas-pc-setup.md)** (include NAS IP in `~/.ssh/config` `Host` line) |
+| `permission denied` on `docker.sock` during deploy | Add deploy user to `docker` group on NAS — see **[nas-pc-setup.md](nas-pc-setup.md)** §4 |
 | Login redirects wrong | `AUTH_URL` must match the URL in your browser |
 | Build fails on NAS | NAS CPU may be slow — first build can take 10–20 min |
 | Out of memory during build | Build on your PC, push image to a registry, or increase NAS swap |

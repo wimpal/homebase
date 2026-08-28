@@ -1,0 +1,65 @@
+# Restore drill stack — isolated from production.
+#
+# Usage (on NAS, from repo root):
+#   docker compose -p homebase-drill -f docker-compose.drill.yml up -d
+#
+# Or use scripts/restore-drill.sh <YYYY-MM-DD>
+#
+# Production (:3000) is untouched. Drill app listens on :13000.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-homebase}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homebase}
+      POSTGRES_DB: ${POSTGRES_DB:-homebase}
+    volumes:
+      - drill_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homebase}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - drill_redis_data:/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${DRILL_APP_PORT:-13000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-homebase}:${POSTGRES_PASSWORD:-homebase}@postgres:5432/${POSTGRES_DB:-homebase}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      AUTH_URL: ${DRILL_AUTH_URL:-http://192.168.0.170:13000}
+      REDIS_URL: redis://redis:6379
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@homebase.local}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      UPLOAD_DIR: /app/uploads
+      HUE_BRIDGE_IP: ${HUE_BRIDGE_IP:-}
+      HUE_USERNAME: ${HUE_USERNAME:-}
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-}
+      MCP_HOUSEHOLD_ID: ${MCP_HOUSEHOLD_ID:-}
+      MCP_SHOPPING_LIST_ID: ${MCP_SHOPPING_LIST_ID:-}
+    volumes:
+      - drill_uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  drill_postgres_data:
+  drill_redis_data:
+  drill_uploads_data:

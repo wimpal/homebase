@@ -1,6 +1,7 @@
 # Deploy Homebase to the NAS.
 #
 # Default: git pull on the NAS SMB share, then docker compose via SSH.
+# PC setup (SSH key, docker group): docs/nas-pc-setup.md
 # Optional: copy .env.example to .env in the repo root (gitignored).
 #
 #   npm run deploy:nas
@@ -94,9 +95,9 @@ function Get-DockerRemoteCmd {
     return (
         "set -eu && " +
         "cd '$NasPath' && " +
-        "sudo docker compose up --build -d && " +
-        "sudo docker compose exec -T worker npx prisma db push && " +
-        "sudo docker compose logs --tail=30 && " +
+        "docker compose up --build -d && " +
+        "docker compose exec -T worker npx prisma db push && " +
+        "docker compose logs --tail=30 && " +
         "sleep 2 && " +
         "curl -sf http://127.0.0.1:3000/health"
     )
@@ -115,9 +116,7 @@ function Invoke-DockerOnNas {
     $remoteCmd = Get-DockerRemoteCmd
 
     Write-Host "Building on NAS (${remote}:${NasPath})..."
-    Write-Host "You may be prompted for your SSH and sudo passwords."
-
-    & ssh -p $SshPort -t $remote $remoteCmd
+    & ssh -p $SshPort $remote $remoteCmd
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -186,9 +185,8 @@ function Deploy-ViaScp {
         )
 
         Write-Host "Building on NAS (${remote}:${NasPath})..."
-        Write-Host "You may be prompted for your SSH and sudo passwords."
 
-        & ssh -p $SshPort -t $remote $remoteCmd
+        & ssh -p $SshPort $remote $remoteCmd
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     finally {
