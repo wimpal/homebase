@@ -2,13 +2,18 @@
  * Smoke test for Homebase MCP at /mcp (T-004 read + T-012 write + T-013 change log).
  * Requires: dev server running, SERVICE_TOKEN + MCP_HOUSEHOLD_ID in .env
  *
- * Usage: npm run mcp:smoke
+ * Usage:
+ *   npm run mcp:smoke                              # local (127.0.0.1)
+ *   MCP_BASE_URL=http://192.168.0.170:3000 npm run mcp:smoke   # NAS (no local DB)
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
 function loadDotEnv() {
+  if (process.env.HOMEBASE_SMOKE_SKIP_DOTENV === "1") {
+    return;
+  }
   try {
     const content = readFileSync(resolve(process.cwd(), ".env"), "utf8");
     for (const line of content.split("\n")) {
@@ -38,6 +43,17 @@ loadDotEnv();
 const BASE_URL = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const TOKEN = process.env.SERVICE_TOKEN?.trim();
 const HOUSEHOLD_ID = process.env.MCP_HOUSEHOLD_ID?.trim();
+
+function isLocalMcpTarget(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+const IS_LOCAL = isLocalMcpTarget(BASE_URL);
 
 type ToolResult = {
   isError?: boolean;
@@ -144,7 +160,11 @@ async function main() {
 
   const { status: initStatus, body: initRes } = await mcpPost(initBody, TOKEN);
   if (initStatus !== 200) {
-    fail(`initialize failed (${initStatus}): ${initRes}`);
+    const hint =
+      initStatus === 401
+        ? " (check SERVICE_TOKEN matches the server's .env — NAS deploy uses the share .env, not only local dev .env)"
+        : "";
+    fail(`initialize failed (${initStatus})${hint}: ${initRes}`);
   }
   const initJson = parseJson(initRes) as { result?: unknown };
   if (!initJson.result) {
@@ -275,94 +295,10 @@ async function main() {
   }
   ok("add_item → changes.list → revert round-trip");
 
-  const prisma = new PrismaClient();
-  const productName = `mcp-smoke-product-${Date.now()}`;
-  let productId: string | undefined;
-
-  try {
-    const product = await prisma.product.create({
-      data: {
-        householdId: HOUSEHOLD_ID,
-        name: productName,
-        stockItems: {
-          create: { householdId: HOUSEHOLD_ID, quantity: 5 },
-        },
-      },
-    });
-    productId = product.id;
-
-    const deltaResult = await callTool(11, "homebase.inventory.update", {
-      id: productId,
-      delta: -1,
-    });
-    if (deltaResult.isError) {
-      fail("homebase.inventory.update (delta) tool error");
-    }
-    const afterDelta = parseToolPayload(deltaResult) as {
-      change_id: string;
-      quantity: number;
-    };
-    if (!afterDelta.change_id) {
-      fail("inventory.update missing change_id");
-    }
-    if (afterDelta.quantity !== 4) {
-      fail(`expected quantity 4 after delta -1, got ${afterDelta.quantity}`);
-    }
-    ok("homebase.inventory.update (delta)");
-
-    const invRevert = await callTool(12, "homebase.changes.revert", {
-      change_id: afterDelta.change_id,
-    });
-    if (invRevert.isError) {
-      fail("changes.revert (inventory) tool error");
-    }
-
-    const gotAfterRevert = await callTool(13, "homebase.inventory.get", {
-      id: productId,
-    });
-    const restored = parseToolPayload(gotAfterRevert) as { quantity: number };
-    if (restored.quantity !== 5) {
-      fail(`expected quantity 5 after inventory revert, got ${restored.quantity}`);
-    }
-    ok("inventory.update → revert restores quantity");
-
-    const qtyResult = await callTool(14, "homebase.inventory.update", {
-      id: productId,
-      quantity: 2,
-    });
-    if (qtyResult.isError) {
-      fail("homebase.inventory.update (quantity) tool error");
-    }
-    const afterQty = parseToolPayload(qtyResult) as { quantity: number };
-    if (afterQty.quantity !== 2) {
-      fail(`expected quantity 2 after set, got ${afterQty.quantity}`);
-    }
-    ok("homebase.inventory.update (quantity)");
-
-    const badResult = await callTool(15, "homebase.inventory.update", {
-      id: productId,
-      quantity: 2,
-      delta: -1,
-    });
-    if (!badResult.isError) {
-      fail("expected invalid_input when both quantity and delta provided");
-    }
-    const badPayload = parseToolPayload(badResult) as {
-      error?: { code: string };
-    };
-    if (badPayload.error?.code !== "invalid_input") {
-      fail(
-        `expected invalid_input error code, got ${JSON.stringify(badPayload)}`,
-      );
-    }
-    ok("homebase.inventory.update rejects both quantity and delta");
-  } finally {
-    if (productId) {
-      await prisma.product.deleteMany({
-        where: { id: productId, householdId: HOUSEHOLD_ID },
-      });
-    }
-    await prisma.$disconnect();
+  if (IS_LOCAL) {
+    await runInventoryUpdateSmokeLocal(callTool);
+  } else {
+    await runInventoryUpdateSmokeRemote(callTool);
   }
 
   function formatDate(d: Date): string {
@@ -413,7 +349,7 @@ async function main() {
     fail("homebase.tasks.complete tool error");
   }
 
-  const tasksAfterOneOffComplete = await callTool(19.1, "homebase.tasks.list", {});
+  const tasksAfterOneOffComplete = await callTool(24, "homebase.tasks.list", {});
   const afterOneOff = parseToolPayload(tasksAfterOneOffComplete) as { title: string }[];
   if (afterOneOff.some((row) => row.title === smokeTaskTitle)) {
     fail("one-off task still in active list after complete");
@@ -449,7 +385,7 @@ async function main() {
     fail("recurring task missing rolled nextDue after complete");
   }
 
-  const tasksAfterRecurringComplete = await callTool(21.1, "homebase.tasks.list", {});
+  const tasksAfterRecurringComplete = await callTool(25, "homebase.tasks.list", {});
   const afterRecurring = parseToolPayload(tasksAfterRecurringComplete) as {
     title: string;
   }[];
@@ -458,50 +394,197 @@ async function main() {
   }
   ok("recurring tasks.complete rolls nextDue and hides until next due");
 
-  const prismaRecipes = new PrismaClient();
-  let recipeSearchQuery = "test";
-  try {
-    const firstRecipe = await prismaRecipes.recipe.findFirst({
-      where: { householdId: HOUSEHOLD_ID },
-      select: { title: true },
+  const recipeSearchResult = await callTool(22, "homebase.recipes.search", {});
+  if (recipeSearchResult.isError) {
+    fail("homebase.recipes.search tool error");
+  }
+  const recipeHits = parseToolPayload(recipeSearchResult) as { id: string }[];
+  if (recipeHits.length > 0) {
+    const recipeGetResult = await callTool(23, "homebase.recipes.get", {
+      id: recipeHits[0].id,
     });
-    if (firstRecipe?.title) {
-      recipeSearchQuery = firstRecipe.title.slice(0, 8);
+    if (recipeGetResult.isError) {
+      fail("homebase.recipes.get tool error");
     }
-
-    const recipeSearchResult = await callTool(22, "homebase.recipes.search", {
-      query: recipeSearchQuery,
-    });
-    if (recipeSearchResult.isError) {
-      fail("homebase.recipes.search tool error");
+    const recipeDetail = parseToolPayload(recipeGetResult) as {
+      steps: string[];
+      instructions: string;
+    };
+    if (!Array.isArray(recipeDetail.steps)) {
+      fail("recipes.get missing steps array");
     }
-    const recipeHits = parseToolPayload(recipeSearchResult) as { id: string }[];
-    if (recipeHits.length > 0) {
-      const recipeGetResult = await callTool(23, "homebase.recipes.get", {
-        id: recipeHits[0].id,
-      });
-      if (recipeGetResult.isError) {
-        fail("homebase.recipes.get tool error");
-      }
-      const recipeDetail = parseToolPayload(recipeGetResult) as {
-        steps: string[];
-        instructions: string;
-      };
-      if (!Array.isArray(recipeDetail.steps)) {
-        fail("recipes.get missing steps array");
-      }
-      ok("recipes search → get round-trip");
-    } else {
-      console.log(
-        `NOTE: no recipes matched query "${recipeSearchQuery}" — search/get skipped`,
-      );
-      ok("homebase.recipes.search (no matches in household)");
-    }
-  } finally {
-    await prismaRecipes.$disconnect();
+    ok("recipes search → get round-trip");
+  } else {
+    console.log("NOTE: household has no recipes — search/get skipped");
+    ok("homebase.recipes.search (no matches in household)");
   }
 
   console.log("\nAll MCP smoke checks passed.");
+}
+
+type CallTool = (
+  id: number,
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<ToolResult>;
+
+async function runInventoryUpdateSmokeLocal(callTool: CallTool) {
+  const prisma = new PrismaClient();
+  const productName = `mcp-smoke-product-${Date.now()}`;
+  let productId: string | undefined;
+
+  try {
+    const product = await prisma.product.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: productName,
+        stockItems: {
+          create: { householdId: HOUSEHOLD_ID!, quantity: 5 },
+        },
+      },
+    });
+    productId = product.id;
+
+    await runInventoryUpdateChecks(callTool, productId, 5, 2);
+  } finally {
+    if (productId) {
+      await prisma.product.deleteMany({
+        where: { id: productId, householdId: HOUSEHOLD_ID! },
+      });
+    }
+    await prisma.$disconnect();
+  }
+}
+
+async function runInventoryUpdateSmokeRemote(callTool: CallTool) {
+  const allInvResult = await callTool(11, "homebase.inventory.list", {});
+  if (allInvResult.isError) {
+    fail("homebase.inventory.list (full) tool error");
+  }
+  const products = parseToolPayload(allInvResult) as {
+    id: string;
+    quantity: number;
+  }[];
+  const product =
+    products.find((p) => p.quantity >= 1) ?? products[0] ?? undefined;
+  if (!product) {
+    console.log(
+      "NOTE: no inventory products on NAS — inventory.update tests skipped (remote mode)",
+    );
+    ok("homebase.inventory.update (skipped, empty household)");
+    return;
+  }
+
+  const initialQty = product.quantity;
+  const setQtyTarget = initialQty === 2 ? 3 : 2;
+  await runInventoryUpdateChecks(
+    callTool,
+    product.id,
+    initialQty,
+    setQtyTarget,
+  );
+}
+
+async function runInventoryUpdateChecks(
+  callTool: CallTool,
+  productId: string,
+  initialQty: number,
+  setQtyTarget: number,
+) {
+  const deltaResult = await callTool(11, "homebase.inventory.update", {
+    id: productId,
+    delta: -1,
+  });
+  if (deltaResult.isError) {
+    fail("homebase.inventory.update (delta) tool error");
+  }
+  const afterDelta = parseToolPayload(deltaResult) as {
+    change_id: string;
+    quantity: number;
+  };
+  if (!afterDelta.change_id) {
+    fail("inventory.update missing change_id");
+  }
+  if (afterDelta.quantity !== initialQty - 1) {
+    fail(
+      `expected quantity ${initialQty - 1} after delta -1, got ${afterDelta.quantity}`,
+    );
+  }
+  ok("homebase.inventory.update (delta)");
+
+  const invRevert = await callTool(12, "homebase.changes.revert", {
+    change_id: afterDelta.change_id,
+  });
+  if (invRevert.isError) {
+    fail("changes.revert (inventory) tool error");
+  }
+
+  const gotAfterRevert = await callTool(13, "homebase.inventory.get", {
+    id: productId,
+  });
+  const restored = parseToolPayload(gotAfterRevert) as { quantity: number };
+  if (restored.quantity !== initialQty) {
+    fail(
+      `expected quantity ${initialQty} after inventory revert, got ${restored.quantity}`,
+    );
+  }
+  ok("inventory.update → revert restores quantity");
+
+  const qtyResult = await callTool(14, "homebase.inventory.update", {
+    id: productId,
+    quantity: setQtyTarget,
+  });
+  if (qtyResult.isError) {
+    fail("homebase.inventory.update (quantity) tool error");
+  }
+  const afterQty = parseToolPayload(qtyResult) as {
+    change_id?: string;
+    quantity: number;
+  };
+  if (afterQty.quantity !== setQtyTarget) {
+    fail(
+      `expected quantity ${setQtyTarget} after set, got ${afterQty.quantity}`,
+    );
+  }
+  ok("homebase.inventory.update (quantity)");
+
+  if (afterQty.change_id) {
+    const qtyRevert = await callTool(26, "homebase.changes.revert", {
+      change_id: afterQty.change_id,
+    });
+    if (qtyRevert.isError) {
+      fail("changes.revert (inventory quantity set) tool error");
+    }
+    const gotAfterQtyRevert = await callTool(27, "homebase.inventory.get", {
+      id: productId,
+    });
+    const afterQtyRevert = parseToolPayload(gotAfterQtyRevert) as {
+      quantity: number;
+    };
+    if (afterQtyRevert.quantity !== initialQty) {
+      fail(
+        `expected quantity ${initialQty} after quantity-set revert, got ${afterQtyRevert.quantity}`,
+      );
+    }
+  }
+
+  const badResult = await callTool(15, "homebase.inventory.update", {
+    id: productId,
+    quantity: setQtyTarget,
+    delta: -1,
+  });
+  if (!badResult.isError) {
+    fail("expected invalid_input when both quantity and delta provided");
+  }
+  const badPayload = parseToolPayload(badResult) as {
+    error?: { code: string };
+  };
+  if (badPayload.error?.code !== "invalid_input") {
+    fail(
+      `expected invalid_input error code, got ${JSON.stringify(badPayload)}`,
+    );
+  }
+  ok("homebase.inventory.update rejects both quantity and delta");
 }
 
 main().catch((err) => {

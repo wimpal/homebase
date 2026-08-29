@@ -14,7 +14,7 @@
     "worker": "tsx worker/index.ts",
     "mcp:smoke": "tsx scripts/mcp-smoke.ts",
     "household:id": "tsx scripts/print-household-id.ts",
-    "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1",
+    "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-preflight.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1 -SkipPreflight",
     "postinstall": "prisma generate"
   },
   "dependencies": {
