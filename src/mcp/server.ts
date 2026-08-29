@@ -208,7 +208,9 @@ export function createMcpServer(householdId: string): McpServer {
         include_done: z
           .boolean()
           .optional()
-          .describe("Include chores completed today"),
+          .describe(
+            "Include inactive chores (completed one-offs, recurring not yet due again)",
+          ),
       },
     },
     async (input) => {

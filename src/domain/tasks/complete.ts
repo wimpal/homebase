@@ -21,6 +21,7 @@ export async function completeChoreDomain(
       choreId: input.id,
       userId: input.userId ?? null,
       durationMin: input.durationMin,
+      startedAt: input.startedAt ?? null,
     },
   });
 

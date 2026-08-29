@@ -10,6 +10,7 @@ export interface TaskListItem {
 export interface ListTasksInput {
   assignee?: string;
   due_before?: string;
+  /** When true, include inactive / completed chores (debugging and history-style views). */
   include_done?: boolean;
 }
 
@@ -29,4 +30,20 @@ export interface CompleteTaskInput {
   /** UI session user; MCP passes undefined. */
   userId?: string;
   durationMin?: number;
+  /** Set when the UI timer was started; null on quick-complete / MCP. */
+  startedAt?: Date;
+}
+
+export interface ListChoreHistoryInput {
+  limit?: number;
+}
+
+export interface ChoreHistoryItem {
+  id: string;
+  chore_id: string;
+  title: string;
+  started_at: string | null;
+  completed_at: string;
+  duration_min: number | null;
+  completed_by: string | null;
 }

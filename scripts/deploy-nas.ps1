@@ -4,8 +4,13 @@
 # PC setup (SSH key, docker group): docs/nas-pc-setup.md
 # Optional: copy .env.example to .env in the repo root (gitignored).
 #
+# Pre-deploy (local): stops a Node dev server on port 3000 if present, then npm run build.
+# Post-deploy: mcp:smoke against http://<NAS>:3000 when SERVICE_TOKEN + MCP_HOUSEHOLD_ID are set.
+#
 #   npm run deploy:nas
 #   npm run deploy:nas -- -Push
+#   npm run deploy:nas -- -SkipPreflight    # skip local build
+#   npm run deploy:nas -- -SkipSmoke        # skip post-deploy MCP smoke
 #   npm run deploy:nas -- -UseScp    # skip share; upload tarball instead
 
 [CmdletBinding()]
@@ -17,6 +22,8 @@ param(
     [string]$Branch,
     [switch]$Push,
     [switch]$UseScp,
+    [switch]$SkipPreflight,
+    [switch]$SkipSmoke,
     [int]$SshPort = 0
 )
 
@@ -120,6 +127,74 @@ function Invoke-DockerOnNas {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+function Stop-DevServerOnPort3000 {
+    $listeners = @(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)
+    foreach ($conn in $listeners) {
+        $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
+        if (-not $proc) { continue }
+        if ($proc.Name -ne "node") {
+            Write-Warning "Port 3000 is in use by $($proc.Name) (PID $($proc.Id)); not stopping."
+            continue
+        }
+        Write-Host "Stopping dev server on port 3000 (PID $($proc.Id))..."
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+}
+
+function Invoke-PreDeployChecks {
+    if ($SkipPreflight) {
+        Write-Host "Skipping pre-deploy checks (-SkipPreflight)."
+        return
+    }
+
+    Write-Host "Pre-deploy checks (local build)..."
+    Stop-DevServerOnPort3000
+
+    Push-Location $repoRoot
+    try {
+        & npm run build
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Pre-deploy build failed. Fix errors before deploying to NAS."
+            exit $LASTEXITCODE
+        }
+        Write-Host "Pre-deploy build OK."
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Invoke-PostDeploySmoke {
+    if ($SkipSmoke) {
+        Write-Host "Skipping post-deploy MCP smoke (-SkipSmoke)."
+        return
+    }
+
+    if (-not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
+        Write-Warning "Skipping mcp:smoke — set SERVICE_TOKEN and MCP_HOUSEHOLD_ID in .env to enable."
+        return
+    }
+
+    Write-Host "Post-deploy MCP smoke (http://${NasHost}:3000)..."
+    Push-Location $repoRoot
+    try {
+        $prevBase = $env:MCP_BASE_URL
+        $env:MCP_BASE_URL = "http://${NasHost}:3000"
+        & npm run mcp:smoke
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Post-deploy mcp:smoke failed."
+            exit $LASTEXITCODE
+        }
+        Write-Host "Post-deploy MCP smoke OK."
+    }
+    finally {
+        if ($null -ne $prevBase) { $env:MCP_BASE_URL = $prevBase }
+        else { Remove-Item Env:MCP_BASE_URL -ErrorAction SilentlyContinue }
+        Pop-Location
+    }
+}
+
 function Deploy-ViaShare {
     Write-Host "Pulling $Branch on NAS share $NasShare ..."
     $dirty = & git -C $NasShare status --porcelain
@@ -199,6 +274,8 @@ if ($Push) {
     Invoke-Git @("push", "origin", $Branch)
 }
 
+Invoke-PreDeployChecks
+
 if ($useShare) {
     Write-Host "Deploy mode: NAS share (git pull)"
     Deploy-ViaShare
@@ -210,6 +287,8 @@ else {
     }
     Deploy-ViaScp -Explicit:$UseScp
 }
+
+Invoke-PostDeploySmoke
 
 Write-Host ""
 Write-Host "Deploy finished. App: http://${NasHost}:3000/"

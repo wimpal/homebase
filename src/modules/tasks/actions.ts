@@ -4,7 +4,12 @@ import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertProject } from "@/core/tenancy/assertHouseholdResource";
 import { isDomainError } from "@/domain/error";
-import { addChore, completeChoreDomain } from "@/domain/tasks";
+import {
+  addChore,
+  completeChoreDomain,
+  isChoreActive,
+  listChoreHistory,
+} from "@/domain/tasks";
 import { ModuleId } from "@prisma/client";
 import { getAverageChoreDuration } from "@/core/scheduler";
 import { addDays } from "date-fns";
@@ -13,13 +18,24 @@ import { saveUpload } from "@/core/uploads/service";
 
 export async function getChores() {
   const { householdId } = await requireHousehold();
-  return prisma.chore.findMany({
+  const chores = await prisma.chore.findMany({
     where: { householdId },
     include: {
-      completions: { orderBy: { completedAt: "desc" }, take: 10 },
+      completions: {
+        orderBy: { completedAt: "desc" },
+        take: 10,
+        select: { completedAt: true, durationMin: true },
+      },
     },
     orderBy: { nextDue: "asc" },
   });
+
+  return chores.filter((chore) => isChoreActive(chore));
+}
+
+export async function getChoreHistory() {
+  const { householdId } = await requireHousehold();
+  return listChoreHistory(householdId, { limit: 50 });
 }
 
 export async function createChore(formData: FormData) {
@@ -51,11 +67,17 @@ export async function completeChore(formData: FormData) {
   const durationMin = formData.get("durationMin")
     ? parseInt(formData.get("durationMin") as string, 10)
     : undefined;
+  const startedAtRaw = formData.get("startedAt") as string | null;
+  const startedAt =
+    startedAtRaw && startedAtRaw.trim()
+      ? new Date(startedAtRaw)
+      : undefined;
 
   const result = await completeChoreDomain(householdId, {
     id: choreId,
     userId,
     durationMin,
+    startedAt,
   });
   if (isDomainError(result)) {
     throw new Error(result.message);
@@ -63,6 +85,36 @@ export async function completeChore(formData: FormData) {
 
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+}
+
+export type ChoreFormState = { error?: string };
+
+export async function createChoreWithState(
+  _prev: ChoreFormState,
+  formData: FormData,
+): Promise<ChoreFormState> {
+  try {
+    await createChore(formData);
+    return {};
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to create chore",
+    };
+  }
+}
+
+export async function completeChoreWithState(
+  _prev: ChoreFormState,
+  formData: FormData,
+): Promise<ChoreFormState> {
+  try {
+    await completeChore(formData);
+    return {};
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to complete chore",
+    };
+  }
 }
 
 export async function getProjects() {
@@ -128,20 +180,29 @@ export async function addProjectUpdate(formData: FormData) {
 
 export async function getDashboardTodos() {
   const { householdId } = await requireHousehold();
+  const now = new Date();
   const chores = await prisma.chore.findMany({
     where: {
       householdId,
       OR: [
-        { nextDue: { lte: addDays(new Date(), 7) } },
-        { deadline: { lte: addDays(new Date(), 7) } },
+        { nextDue: { lte: addDays(now, 7) } },
+        { deadline: { lte: addDays(now, 7) } },
       ],
     },
-    include: { completions: { take: 5 } },
-    take: 10,
+    include: {
+      completions: {
+        select: { completedAt: true, durationMin: true },
+        orderBy: { completedAt: "desc" },
+      },
+    },
+    take: 20,
   });
 
-  return chores.map((c) => ({
-    ...c,
-    avgDuration: getAverageChoreDuration(c.completions),
-  }));
+  return chores
+    .filter((chore) => isChoreActive(chore, now))
+    .slice(0, 10)
+    .map((c) => ({
+      ...c,
+      avgDuration: getAverageChoreDuration(c.completions),
+    }));
 }

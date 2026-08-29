@@ -372,11 +372,12 @@ model Chore {
 }
 
 model ChoreCompletion {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   choreId     String
   userId      String?
   durationMin Int?
-  completedAt DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime  @default(now())
   notes       String?
 
   chore Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)

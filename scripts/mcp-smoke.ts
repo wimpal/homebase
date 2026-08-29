@@ -412,6 +412,12 @@ async function main() {
   if (taskCompleteResult.isError) {
     fail("homebase.tasks.complete tool error");
   }
+
+  const tasksAfterOneOffComplete = await callTool(19.1, "homebase.tasks.list", {});
+  const afterOneOff = parseToolPayload(tasksAfterOneOffComplete) as { title: string }[];
+  if (afterOneOff.some((row) => row.title === smokeTaskTitle)) {
+    fail("one-off task still in active list after complete");
+  }
   ok("tasks add → list → complete round-trip");
 
   const recurringAdd = await callTool(20, "homebase.tasks.add", {
@@ -423,6 +429,7 @@ async function main() {
   }
   const recurringTask = parseToolPayload(recurringAdd) as {
     id: string;
+    title: string;
     recurrence: string | null;
   };
   if (recurringTask.recurrence !== "every 7 days") {
@@ -441,7 +448,15 @@ async function main() {
   if (!completedRecurring.due) {
     fail("recurring task missing rolled nextDue after complete");
   }
-  ok("recurring tasks.complete rolls nextDue");
+
+  const tasksAfterRecurringComplete = await callTool(21.1, "homebase.tasks.list", {});
+  const afterRecurring = parseToolPayload(tasksAfterRecurringComplete) as {
+    title: string;
+  }[];
+  if (afterRecurring.some((row) => row.title === recurringTask.title)) {
+    fail("recurring task still in active list before next due");
+  }
+  ok("recurring tasks.complete rolls nextDue and hides until next due");
 
   const prismaRecipes = new PrismaClient();
   let recipeSearchQuery = "test";
