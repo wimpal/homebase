@@ -3,7 +3,9 @@ import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
 import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
+import { getRecipe, searchRecipes } from "@/domain/recipes";
 import { addShoppingListItem, listShoppingItems } from "@/domain/shopping";
+import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
 function toolJson(value: unknown) {
   return {
@@ -182,6 +184,112 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ change_id }) => {
       const result = await revertMcpChange(householdId, change_id);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.tasks.list",
+    {
+      description:
+        'List household tasks/chores. Use for "what needs doing", "what\'s overdue". Dates are YYYY-MM-DD in the household timezone.',
+      inputSchema: {
+        assignee: z
+          .string()
+          .optional()
+          .describe("Filter by assignee (ignored in v1)"),
+        due_before: z
+          .string()
+          .optional()
+          .describe("YYYY-MM-DD — include tasks due on or before this date"),
+        include_done: z
+          .boolean()
+          .optional()
+          .describe("Include chores completed today"),
+      },
+    },
+    async (input) => {
+      const items = await listChores(householdId, input);
+      return toolJson(items);
+    },
+  );
+
+  server.registerTool(
+    "homebase.tasks.add",
+    {
+      description: "Create a household task, optionally recurring.",
+      inputSchema: {
+        title: z.string().describe("Task title"),
+        assignee: z
+          .string()
+          .optional()
+          .describe("Assignee (ignored in v1)"),
+        due: z.string().optional().describe("Due date YYYY-MM-DD"),
+        recurrence: z
+          .string()
+          .optional()
+          .describe("e.g. weekly, monthly, every 3 days"),
+      },
+    },
+    async (input) => {
+      const result = await addChore(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.tasks.complete",
+    {
+      description:
+        "Mark a task done. Recurring tasks roll forward to the next occurrence.",
+      inputSchema: {
+        id: z.string().describe("Chore id"),
+      },
+    },
+    async ({ id }) => {
+      const result = await completeChoreDomain(householdId, { id });
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.recipes.search",
+    {
+      description:
+        'Find recipes by name or ingredient. Use for meal planning and "what can I make with what\'s in the house" — combine with homebase.inventory.list.',
+      inputSchema: {
+        query: z.string().optional().describe("Search recipe title"),
+        ingredients: z
+          .array(z.string())
+          .optional()
+          .describe("Only return recipes using all of these ingredients"),
+      },
+    },
+    async (input) => {
+      const items = await searchRecipes(householdId, input);
+      return toolJson(items);
+    },
+  );
+
+  server.registerTool(
+    "homebase.recipes.get",
+    {
+      description: "Get a full recipe including steps and quantities.",
+      inputSchema: {
+        id: z.string().describe("Recipe id"),
+      },
+    },
+    async ({ id }) => {
+      const result = await getRecipe(householdId, id);
       if (isDomainError(result)) {
         return toolError(result);
       }

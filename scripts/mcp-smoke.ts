@@ -175,13 +175,18 @@ async function main() {
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
+    "homebase.recipes.get",
+    "homebase.recipes.search",
     "homebase.shopping_list.add_item",
     "homebase.shopping_list.list",
+    "homebase.tasks.add",
+    "homebase.tasks.complete",
+    "homebase.tasks.list",
   ];
-  if (names.length !== 7 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 12 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 7 homebase tools");
+  ok("tools/list returns exactly 12 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -358,6 +363,127 @@ async function main() {
       });
     }
     await prisma.$disconnect();
+  }
+
+  function formatDate(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+
+  const dueBefore = new Date();
+  dueBefore.setDate(dueBefore.getDate() + 7);
+  const tasksListResult = await callTool(16, "homebase.tasks.list", {
+    due_before: formatDate(dueBefore),
+  });
+  if (tasksListResult.isError) {
+    fail("homebase.tasks.list tool error");
+  }
+  ok("homebase.tasks.list");
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const smokeTaskTitle = `mcp-smoke-task-${Date.now()}`;
+  const taskAddResult = await callTool(17, "homebase.tasks.add", {
+    title: smokeTaskTitle,
+    due: formatDate(tomorrow),
+  });
+  if (taskAddResult.isError) {
+    fail("homebase.tasks.add tool error");
+  }
+  const addedTask = parseToolPayload(taskAddResult) as {
+    id: string;
+    title: string;
+    due: string | null;
+  };
+  if (addedTask.title !== smokeTaskTitle) {
+    fail(`tasks.add returned unexpected title: ${JSON.stringify(addedTask)}`);
+  }
+
+  const tasksAfterAdd = await callTool(18, "homebase.tasks.list", {
+    due_before: formatDate(tomorrow),
+  });
+  const taskRows = parseToolPayload(tasksAfterAdd) as { title: string }[];
+  if (!taskRows.some((row) => row.title === smokeTaskTitle)) {
+    fail(`added task ${smokeTaskTitle} not found in tasks.list`);
+  }
+
+  const taskCompleteResult = await callTool(19, "homebase.tasks.complete", {
+    id: addedTask.id,
+  });
+  if (taskCompleteResult.isError) {
+    fail("homebase.tasks.complete tool error");
+  }
+  ok("tasks add → list → complete round-trip");
+
+  const recurringAdd = await callTool(20, "homebase.tasks.add", {
+    title: `mcp-smoke-recurring-${Date.now()}`,
+    recurrence: "weekly",
+  });
+  if (recurringAdd.isError) {
+    fail("homebase.tasks.add (recurring) tool error");
+  }
+  const recurringTask = parseToolPayload(recurringAdd) as {
+    id: string;
+    recurrence: string | null;
+  };
+  if (recurringTask.recurrence !== "every 7 days") {
+    fail(`expected weekly recurrence, got ${recurringTask.recurrence}`);
+  }
+
+  const recurringComplete = await callTool(21, "homebase.tasks.complete", {
+    id: recurringTask.id,
+  });
+  if (recurringComplete.isError) {
+    fail("homebase.tasks.complete (recurring) tool error");
+  }
+  const completedRecurring = parseToolPayload(recurringComplete) as {
+    due: string | null;
+  };
+  if (!completedRecurring.due) {
+    fail("recurring task missing rolled nextDue after complete");
+  }
+  ok("recurring tasks.complete rolls nextDue");
+
+  const prismaRecipes = new PrismaClient();
+  let recipeSearchQuery = "test";
+  try {
+    const firstRecipe = await prismaRecipes.recipe.findFirst({
+      where: { householdId: HOUSEHOLD_ID },
+      select: { title: true },
+    });
+    if (firstRecipe?.title) {
+      recipeSearchQuery = firstRecipe.title.slice(0, 8);
+    }
+
+    const recipeSearchResult = await callTool(22, "homebase.recipes.search", {
+      query: recipeSearchQuery,
+    });
+    if (recipeSearchResult.isError) {
+      fail("homebase.recipes.search tool error");
+    }
+    const recipeHits = parseToolPayload(recipeSearchResult) as { id: string }[];
+    if (recipeHits.length > 0) {
+      const recipeGetResult = await callTool(23, "homebase.recipes.get", {
+        id: recipeHits[0].id,
+      });
+      if (recipeGetResult.isError) {
+        fail("homebase.recipes.get tool error");
+      }
+      const recipeDetail = parseToolPayload(recipeGetResult) as {
+        steps: string[];
+        instructions: string;
+      };
+      if (!Array.isArray(recipeDetail.steps)) {
+        fail("recipes.get missing steps array");
+      }
+      ok("recipes search → get round-trip");
+    } else {
+      console.log(
+        `NOTE: no recipes matched query "${recipeSearchQuery}" — search/get skipped`,
+      );
+      ok("homebase.recipes.search (no matches in household)");
+    }
+  } finally {
+    await prismaRecipes.$disconnect();
   }
 
   console.log("\nAll MCP smoke checks passed.");

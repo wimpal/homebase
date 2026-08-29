@@ -2,7 +2,9 @@
 
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
-import { assertChore, assertProject } from "@/core/tenancy/assertHouseholdResource";
+import { assertProject } from "@/core/tenancy/assertHouseholdResource";
+import { isDomainError } from "@/domain/error";
+import { addChore, completeChoreDomain } from "@/domain/tasks";
 import { ModuleId } from "@prisma/client";
 import { getAverageChoreDuration } from "@/core/scheduler";
 import { addDays } from "date-fns";
@@ -31,16 +33,15 @@ export async function createChore(formData: FormData) {
     ? new Date(formData.get("deadline") as string)
     : undefined;
 
-  await prisma.chore.create({
-    data: {
-      householdId,
-      title,
-      description,
-      intervalDays,
-      deadline,
-      nextDue: intervalDays ? addDays(new Date(), intervalDays) : undefined,
-    },
+  const result = await addChore(householdId, {
+    title,
+    description,
+    intervalDays,
+    deadline,
   });
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
   revalidatePath("/tasks");
 }
 
@@ -51,17 +52,13 @@ export async function completeChore(formData: FormData) {
     ? parseInt(formData.get("durationMin") as string, 10)
     : undefined;
 
-  const chore = await assertChore(householdId, choreId);
-
-  await prisma.choreCompletion.create({
-    data: { choreId, userId, durationMin },
+  const result = await completeChoreDomain(householdId, {
+    id: choreId,
+    userId,
+    durationMin,
   });
-
-  if (chore.intervalDays) {
-    await prisma.chore.update({
-      where: { id: choreId },
-      data: { nextDue: addDays(new Date(), chore.intervalDays) },
-    });
+  if (isDomainError(result)) {
+    throw new Error(result.message);
   }
 
   revalidatePath("/tasks");
