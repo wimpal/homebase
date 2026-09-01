@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createDevice, addSensorReading, controlDirigeraLight, controlHueLight } from "@/modules/smarthome/actions";
+import {
+  createDevice,
+  addSensorReading,
+  controlDirigeraLight,
+  controlHueLight,
+  getDirigeraLights,
+} from "@/modules/smarthome/actions";
 import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
+import type { DirigeraLight } from "@/domain/smarthome/types";
 import { getWindowRecommendation } from "@/lib/smarthome";
 import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
@@ -38,7 +45,15 @@ export function SmartHomeClient({
   dirigera: DirigeraLightsResult;
 }) {
   const [hueStatus, setHueStatus] = useState<Record<string, string>>({});
-  const [dirigeraStatus, setDirigeraStatus] = useState<Record<string, string>>({});
+  const [ikeaLights, setIkeaLights] = useState<DirigeraLight[]>(dirigera.lights);
+  const [ikeaPending, setIkeaPending] = useState<Record<string, boolean>>({});
+  const [ikeaError, setIkeaError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (dirigera.configured && !dirigera.error) {
+      setIkeaLights(dirigera.lights);
+    }
+  }, [dirigera]);
 
   const latest = readings[0];
   const recommendation = latest
@@ -60,12 +75,37 @@ export function SmartHomeClient({
     }));
   }
 
-  async function toggleDirigeraLight(deviceId: string, on: boolean) {
-    const result = await controlDirigeraLight(deviceId, on);
-    setDirigeraStatus((prev) => ({
-      ...prev,
-      [deviceId]: result.success ? (on ? "On" : "Off") : result.error || "Failed",
-    }));
+  async function refreshIkeaLights() {
+    const fresh = await getDirigeraLights();
+    if (!fresh.configured) return;
+    if (fresh.error) {
+      setIkeaError(fresh.error);
+      return;
+    }
+    setIkeaError(null);
+    setIkeaLights(fresh.lights);
+  }
+
+  async function handleIkeaToggle(lightId: string, on: boolean) {
+    setIkeaError(null);
+    setIkeaPending((prev) => ({ ...prev, [lightId]: true }));
+    setIkeaLights((prev) =>
+      prev.map((light) => (light.id === lightId ? { ...light, isOn: on } : light)),
+    );
+
+    const result = await controlDirigeraLight(lightId, on);
+    if (result.success) {
+      await refreshIkeaLights();
+    } else {
+      setIkeaError(result.error ?? "Failed to update light");
+      await refreshIkeaLights();
+    }
+
+    setIkeaPending((prev) => {
+      const next = { ...prev };
+      delete next[lightId];
+      return next;
+    });
   }
 
   const lights = devices.filter((d) => d.type === "LIGHT");
@@ -167,48 +207,41 @@ export function SmartHomeClient({
               </CardContent>
             </Card>
           ) : (
-            dirigera.lights.map((light) => (
-              <Card key={light.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb
-                      className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
-                    />
-                    <div>
-                      <span>{light.name}</span>
-                      {light.room && (
-                        <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
-                      )}
-                      {!light.isReachable && (
-                        <span className="ml-2 text-xs text-amber-600">Unreachable</span>
-                      )}
-                      {dirigeraStatus[light.id] && (
-                        <span className="ml-2 text-xs text-zinc-500">
-                          {dirigeraStatus[light.id]}
-                        </span>
-                      )}
+            <>
+              {ikeaError && (
+                <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+                  <CardContent className="p-3 text-sm text-amber-800 dark:text-amber-200">
+                    {ikeaError}
+                  </CardContent>
+                </Card>
+              )}
+              {ikeaLights.map((light) => (
+                <Card key={light.id}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb
+                        className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
+                      />
+                      <div>
+                        <span>{light.name}</span>
+                        {light.room && (
+                          <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
+                        )}
+                        {!light.isReachable && (
+                          <span className="ml-2 text-xs text-amber-600">Unreachable</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => toggleDirigeraLight(light.id, true)}
-                      disabled={!light.isReachable}
-                    >
-                      On
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleDirigeraLight(light.id, false)}
-                      disabled={!light.isReachable}
-                    >
-                      Off
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                    <Switch
+                      checked={light.isOn}
+                      disabled={!light.isReachable || ikeaPending[light.id]}
+                      onCheckedChange={(checked) => handleIkeaToggle(light.id, checked)}
+                      aria-label={`${light.name} ${light.isOn ? "on" : "off"}`}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </>
           )}
         </TabsContent>
 
