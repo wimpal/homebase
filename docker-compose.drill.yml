@@ -39,7 +39,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-homebase}:${POSTGRES_PASSWORD:-homebase}@postgres:5432/${POSTGRES_DB:-homebase}?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
-      AUTH_URL: ${DRILL_AUTH_URL:-http://192.168.0.170:13000}
+      AUTH_URL: ${DRILL_AUTH_URL:-http://192.168.1.142:13000}
       REDIS_URL: redis://redis:6379
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
@@ -48,6 +48,8 @@ services:
       UPLOAD_DIR: /app/uploads
       HUE_BRIDGE_IP: ${HUE_BRIDGE_IP:-}
       HUE_USERNAME: ${HUE_USERNAME:-}
+      DIRIGERA_IP: ${DIRIGERA_IP:-}
+      DIRIGERA_TOKEN: ${DIRIGERA_TOKEN:-}
       SERVICE_TOKEN: ${SERVICE_TOKEN:-}
       MCP_HOUSEHOLD_ID: ${MCP_HOUSEHOLD_ID:-}
       MCP_SHOPPING_LIST_ID: ${MCP_SHOPPING_LIST_ID:-}

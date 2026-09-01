@@ -15,8 +15,8 @@ files are easy to leak; OpenSSH does not read them from env vars anyway.
 |---|---|---|
 | Repo folder (PC) | `D:\Dev\Projects\Homebase` | `D:\Dev\Projects\BudgetTracker` |
 | `NAS_PATH` | `/volume1/docker/homebase` | `/volume1/docker/BudgetTracker` |
-| `NAS_SHARE` | `\\192.168.0.170\docker\homebase` | `\\192.168.0.170\docker\BudgetTracker` |
-| App URL after deploy | `http://192.168.0.170:3000/` | `http://192.168.0.170:8080/` |
+| `NAS_SHARE` | `\\192.168.1.142\docker\homebase` | `\\192.168.1.142\docker\BudgetTracker` |
+| App URL after deploy | `http://192.168.1.142:3000/` | `http://192.168.1.142:8080/` |
 
 Adjust IP and paths if your NAS differs. Defaults match `scripts/deploy-nas.ps1`.
 
@@ -40,10 +40,10 @@ is safer but you will type it (or use `ssh-agent`) on each deploy.
 Enter your NAS password **one last time**:
 
 ```powershell
-type $env:USERPROFILE\.ssh\id_ed25519_nas.pub | ssh wim@192.168.0.170 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+type $env:USERPROFILE\.ssh\id_ed25519_nas.pub | ssh wim@192.168.1.142 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
-Replace `wim` and `192.168.0.170` if yours differ.
+Replace `wim` and `192.168.1.142` if yours differ.
 
 **Manual fallback** (if the pipe command fails): SSH in, `nano ~/.ssh/authorized_keys`,
 paste the single line from `Get-Content $env:USERPROFILE\.ssh\id_ed25519_nas.pub`.
@@ -52,14 +52,14 @@ paste the single line from `Get-Content $env:USERPROFILE\.ssh\id_ed25519_nas.pub
 
 ## 3. SSH config (required for deploy scripts)
 
-Deploy connects as `wim@192.168.0.170`, not the alias `nas`. The config must match
+Deploy connects as `wim@192.168.1.142`, not the alias `nas`. The config must match
 **both** the alias and the IP, or the key will not be used.
 
 Create or edit `C:\Users\<you>\.ssh\config`:
 
 ```
-Host nas 192.168.0.170
-  HostName 192.168.0.170
+Host nas 192.168.1.142
+  HostName 192.168.1.142
   User wim
   IdentityFile ~/.ssh/id_ed25519_nas
   IdentitiesOnly yes
@@ -69,7 +69,7 @@ Verify (no password prompt):
 
 ```powershell
 ssh nas "echo ok"
-ssh wim@192.168.0.170 "echo ok"
+ssh wim@192.168.1.142 "echo ok"
 ```
 
 Both must print `ok`. If only `ssh nas` works, fix the `Host` line — include the IP.
@@ -119,10 +119,10 @@ deploy user on the NAS.
 In the **repo root** on your PC (gitignored):
 
 ```env
-NAS_HOST=192.168.0.170
+NAS_HOST=192.168.1.142
 NAS_USER=wim
 NAS_PATH=/volume1/docker/homebase
-NAS_SHARE=\\192.168.0.170\docker\homebase
+NAS_SHARE=\\192.168.1.142\docker\homebase
 NAS_BRANCH=main
 NAS_SSH_PORT=22
 ```
@@ -160,7 +160,7 @@ Git Bash: `./scripts/deploy-nas.sh` (same env vars).
 
 | Symptom | Fix |
 |---------|-----|
-| `wim@192.168.0.170's password:` during deploy | SSH config missing IP on `Host` line, or key not in `authorized_keys`. Re-check §2–3. |
+| `wim@192.168.1.142's password:` during deploy | SSH config missing IP on `Host` line, or key not in `authorized_keys`. Re-check §2–3. |
 | `permission denied` on `docker.sock` | User not in `docker` group. Re-check §4; use a **new** SSH session after `usermod`. |
 | `sudo: a terminal is required` | Deploy scripts use plain `docker compose` (no sudo). Fix with §4, not sudoers. |
 | `Could not read package.json` | Wrong directory — run from `Homebase` or `BudgetTracker`, not the control repo. |
@@ -172,8 +172,8 @@ Git Bash: `./scripts/deploy-nas.sh` (same env vars).
 
 - [ ] `ssh-keygen` → `id_ed25519_nas`
 - [ ] Public key in NAS `~/.ssh/authorized_keys`
-- [ ] `~/.ssh/config` with `Host nas 192.168.0.170` + `IdentityFile`
-- [ ] `ssh wim@192.168.0.170 "echo ok"` — no password
+- [ ] `~/.ssh/config` with `Host nas 192.168.1.142` + `IdentityFile`
+- [ ] `ssh wim@192.168.1.142 "echo ok"` — no password
 - [ ] NAS user in `docker` group (`groups` shows `docker`)
 - [ ] `docker compose ps` works over SSH in project path
 - [ ] Optional `.env` with `NAS_*` paths

@@ -3,6 +3,13 @@
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertDevice } from "@/core/tenancy/assertHouseholdResource";
+import { isDomainError } from "@/domain/error";
+import {
+  isDirigeraConfigured,
+  listDirigeraLights,
+  setDirigeraLightState,
+} from "@/domain/smarthome";
+import type { DirigeraLight } from "@/domain/smarthome";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -101,4 +108,38 @@ export async function getCameraStreamUrl(deviceId: string) {
   if (!device || device.type !== "CAMERA") return null;
   const config = device.config as { streamUrl?: string } | null;
   return config?.streamUrl ?? null;
+}
+
+export type DirigeraLightsResult =
+  | { configured: false; lights: DirigeraLight[]; error?: string }
+  | { configured: true; lights: DirigeraLight[]; error?: string };
+
+export async function getDirigeraLights(): Promise<DirigeraLightsResult> {
+  await requireHousehold();
+
+  if (!isDirigeraConfigured()) {
+    return { configured: false, lights: [] };
+  }
+
+  const result = await listDirigeraLights();
+  if (isDomainError(result)) {
+    return {
+      configured: true,
+      lights: [],
+      error: result.message,
+    };
+  }
+
+  return { configured: true, lights: result };
+}
+
+export async function controlDirigeraLight(
+  deviceId: string,
+  on: boolean,
+  brightness?: number,
+) {
+  await requireMutationAccess(ModuleId.SMART_HOME);
+  const result = await setDirigeraLightState(deviceId, on, brightness);
+  revalidatePath("/smart-home");
+  return result;
 }

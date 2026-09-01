@@ -154,10 +154,10 @@ function Invoke-Git {
 
 Import-DotEnv (Join-Path $repoRoot ".env")
 
-if (-not $NasHost) { $NasHost = $(if ($env:NAS_HOST) { $env:NAS_HOST } else { "192.168.0.170" }) }
+if (-not $NasHost) { $NasHost = $(if ($env:NAS_HOST) { $env:NAS_HOST } else { "192.168.1.142" }) }
 if (-not $NasUser) { $NasUser = $(if ($env:NAS_USER) { $env:NAS_USER } else { "wim" }) }
 if (-not $NasPath) { $NasPath = $(if ($env:NAS_PATH) { $env:NAS_PATH } else { "/volume1/docker/homebase" }) }
-if (-not $NasShare) { $NasShare = $(if ($env:NAS_SHARE) { $env:NAS_SHARE } else { "\\192.168.0.170\docker\homebase" }) }
+if (-not $NasShare) { $NasShare = $(if ($env:NAS_SHARE) { $env:NAS_SHARE } else { "\\192.168.1.142\docker\homebase" }) }
 if (-not $Branch) { $Branch = $(if ($env:NAS_BRANCH) { $env:NAS_BRANCH } else { "main" }) }
 if (-not $SshPort -or $SshPort -eq 0) {
     $SshPort = $(if ($env:NAS_SSH_PORT) { [int]$env:NAS_SSH_PORT } else { 22 })

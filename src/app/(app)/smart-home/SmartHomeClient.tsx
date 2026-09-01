@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createDevice, addSensorReading, controlHueLight } from "@/modules/smarthome/actions";
+import { createDevice, addSensorReading, controlDirigeraLight, controlHueLight } from "@/modules/smarthome/actions";
+import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
 import { getWindowRecommendation } from "@/lib/smarthome";
 import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
@@ -30,11 +31,14 @@ interface Reading {
 export function SmartHomeClient({
   devices,
   readings,
+  dirigera,
 }: {
   devices: Device[];
   readings: Reading[];
+  dirigera: DirigeraLightsResult;
 }) {
   const [hueStatus, setHueStatus] = useState<Record<string, string>>({});
+  const [dirigeraStatus, setDirigeraStatus] = useState<Record<string, string>>({});
 
   const latest = readings[0];
   const recommendation = latest
@@ -51,6 +55,14 @@ export function SmartHomeClient({
   async function toggleLight(deviceId: string, on: boolean) {
     const result = await controlHueLight(deviceId, on);
     setHueStatus((prev) => ({
+      ...prev,
+      [deviceId]: result.success ? (on ? "On" : "Off") : result.error || "Failed",
+    }));
+  }
+
+  async function toggleDirigeraLight(deviceId: string, on: boolean) {
+    const result = await controlDirigeraLight(deviceId, on);
+    setDirigeraStatus((prev) => ({
       ...prev,
       [deviceId]: result.success ? (on ? "On" : "Off") : result.error || "Failed",
     }));
@@ -77,6 +89,7 @@ export function SmartHomeClient({
       <Tabs defaultValue="sensors">
         <TabsList>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
+          <TabsTrigger value="ikea-lights">IKEA Lights</TabsTrigger>
           <TabsTrigger value="lights">Hue Lights</TabsTrigger>
           <TabsTrigger value="cameras">Cameras</TabsTrigger>
         </TabsList>
@@ -126,6 +139,76 @@ export function SmartHomeClient({
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="ikea-lights" className="space-y-4">
+          {!dirigera.configured ? (
+            <Card>
+              <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <p>Set <code className="text-xs">DIRIGERA_IP</code> and{" "}
+                  <code className="text-xs">DIRIGERA_TOKEN</code> in <code className="text-xs">.env</code> on
+                  the NAS, then redeploy. Pair with{" "}
+                  <code className="text-xs">npx dirigera authenticate</code>. See{" "}
+                  <code className="text-xs">docs/nas-deploy.md</code>.
+                </p>
+              </CardContent>
+            </Card>
+          ) : dirigera.error ? (
+            <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+              <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200">
+                {dirigera.error}
+              </CardContent>
+            </Card>
+          ) : dirigera.lights.length === 0 ? (
+            <Card>
+              <CardContent className="p-4 text-sm text-zinc-500">
+                No IKEA lights found on the Dirigera hub.
+              </CardContent>
+            </Card>
+          ) : (
+            dirigera.lights.map((light) => (
+              <Card key={light.id}>
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb
+                      className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
+                    />
+                    <div>
+                      <span>{light.name}</span>
+                      {light.room && (
+                        <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
+                      )}
+                      {!light.isReachable && (
+                        <span className="ml-2 text-xs text-amber-600">Unreachable</span>
+                      )}
+                      {dirigeraStatus[light.id] && (
+                        <span className="ml-2 text-xs text-zinc-500">
+                          {dirigeraStatus[light.id]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => toggleDirigeraLight(light.id, true)}
+                      disabled={!light.isReachable}
+                    >
+                      On
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleDirigeraLight(light.id, false)}
+                      disabled={!light.isReachable}
+                    >
+                      Off
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </TabsContent>
 

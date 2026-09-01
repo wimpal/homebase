@@ -8,6 +8,8 @@ HomeBase runs as four Docker containers: **app**, **worker**, **postgres**, and 
 - **Git** on the NAS (or clone from your PC and copy the folder)
 - SSH access (recommended for easy redeploys)
 
+**Home LAN (this household):** Zyxel T-56 (`192.168.1.0/24`, gateway `192.168.1.1`). TP-Link Archer BE230 is in **Access Point** mode (office Wi‑Fi / switch). NAS default LAN IP: **`192.168.1.142`** — reserve it on T-56 DHCP. Dirigera hub and TV are on the same flat network.
+
 ---
 
 ## One-time setup on the NAS
@@ -96,10 +98,10 @@ Optional `.env` on your **Windows** machine (gitignored):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `NAS_HOST` | `192.168.0.170` | NAS IP |
+| `NAS_HOST` | `192.168.1.142` | NAS IP |
 | `NAS_USER` | `wim` | SSH user |
 | `NAS_PATH` | `/volume1/docker/homebase` | Path on the NAS |
-| `NAS_SHARE` | `\\192.168.0.170\docker\homebase` | Windows SMB path to git checkout |
+| `NAS_SHARE` | `\\192.168.1.142\docker\homebase` | Windows SMB path to git checkout |
 | `NAS_BRANCH` | `main` | Branch to pull / archive |
 
 Variants:
@@ -187,6 +189,63 @@ Full schedule, retention, restore drill, and disaster recovery:
 | Out of memory during build | Build on your PC, push image to a registry, or increase NAS swap |
 | Scheduler not running | Ensure `worker` container is up: `docker compose ps` |
 | Hue not working | Set `HUE_BRIDGE_IP` in `.env`; NAS must be on same LAN as Hue bridge |
+| Dirigera not working | Set `DIRIGERA_IP` + `DIRIGERA_TOKEN` in `.env`; NAS must reach `https://<IP>:8443` — see **Dirigera** section below |
+
+---
+
+## Dirigera (IKEA smart home)
+
+Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a bearer token from one-time pairing. Mimir does not call the hub directly — only the Homebase app container does.
+
+### One-time pairing (on home LAN)
+
+```bash
+npx dirigera authenticate
+# Press the action button on the bottom of the hub within 60 seconds
+# Save the printed access token securely — not in git
+npx dirigera dump --access-token <TOKEN>
+# Lists devices — pick a light id for testing
+```
+
+Add to NAS `.env`:
+
+| Variable | Example | Why |
+|----------|---------|-----|
+| `DIRIGERA_IP` | `192.168.0.42` | Hub LAN IP (router DHCP or IKEA app) |
+| `DIRIGERA_TOKEN` | *(from pairing)* | Bearer token (~10 year lifetime) |
+
+Redeploy after adding vars: `npm run deploy:nas` or `docker compose up -d --build`.
+
+### Verify connectivity (fail fast)
+
+**From NAS host:**
+
+```bash
+curl -k https://<DIRIGERA_IP>:8443/v1/home -H "Authorization: Bearer <TOKEN>"
+```
+
+**From app container** (hard gate — must pass before Dirigera features work):
+
+```bash
+docker compose exec app wget -qO- --no-check-certificate \
+  --header="Authorization: Bearer <TOKEN>" \
+  https://<DIRIGERA_IP>:8443/v1/home
+```
+
+If the host works but the container fails, check Docker networking — NAS and hub must be on the same LAN (T-56 `192.168.1.0/24`; Archer is AP mode).
+
+**Smoke script** (after deploy):
+
+```bash
+npm run dirigera:smoke
+# Optional: DIRIGERA_TEST_DEVICE_ID=<light-id> toggles one light
+```
+
+The hub uses a **self-signed TLS certificate**. The Node client sets `rejectUnauthorized: false` — required in Docker/NAS; do not expose the hub to the public internet.
+
+### UI
+
+Smart Home → **IKEA Lights** tab lists live devices from the hub. No Prisma device rows required for Phase A.
 
 ---
 

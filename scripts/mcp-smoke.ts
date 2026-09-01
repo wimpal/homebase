@@ -4,7 +4,7 @@
  *
  * Usage:
  *   npm run mcp:smoke                              # local (127.0.0.1)
- *   MCP_BASE_URL=http://192.168.0.170:3000 npm run mcp:smoke   # NAS (no local DB)
+ *   MCP_BASE_URL=http://192.168.1.142:3000 npm run mcp:smoke   # NAS (no local DB)
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

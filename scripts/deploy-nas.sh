@@ -7,10 +7,10 @@
 
 set -eu
 
-NAS_HOST="${NAS_HOST:-192.168.0.170}"
+NAS_HOST="${NAS_HOST:-192.168.1.142}"
 NAS_USER="${NAS_USER:-wim}"
 NAS_PATH="${NAS_PATH:-/volume1/docker/homebase}"
-NAS_SHARE="${NAS_SHARE:-//192.168.0.170/docker/homebase}"
+NAS_SHARE="${NAS_SHARE:-//192.168.1.142/docker/homebase}"
 NAS_BRANCH="${NAS_BRANCH:-main}"
 NAS_SSH_PORT="${NAS_SSH_PORT:-22}"
 PUSH=0

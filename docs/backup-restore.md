@@ -20,7 +20,7 @@ without touching production.
 Verify volume names on your NAS:
 
 ```bash
-ssh wim@192.168.0.170 "docker volume ls | grep -E 'homebase|postgres|uploads'"
+ssh wim@192.168.1.142 "docker volume ls | grep -E 'homebase|postgres|uploads'"
 ```
 
 Expected: `homebase_postgres_data`, `homebase_uploads_data`.
@@ -185,7 +185,7 @@ If port 13000 on the NAS is awkward, you can verify a dump locally:
 
 ```bash
 # On your PC — copy dump from NAS first
-scp wim@192.168.0.170:/volume1/Docker-backups/homebase/postgres-2026-08-28.dump .
+scp wim@192.168.1.142:/volume1/Docker-backups/homebase/postgres-2026-08-28.dump .
 
 createdb homebase_restore_test
 pg_restore -d homebase_restore_test --no-owner postgres-2026-08-28.dump
