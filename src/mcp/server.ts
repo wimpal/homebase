@@ -5,6 +5,7 @@ import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
 import { getRecipe, searchRecipes } from "@/domain/recipes";
 import { addShoppingListItem, listShoppingItems } from "@/domain/shopping";
+import { listDirigeraLights, setDirigeraLightState } from "@/domain/smarthome";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
 function toolJson(value: unknown) {
@@ -296,6 +297,60 @@ export function createMcpServer(householdId: string): McpServer {
         return toolError(result);
       }
       return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.lights.list",
+    {
+      description:
+        'List controllable IKEA lights from the Dirigera hub. Use for "which lights are on", "lights in the office", or before toggling a lamp by name. Does not include Philips Hue — IKEA/Dirigera only in v1.',
+      inputSchema: {},
+    },
+    async () => {
+      const result = await listDirigeraLights();
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      const lights = result.slice(0, 50).map(({ id, name, room, isOn, isReachable }) => ({
+        id,
+        name,
+        room,
+        isOn,
+        reachable: isReachable,
+      }));
+      return toolJson(lights);
+    },
+  );
+
+  server.registerTool(
+    "homebase.lights.set_state",
+    {
+      description:
+        'Turn an IKEA light on or off, optionally set brightness. Requires device_id from lights.list. Use for "turn off the office light", "dim the lamp to 30%". Not audited in homebase.changes v1.',
+      inputSchema: {
+        device_id: z.string().min(1).describe("Dirigera device id from lights.list"),
+        on: z.boolean(),
+        brightness: z
+          .number()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe("0–100; only applied when on is true"),
+      },
+    },
+    async ({ device_id, on, brightness }) => {
+      const result = await setDirigeraLightState(
+        device_id,
+        on,
+        on ? brightness : undefined,
+      );
+      return toolJson({
+        success: result.success,
+        device_id,
+        on,
+        ...(result.error ? { error: result.error } : {}),
+      });
     },
   );
 

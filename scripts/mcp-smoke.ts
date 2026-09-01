@@ -195,6 +195,8 @@ async function main() {
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
+    "homebase.lights.list",
+    "homebase.lights.set_state",
     "homebase.recipes.get",
     "homebase.recipes.search",
     "homebase.shopping_list.add_item",
@@ -203,10 +205,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 12 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 14 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 12 homebase tools");
+  ok("tools/list returns exactly 14 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -419,6 +421,8 @@ async function main() {
     ok("homebase.recipes.search (no matches in household)");
   }
 
+  await runLightsSmoke(callTool);
+
   console.log("\nAll MCP smoke checks passed.");
 }
 
@@ -427,6 +431,96 @@ type CallTool = (
   name: string,
   args: Record<string, unknown>,
 ) => Promise<ToolResult>;
+
+type LightRow = {
+  id: string;
+  name: string;
+  room?: string;
+  isOn: boolean;
+  reachable?: boolean;
+};
+
+async function runLightsSmoke(callTool: CallTool) {
+  const lightsListResult = await callTool(28, "homebase.lights.list", {});
+
+  if (lightsListResult.isError) {
+    const payload = parseToolPayload(lightsListResult) as {
+      error?: { code?: string };
+    };
+    if (payload.error?.code === "unavailable") {
+      console.log("NOTE: Dirigera not configured on target — lights smoke skipped");
+      ok("homebase.lights.list (skipped, Dirigera unavailable)");
+      return;
+    }
+    fail("homebase.lights.list tool error");
+  }
+
+  const lights = parseToolPayload(lightsListResult) as LightRow[];
+  if (!Array.isArray(lights)) {
+    fail("homebase.lights.list did not return an array");
+  }
+  ok(`homebase.lights.list (${lights.length} light(s))`);
+
+  if (lights.length === 0) {
+    console.log("NOTE: no IKEA lights on hub — toggle skipped");
+    return;
+  }
+
+  const envTestId = process.env.DIRIGERA_TEST_DEVICE_ID?.trim();
+  const testDevice =
+    (envTestId ? lights.find((l) => l.id === envTestId) : undefined) ??
+    lights.find((l) => l.isOn) ??
+    lights[0];
+
+  const deviceId = testDevice.id;
+  const originalOn = testDevice.isOn;
+
+  const setOffResult = await callTool(29, "homebase.lights.set_state", {
+    device_id: deviceId,
+    on: false,
+  });
+  if (setOffResult.isError) {
+    fail("homebase.lights.set_state (off) tool error");
+  }
+  const setOffPayload = parseToolPayload(setOffResult) as {
+    success: boolean;
+    device_id: string;
+    on: boolean;
+    error?: string;
+  };
+  if (!setOffPayload.success) {
+    fail(
+      `homebase.lights.set_state (off) failed: ${setOffPayload.error ?? "unknown"}`,
+    );
+  }
+
+  const listAfterOff = await callTool(30, "homebase.lights.list", {});
+  if (listAfterOff.isError) {
+    fail("homebase.lights.list after set_state (off) failed");
+  }
+  const afterOffLights = parseToolPayload(listAfterOff) as LightRow[];
+  const afterOff = afterOffLights.find((l) => l.id === deviceId);
+  if (!afterOff || afterOff.isOn !== false) {
+    fail(`expected ${deviceId} isOn false after set_state off`);
+  }
+
+  const restoreOn = originalOn;
+  const setOnResult = await callTool(31, "homebase.lights.set_state", {
+    device_id: deviceId,
+    on: restoreOn,
+  });
+  if (setOnResult.isError) {
+    fail("homebase.lights.set_state (restore) tool error");
+  }
+  const setOnPayload = parseToolPayload(setOnResult) as { success: boolean; error?: string };
+  if (!setOnPayload.success) {
+    fail(
+      `homebase.lights.set_state (restore) failed: ${setOnPayload.error ?? "unknown"}`,
+    );
+  }
+
+  ok("lights list → set_state off/on round-trip");
+}
 
 async function runInventoryUpdateSmokeLocal(callTool: CallTool) {
   const prisma = new PrismaClient();
