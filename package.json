@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "worker": "tsx worker/index.ts",
     "mcp:smoke": "tsx scripts/mcp-smoke.ts",
+    "mcp:smoke:full": "tsx scripts/mcp-smoke.ts --lights-write",
     "dirigera:smoke": "tsx scripts/dirigera-smoke.ts",
     "household:id": "tsx scripts/print-household-id.ts",
     "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-preflight.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1 -SkipPreflight",

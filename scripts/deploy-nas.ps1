@@ -273,6 +273,7 @@ if (-not $SkipSmoke) {
             $prevBase = $env:MCP_BASE_URL
             $env:MCP_BASE_URL = "http://${NasHost}:3000"
             $env:HOMEBASE_SMOKE_SKIP_DOTENV = "1"
+            # lights smoke is list-only on remote (T-038)
             & npm run mcp:smoke
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Post-deploy mcp:smoke failed."

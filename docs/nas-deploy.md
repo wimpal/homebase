@@ -241,8 +241,13 @@ If the host works but the container fails, check Docker networking — NAS and h
 
 ```bash
 npm run dirigera:smoke
-# Optional: DIRIGERA_TEST_DEVICE_ID=<light-id> toggles one light
+# Optional: DIRIGERA_TEST_DEVICE_ID=<light-id> toggles one light (local dev only)
 ```
+
+Post-deploy MCP smoke (`deploy-nas.ps1` → `npm run mcp:smoke` against NAS) verifies
+`homebase.lights.list` only — it never calls `lights.set_state` on household lamps (T-038).
+For local write smoke: `npm run mcp:smoke:full` with `DIRIGERA_TEST_DEVICE_ID` set to a
+dedicated test lamp.
 
 The hub uses a **self-signed TLS certificate**. The Node client sets `rejectUnauthorized: false` — required in Docker/NAS; do not expose the hub to the public internet.
 

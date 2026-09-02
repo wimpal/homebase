@@ -3,8 +3,11 @@
  * Requires: dev server running, SERVICE_TOKEN + MCP_HOUSEHOLD_ID in .env
  *
  * Usage:
- *   npm run mcp:smoke                              # local (127.0.0.1)
- *   MCP_BASE_URL=http://192.168.1.142:3000 npm run mcp:smoke   # NAS (no local DB)
+ *   npm run mcp:smoke                              # local — lights.list only (T-038)
+ *   npm run mcp:smoke:full                         # local — lights write smoke (pinned test device)
+ *   MCP_BASE_URL=http://192.168.1.142:3000 npm run mcp:smoke   # NAS deploy — list-only, never toggles
+ *
+ * Lights write smoke (local only): HOMEBASE_SMOKE_LIGHTS_WRITE=1 + DIRIGERA_TEST_DEVICE_ID
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -39,6 +42,10 @@ function loadDotEnv() {
 }
 
 loadDotEnv();
+
+if (process.argv.includes("--lights-write")) {
+  process.env.HOMEBASE_SMOKE_LIGHTS_WRITE = "1";
+}
 
 const BASE_URL = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const TOKEN = process.env.SERVICE_TOKEN?.trim();
@@ -532,28 +539,18 @@ function isReachable(light: LightRow): boolean {
   return light.reachable !== false;
 }
 
+function lightsWriteSmokeAllowed(): boolean {
+  if (!IS_LOCAL) return false;
+  if (process.env.HOMEBASE_SMOKE_LIGHTS_WRITE !== "1") return false;
+  return Boolean(process.env.DIRIGERA_TEST_DEVICE_ID?.trim());
+}
+
 function pickTestLight(lights: LightRow[]): LightRow | undefined {
   const envTestId = process.env.DIRIGERA_TEST_DEVICE_ID?.trim();
-  const reachable = lights.filter(isReachable);
-
-  if (reachable.length === 0) {
+  if (!envTestId) {
     return undefined;
   }
-
-  if (envTestId) {
-    const envMatch = reachable.find((l) => l.id === envTestId);
-    if (envMatch) {
-      return envMatch;
-    }
-    const envUnreachable = lights.find((l) => l.id === envTestId);
-    if (envUnreachable) {
-      console.log(
-        `NOTE: DIRIGERA_TEST_DEVICE_ID ${envTestId} is unreachable — using another reachable light`,
-      );
-    }
-  }
-
-  return reachable.find((l) => l.isOn) ?? reachable[0];
+  return lights.filter(isReachable).find((l) => l.id === envTestId);
 }
 
 async function waitForLightState(
@@ -604,22 +601,24 @@ async function runLightsSmoke(callTool: CallTool) {
   ok(`homebase.lights.list (${lights.length} light(s))`);
 
   if (lights.length === 0) {
-    console.log("NOTE: no IKEA lights on hub — toggle skipped");
+    console.log("NOTE: no IKEA lights on hub — write smoke skipped");
     return;
   }
 
-  const unreachableCount = lights.filter((l) => !isReachable(l)).length;
-  if (unreachableCount > 0) {
+  if (!lightsWriteSmokeAllowed()) {
     console.log(
-      `NOTE: ${unreachableCount} light(s) report reachable=false (hub mesh); smoke uses a reachable lamp only`,
+      "NOTE: lights write smoke skipped (list-only; set HOMEBASE_SMOKE_LIGHTS_WRITE=1 and DIRIGERA_TEST_DEVICE_ID for local toggle)",
     );
+    ok("homebase.lights.set_state (skipped, list-only smoke)");
+    return;
   }
 
+  const testDeviceId = process.env.DIRIGERA_TEST_DEVICE_ID!.trim();
   const testDevice = pickTestLight(lights);
   if (!testDevice) {
-    console.log("NOTE: all lights unreachable — toggle skipped");
-    ok("homebase.lights.set_state (skipped, no reachable lights)");
-    return;
+    fail(
+      `DIRIGERA_TEST_DEVICE_ID ${testDeviceId} not found or unreachable — pin a dedicated test lamp, never a household light in daily use`,
+    );
   }
 
   const deviceId = testDevice.id;
