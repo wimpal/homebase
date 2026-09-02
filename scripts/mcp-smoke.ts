@@ -232,6 +232,7 @@ async function main() {
     "homebase.inventory.list",
     "homebase.inventory.update",
     "homebase.lights.list",
+    "homebase.lights.party_mode",
     "homebase.lights.set_state",
     "homebase.recipes.get",
     "homebase.recipes.search",
@@ -242,10 +243,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 15 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 16 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 15 homebase tools");
+  ok("tools/list returns exactly 16 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,

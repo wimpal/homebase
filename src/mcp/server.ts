@@ -5,7 +5,7 @@ import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
 import { getRecipe, searchRecipes } from "@/domain/recipes";
 import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
-import { listDirigeraLights, setDirigeraLightState } from "@/domain/smarthome";
+import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from "@/domain/smarthome";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
 function toolJson(value: unknown) {
@@ -377,6 +377,27 @@ export function createMcpServer(householdId: string): McpServer {
         on,
         ...(result.error ? { error: result.error } : {}),
       });
+    },
+  );
+
+  // Blocks up to 60s — Mimir MCP client may need extended timeout for this tool only.
+  server.registerTool(
+    "homebase.lights.party_mode",
+    {
+      description:
+        "Party mode easter egg: all reachable IKEA lights flicker on and off together for a short show, then each lamp is restored to its on/off state before the show started. Explicit operator request only — not for routine automation. Not audited in homebase.changes v1.",
+      inputSchema: {
+        duration_seconds: z
+          .number()
+          .optional()
+          .describe("Show length in seconds; default 15, server clamps 1–60"),
+      },
+    },
+    async ({ duration_seconds }) => {
+      const result = await runDirigeraPartyMode({
+        durationSeconds: duration_seconds,
+      });
+      return toolJson(result);
     },
   );
 
