@@ -179,7 +179,7 @@ if (-not $SkipPreflight) {
 
 if ($Push) {
     Write-Host "Pushing $Branch to origin from $repoRoot ..."
-    Invoke-Git @("push", "origin", $Branch)
+    Invoke-Git -GitArgs @("push", "origin", $Branch)
 }
 
 if ($useShare) {
@@ -201,9 +201,9 @@ Then re-run npm run deploy:nas
 "@
         exit 1
     }
-    Invoke-Git -WorkTree $NasShare @("fetch", "origin", $Branch)
-    Invoke-Git -WorkTree $NasShare @("checkout", $Branch)
-    Invoke-Git -WorkTree $NasShare @("pull", "--ff-only", "origin", $Branch)
+    Invoke-Git -WorkTree $NasShare -GitArgs @("fetch", "origin", $Branch)
+    Invoke-Git -WorkTree $NasShare -GitArgs @("checkout", $Branch)
+    Invoke-Git -WorkTree $NasShare -GitArgs @("pull", "--ff-only", "origin", $Branch)
 
     $remoteCmd = Get-DockerRemoteCmd -TargetNasPath $NasPath
     Write-Host "Building on NAS (${remote}:${NasPath})..."
@@ -233,7 +233,7 @@ else {
 
     Write-Host "Packaging $Branch..."
     if (Test-Path -LiteralPath $localTar) { Remove-Item -LiteralPath $localTar -Force }
-    Invoke-Git @("archive", "--format=tar.gz", "-o", $localTar, $Branch)
+    Invoke-Git -GitArgs @("archive", "--format=tar.gz", "-o", $localTar, $Branch)
 
     try {
         Write-Host "Uploading to ${remote}:${remoteTar} ..."
