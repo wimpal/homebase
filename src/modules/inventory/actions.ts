@@ -4,6 +4,7 @@ import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertLocation, assertProduct } from "@/core/tenancy/assertHouseholdResource";
 import { listInventory } from "@/domain/inventory";
+import { findProductByNameCi } from "@/domain/shopping";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -29,6 +30,7 @@ export async function createProduct(formData: FormData) {
   const name = formData.get("name") as string;
   const category = (formData.get("category") as string) || undefined;
   const lowStockAt = parseInt((formData.get("lowStockAt") as string) || "1", 10);
+  const autoAddWhenLowStock = formData.get("autoAddWhenLowStock") === "on";
   const quantity = parseInt((formData.get("quantity") as string) || "0", 10);
   const locationId = (formData.get("locationId") as string) || undefined;
   const expiryDate = formData.get("expiryDate")
@@ -37,12 +39,18 @@ export async function createProduct(formData: FormData) {
   const barcode = (formData.get("barcode") as string) || undefined;
   if (locationId) await assertLocation(householdId, locationId);
 
+  const existing = await findProductByNameCi(householdId, name);
+  if (existing) {
+    throw new Error(`A product named "${name}" already exists.`);
+  }
+
   await prisma.product.create({
     data: {
       householdId,
       name,
       category,
       lowStockAt,
+      autoAddWhenLowStock,
       stockItems: quantity > 0 ? {
         create: { householdId, quantity, locationId, expiryDate },
       } : undefined,

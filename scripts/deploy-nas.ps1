@@ -52,7 +52,7 @@ function Import-McpSmokeEnv {
         [string]$NasShare,
         [string]$RepoRoot
     )
-    # Docker on NAS reads .env from the deploy tree — smoke must use the same tokens.
+    # Docker on NAS reads .env from the deploy tree; smoke must use the same tokens.
     $candidates = @(
         (Join-Path $NasShare ".env"),
         (Join-Path $RepoRoot ".env")
@@ -213,7 +213,7 @@ else {
         Write-Host "Deploy mode: scp (explicit)"
     }
     else {
-        Write-Warning "NAS share not reachable at $NasShare — falling back to scp upload."
+        Write-Warning "NAS share not reachable at $NasShare; falling back to scp upload."
     }
 
     $remoteTar = "/tmp/homebase-deploy.tar.gz"
@@ -221,7 +221,7 @@ else {
 
     $dirty = & git -C $repoRoot status --porcelain
     if ($dirty) {
-        Write-Warning "Uncommitted changes are not included — only committed files on $Branch are deployed."
+        Write-Warning "Uncommitted changes are not included; only committed files on $Branch are deployed."
     }
 
     if (-not (git -C $repoRoot rev-parse --verify "$Branch^{commit}" 2>$null)) {

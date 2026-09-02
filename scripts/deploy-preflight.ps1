@@ -1,5 +1,5 @@
 # Pre-deploy: stop Node on port 3000 (Prisma DLL lock), then npm run build.
-# Called from package.json before deploy-nas.ps1 — do not call npm from inside deploy-nas.ps1.
+# Called from package.json before deploy-nas.ps1; do not call npm from inside deploy-nas.ps1.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot

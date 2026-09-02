@@ -25,7 +25,19 @@ export async function resolvePrimaryListId(
   });
 
   if (!list) {
-    return DomainError.notFound("No shopping list found for this household.");
+    const household = await prisma.household.findUnique({
+      where: { id: householdId },
+      select: { id: true },
+    });
+    if (!household) {
+      return DomainError.notFound("Household not found.");
+    }
+
+    const created = await prisma.shoppingList.create({
+      data: { householdId, name: "Shopping List" },
+      select: { id: true },
+    });
+    return created.id;
   }
 
   return list.id;

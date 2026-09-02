@@ -20,7 +20,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "==> Pushing local commits (if any)..."
 git push 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "git push failed or no remote configured — continuing with NAS pull anyway."
+    Write-Warning "git push failed or no remote configured; continuing with NAS pull anyway."
 }
 
 $remoteCmd = "cd '$NasPath' && git pull && chmod +x scripts/deploy.sh && ./scripts/deploy.sh"

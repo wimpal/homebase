@@ -2,6 +2,7 @@ import { ModuleId } from "@prisma/client";
 import cron from "node-cron";
 import { prisma } from "@/core/db";
 import { createNotification } from "@/core/notifications/service";
+import { markProductNeeded } from "@/domain/shopping";
 import { NotificationType } from "@prisma/client";
 import { addDays, differenceInDays, isBefore, subMinutes } from "date-fns";
 
@@ -57,24 +58,12 @@ async function checkLowStock() {
         const list = await prisma.shoppingList.findFirst({
           where: { householdId: household.id },
         });
-        if (list) {
-          const alreadyOnList = await prisma.shoppingItem.findFirst({
-            where: {
-              shoppingListId: list.id,
-              name: product.name,
-              checked: false,
-            },
+        if (list && product.autoAddWhenLowStock) {
+          await markProductNeeded(household.id, {
+            productId: product.id,
+            shopping_list_id: list.id,
+            autoAdded: true,
           });
-          if (!alreadyOnList) {
-            await prisma.shoppingItem.create({
-              data: {
-                shoppingListId: list.id,
-                productId: product.id,
-                name: product.name,
-                autoAdded: true,
-              },
-            });
-          }
         }
       }
     }

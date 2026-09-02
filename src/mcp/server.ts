@@ -4,7 +4,7 @@ import { DomainError, isDomainError } from "@/domain/error";
 import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
 import { getRecipe, searchRecipes } from "@/domain/recipes";
-import { addShoppingListItem, listShoppingItems } from "@/domain/shopping";
+import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
 import { listDirigeraLights, setDirigeraLightState } from "@/domain/smarthome";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
@@ -101,7 +101,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.shopping_list.list",
     {
       description:
-        'Get the household primary shopping list. Use for "what do we need" or "what\'s on the list". Not for budget or expenses — use budgettracker for money.',
+        'Get needed items on the household primary shopping list. Each entry is a stable slot tied to a catalog product. Use for "what do we need" or "what\'s on the list". Not for budget or expenses — use budgettracker for money.',
       inputSchema: {
         include_checked: z
           .boolean()
@@ -126,7 +126,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.shopping_list.add_item",
     {
       description:
-        "Add an item to the household primary shopping list. Matches name to a known inventory product when possible.",
+        "Mark a product as needed on the primary shopping list. Matches or creates a catalog product by name (case-insensitive). Repeat calls dedupe to one slot.",
       inputSchema: {
         name: z.string().describe("Item name"),
         quantity: z
@@ -143,6 +143,32 @@ export function createMcpServer(householdId: string): McpServer {
       const result = await addShoppingListItem(householdId, {
         ...input,
         mcp_audit: { tool_name: "homebase.shopping_list.add_item" },
+      });
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.shopping_list.complete_item",
+    {
+      description:
+        "Mark a shopping list slot as bought. Records purchase history and by default increments inventory when the product has stock rows.",
+      inputSchema: {
+        id: z.string().describe("Shopping list slot id"),
+        update_inventory: z
+          .boolean()
+          .optional()
+          .describe("Bump inventory by slot quantity, default true"),
+      },
+    },
+    async (input) => {
+      const result = await completeShoppingItem(householdId, {
+        id: input.id,
+        update_inventory: input.update_inventory,
+        source: "mcp",
       });
       if (isDomainError(result)) {
         return toolError(result);

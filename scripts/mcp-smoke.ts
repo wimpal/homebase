@@ -122,6 +122,31 @@ async function callTool(
   return json.result ?? {};
 }
 
+async function ensureLocalShoppingPrereqs() {
+  const prisma = new PrismaClient();
+  try {
+    const household = await prisma.household.findUnique({
+      where: { id: HOUSEHOLD_ID! },
+    });
+    if (!household) {
+      const demo = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
+      fail(
+        `MCP_HOUSEHOLD_ID is not in the database. Run npm run db:seed and set MCP_HOUSEHOLD_ID=${demo?.id ?? "<household-id>"} in .env (server must restart).`,
+      );
+    }
+    const list = await prisma.shoppingList.findFirst({
+      where: { householdId: HOUSEHOLD_ID! },
+    });
+    if (!list) {
+      await prisma.shoppingList.create({
+        data: { householdId: HOUSEHOLD_ID!, name: "Shopping List" },
+      });
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 async function main() {
   if (!TOKEN) {
     fail("SERVICE_TOKEN is not set in the environment");
@@ -172,6 +197,10 @@ async function main() {
   }
   ok("initialize");
 
+  if (IS_LOCAL) {
+    await ensureLocalShoppingPrereqs();
+  }
+
   await mcpPost(
     JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
     TOKEN,
@@ -200,15 +229,16 @@ async function main() {
     "homebase.recipes.get",
     "homebase.recipes.search",
     "homebase.shopping_list.add_item",
+    "homebase.shopping_list.complete_item",
     "homebase.shopping_list.list",
     "homebase.tasks.add",
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 14 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 15 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 14 homebase tools");
+  ok("tools/list returns exactly 15 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -220,7 +250,9 @@ async function main() {
 
   const shopListResult = await callTool(4, "homebase.shopping_list.list", {});
   if (shopListResult.isError) {
-    fail("homebase.shopping_list.list tool error");
+    fail(
+      `homebase.shopping_list.list tool error: ${shopListResult.content?.[0]?.text ?? "unknown"}`,
+    );
   }
   ok("homebase.shopping_list.list");
 
@@ -245,13 +277,65 @@ async function main() {
     fail(`add_item returned unexpected payload: ${JSON.stringify(added)}`);
   }
 
+  const addDupResult = await callTool(51, "homebase.shopping_list.add_item", {
+    name: smokeItemName,
+    quantity: 2,
+  });
+  if (addDupResult.isError) {
+    fail("shopping_list.add_item dedupe call tool error");
+  }
+  const dupAdded = parseToolPayload(addDupResult) as {
+    id: string;
+    quantity: number;
+  };
+  if (dupAdded.id !== added.id || dupAdded.quantity !== 4) {
+    fail(
+      `dedupe add_item expected same id qty 4, got ${JSON.stringify(dupAdded)}`,
+    );
+  }
+
   const shopAfterAdd = await callTool(6, "homebase.shopping_list.list", {});
   if (shopAfterAdd.isError) {
     fail("shopping_list.list after add_item failed");
   }
-  const shopItems = parseToolPayload(shopAfterAdd) as { name: string }[];
-  if (!shopItems.some((item) => item.name === smokeItemName)) {
-    fail(`added item ${smokeItemName} not found on shopping list`);
+  const shopItems = parseToolPayload(shopAfterAdd) as { name: string; id: string }[];
+  const matches = shopItems.filter((item) => item.name === smokeItemName);
+  if (matches.length !== 1) {
+    fail(`expected one list row for ${smokeItemName}, got ${matches.length}`);
+  }
+
+  const completeResult = await callTool(52, "homebase.shopping_list.complete_item", {
+    id: added.id,
+  });
+  if (completeResult.isError) {
+    fail("homebase.shopping_list.complete_item tool error");
+  }
+  const completed = parseToolPayload(completeResult) as { checked: boolean };
+  if (!completed.checked) {
+    fail("complete_item should return checked true");
+  }
+  const shopAfterComplete = await callTool(53, "homebase.shopping_list.list", {});
+  const afterCompleteItems = parseToolPayload(shopAfterComplete) as { name: string }[];
+  if (afterCompleteItems.some((item) => item.name === smokeItemName)) {
+    fail("completed item still on needed list");
+  }
+  ok("shopping_list dedupe + complete_item");
+
+  const revertItemName = `mcp-smoke-revert-${Date.now()}`;
+  const addForRevert = await callTool(54, "homebase.shopping_list.add_item", {
+    name: revertItemName,
+    quantity: 1,
+  });
+  if (addForRevert.isError) {
+    fail("add_item for revert test tool error");
+  }
+  const addedRevert = parseToolPayload(addForRevert) as {
+    change_id: string;
+    id: string;
+    name: string;
+  };
+  if (!addedRevert.change_id) {
+    fail("add_item for revert missing change_id");
   }
 
   const changesAfterAdd = await callTool(7, "homebase.changes.list", {
@@ -263,12 +347,12 @@ async function main() {
   const changeRows = parseToolPayload(changesAfterAdd) as {
     change_id: string;
   }[];
-  if (!changeRows.some((row) => row.change_id === added.change_id)) {
+  if (!changeRows.some((row) => row.change_id === addedRevert.change_id)) {
     fail("change log missing add_item entry");
   }
 
   const revertedAdd = await callTool(8, "homebase.changes.revert", {
-    change_id: added.change_id,
+    change_id: addedRevert.change_id,
   });
   if (revertedAdd.isError) {
     fail("changes.revert (add_item) tool error");
@@ -277,7 +361,7 @@ async function main() {
     change_id: string;
     reverted_at?: string;
   };
-  if (revertPayload.change_id !== added.change_id || !revertPayload.reverted_at) {
+  if (revertPayload.change_id !== addedRevert.change_id || !revertPayload.reverted_at) {
     fail(`unexpected revert payload: ${JSON.stringify(revertPayload)}`);
   }
 
@@ -285,12 +369,12 @@ async function main() {
   const shopAfterRevertItems = parseToolPayload(shopAfterRevert) as {
     name: string;
   }[];
-  if (shopAfterRevertItems.some((item) => item.name === smokeItemName)) {
+  if (shopAfterRevertItems.some((item) => item.name === revertItemName)) {
     fail("shopping item still on list after revert");
   }
 
   const doubleRevert = await callTool(10, "homebase.changes.revert", {
-    change_id: added.change_id,
+    change_id: addedRevert.change_id,
   });
   if (!doubleRevert.isError) {
     fail("expected invalid_input on second revert");
@@ -440,6 +524,61 @@ type LightRow = {
   reachable?: boolean;
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isReachable(light: LightRow): boolean {
+  return light.reachable !== false;
+}
+
+function pickTestLight(lights: LightRow[]): LightRow | undefined {
+  const envTestId = process.env.DIRIGERA_TEST_DEVICE_ID?.trim();
+  const reachable = lights.filter(isReachable);
+
+  if (reachable.length === 0) {
+    return undefined;
+  }
+
+  if (envTestId) {
+    const envMatch = reachable.find((l) => l.id === envTestId);
+    if (envMatch) {
+      return envMatch;
+    }
+    const envUnreachable = lights.find((l) => l.id === envTestId);
+    if (envUnreachable) {
+      console.log(
+        `NOTE: DIRIGERA_TEST_DEVICE_ID ${envTestId} is unreachable — using another reachable light`,
+      );
+    }
+  }
+
+  return reachable.find((l) => l.isOn) ?? reachable[0];
+}
+
+async function waitForLightState(
+  callTool: CallTool,
+  toolId: number,
+  deviceId: string,
+  expectedOn: boolean,
+): Promise<LightRow | undefined> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) {
+      await sleep(500);
+    }
+    const listResult = await callTool(toolId + attempt, "homebase.lights.list", {});
+    if (listResult.isError) {
+      continue;
+    }
+    const rows = parseToolPayload(listResult) as LightRow[];
+    const light = rows.find((l) => l.id === deviceId);
+    if (light && light.isOn === expectedOn) {
+      return light;
+    }
+  }
+  return undefined;
+}
+
 async function runLightsSmoke(callTool: CallTool) {
   const lightsListResult = await callTool(28, "homebase.lights.list", {});
 
@@ -466,14 +605,25 @@ async function runLightsSmoke(callTool: CallTool) {
     return;
   }
 
-  const envTestId = process.env.DIRIGERA_TEST_DEVICE_ID?.trim();
-  const testDevice =
-    (envTestId ? lights.find((l) => l.id === envTestId) : undefined) ??
-    lights.find((l) => l.isOn) ??
-    lights[0];
+  const unreachableCount = lights.filter((l) => !isReachable(l)).length;
+  if (unreachableCount > 0) {
+    console.log(
+      `NOTE: ${unreachableCount} light(s) report reachable=false (hub mesh); smoke uses a reachable lamp only`,
+    );
+  }
+
+  const testDevice = pickTestLight(lights);
+  if (!testDevice) {
+    console.log("NOTE: all lights unreachable — toggle skipped");
+    ok("homebase.lights.set_state (skipped, no reachable lights)");
+    return;
+  }
 
   const deviceId = testDevice.id;
   const originalOn = testDevice.isOn;
+  console.log(
+    `Using test light: ${testDevice.name}${testDevice.room ? ` (${testDevice.room})` : ""} [${deviceId}]`,
+  );
 
   const setOffResult = await callTool(29, "homebase.lights.set_state", {
     device_id: deviceId,
@@ -494,18 +644,15 @@ async function runLightsSmoke(callTool: CallTool) {
     );
   }
 
-  const listAfterOff = await callTool(30, "homebase.lights.list", {});
-  if (listAfterOff.isError) {
-    fail("homebase.lights.list after set_state (off) failed");
-  }
-  const afterOffLights = parseToolPayload(listAfterOff) as LightRow[];
-  const afterOff = afterOffLights.find((l) => l.id === deviceId);
-  if (!afterOff || afterOff.isOn !== false) {
-    fail(`expected ${deviceId} isOn false after set_state off`);
+  const afterOff = await waitForLightState(callTool, 30, deviceId, false);
+  if (!afterOff) {
+    fail(
+      `expected ${deviceId} isOn false after set_state off (reachable lamp; hub may be slow — retried 5x)`,
+    );
   }
 
   const restoreOn = originalOn;
-  const setOnResult = await callTool(31, "homebase.lights.set_state", {
+  const setOnResult = await callTool(35, "homebase.lights.set_state", {
     device_id: deviceId,
     on: restoreOn,
   });

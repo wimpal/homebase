@@ -165,19 +165,35 @@ Legend: **Done** · **Partial** · **Missing** · **Risk** (security/ops gap)
 
 | README claim | Status | Current implementation | Gaps & changes needed |
 |--------------|--------|------------------------|------------------------|
-| Smart lists | **Partial** | `shopping/page.tsx` uses `lists[0]` only | Multi-list CRUD, default list selection |
-| Auto-population | **Done** | Scheduler adds `ShoppingItem` with `autoAdded: true` | — |
+| Smart lists | **Partial** | `shopping/page.tsx` uses `lists[0]` only | **T-035:** catalog + need view; multi-list deferred |
+| Auto-population | **Partial** | Scheduler adds rows globally | **T-035:** per-product `autoAddWhenLowStock` (default off) |
 | Store filtering | **Done** | `?store=` query, `getFilteredItems` | — |
-| Tags | **Partial** | Tags stored on `ShoppingItem` | Tag filter UI; tag-based grouping |
+| Tags | **Partial** | Tags stored on `ShoppingItem` | Tag filter UI; slot remembers last tags |
 
-**Implementation plan (Phase 6):**
+**T-035 design (accepted 2026-09-02, ADR-010):** `Product` = persistent catalog;
+one primary-list slot per product; needed items only on main view; bought clears
+need + purchase event + inventory bump when stock-tracked; desktop catalog panel +
+mobile typeahead; unique product name per household.
 
-1. **Lists:** `createShoppingList`, `renameShoppingList`, `deleteShoppingList`, list switcher in UI.
-2. **Tags:** Filter by tag; optional tag chips on items.
-3. **Request integration (Phase 8):** Approved grocery requests → `addShoppingItem`.
-4. **Guards:** Fix `toggleShoppingItem`, `deleteShoppingItem` — verify `shoppingList.householdId`.
+**Implementation plan (T-035 — before Phase 6 multi-list work):**
 
-**Files:** `src/modules/shopping/actions.ts`, `src/app/(app)/shopping/page.tsx`
+1. **Schema:** `PurchaseEvent` (or equivalent), `Product.lastPurchasedAt`,
+   `Product.autoAddWhenLowStock` (default false), unique `(householdId, name)`;
+   unique `(shoppingListId, productId)` on slots.
+2. **Domain:** `markNeeded`, `markBought`, upsert slot; migrate orphan free-text rows.
+3. **UI:** Catalog browse/search + needed list (desktop); quick-add typeahead (mobile).
+4. **Scheduler:** Auto-add only when product opt-in is on.
+5. **MCP:** Update contract notes for `list`, `add_item`, implement `complete_item`.
+
+**Future (after T-035 data exists):**
+
+- **Replenishment predictions** — suggest re-need from purchase history cadence.
+- **Receipt capture** — extend existing opportunity (Phase 7+): OCR line items →
+  match/create `Product`, append purchase events, optional BudgetTracker handoff.
+  See opportunity backlog row “Receipt capture and expense import”.
+
+**Files:** `src/modules/shopping/`, `src/domain/shopping/`, `src/app/(app)/shopping/`,
+`prisma/schema.prisma`, `src/core/scheduler/index.ts`
 
 ---
 
@@ -807,7 +823,7 @@ The following items are deliberately separated from committed phase work. They a
 | Weather-driven window ventilation alerts | Help occupants keep the home cooler by warning when outdoor heat rises and when cooler conditions return | Discover after Phase 8 smart-home foundations | Select a privacy-appropriate forecast provider and household location policy; define polling cadence, “hot”/“cool” thresholds, hysteresis, quiet hours, notification deduplication, and forecast-failure behavior. Optionally correlate alerts with authorized indoor temperature sensors; sensors must be household-scoped and remain optional. |
 | Meal planning | Turn recipes, availability, and calendar commitments into a weekly plan | Discover Phase 6; build after Phase 7 | Is planning household-wide or personal? How do servings, leftovers, allergies, and generated shopping items behave? |
 | Pantry-first recipe suggestions | Reduce waste by suggesting recipes using expiring/in-stock products | Discover Phase 7 | Define transparent scoring, substitution policy, privacy-preserving local search, and what “enough stock” means |
-| Receipt capture and expense import | Lower friction for inventory restocking and budgets | Discover after Phase 7 | OCR runs locally or optional provider? How are line items matched, corrected, and retained? |
+| Receipt capture and expense import | Lower friction for inventory restocking and budgets; **feeds T-035 purchase history** (match OCR lines to `Product`, append buy events, refresh cadence data) | Discover after Phase 7; build after T-035 purchase logging | OCR runs locally or optional provider? How are line items matched to catalog products, corrected, and retained? BudgetTracker expense link optional or automatic? |
 | Assignments and accountability | Make shared chores and requests clear without turning HomeBase into surveillance | Discover Phase 4–6 | Opt-in assignment, fair rotation, reassignment, escalation, and activity visibility policies |
 | Household activity timeline | Explain automations and changes across modules | Discover Phase 6 | Define event vocabulary, retention, sensitive-content redaction, pagination, and relation links |
 | Notification center and preferences | Let members choose important, non-noisy alerts | Discover Phase 4; build alongside Phases 5–7 | Per-user vs household controls? Quiet hours, escalation, delivery channels, and critical-alert policy |

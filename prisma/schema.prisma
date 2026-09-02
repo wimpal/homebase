@@ -161,6 +161,7 @@ model Household {
   visitorPrefs     VisitorPreference[]
   deliveries       DeliveryPackage[]
   mcpChangeLogs    McpChangeLog[]
+  purchaseEvents   PurchaseEvent[]
 }
 
 model McpChangeLog {
@@ -253,20 +254,23 @@ model Location {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  householdId String
-  name        String
-  description String?
-  category    String?
-  lowStockAt  Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  householdId          String
+  name                 String
+  description          String?
+  category             String?
+  lowStockAt           Int       @default(1)
+  autoAddWhenLowStock  Boolean   @default(false)
+  lastPurchasedAt      DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   household          Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
   barcodes           Barcode[]
   stockItems         StockItem[]
   recipeIngredients  RecipeIngredient[]
   shoppingItems      ShoppingItem[]
+  purchaseEvents     PurchaseEvent[]
 }
 
 model Barcode {
@@ -315,7 +319,7 @@ model Store {
 model ShoppingItem {
   id             String   @id @default(cuid())
   shoppingListId String
-  productId      String?
+  productId      String
   name           String
   quantity       Int      @default(1)
   checked        Boolean  @default(false)
@@ -325,8 +329,24 @@ model ShoppingItem {
   createdAt      DateTime @default(now())
 
   shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
-  product      Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   store        Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@unique([shoppingListId, productId])
+}
+
+model PurchaseEvent {
+  id          String   @id @default(cuid())
+  householdId String
+  productId   String
+  quantity    Int      @default(1)
+  purchasedAt DateTime @default(now())
+  source      String   @default("manual")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, productId, purchasedAt])
 }
 
 model Budget {

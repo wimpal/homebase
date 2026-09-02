@@ -3,7 +3,12 @@
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertShoppingList, assertStore } from "@/core/tenancy/assertHouseholdResource";
-import { addShoppingListItem } from "@/domain/shopping";
+import {
+  addShoppingListItem,
+  listCatalogProducts,
+  markProductNeeded,
+  markShoppingItemBought,
+} from "@/domain/shopping";
 import { isDomainError } from "@/domain/error";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -13,10 +18,23 @@ export async function getShoppingLists() {
   return prisma.shoppingList.findMany({
     where: { householdId },
     include: {
-      items: { include: { store: true, product: true }, orderBy: { createdAt: "desc" } },
+      items: {
+        where: { checked: false },
+        include: { store: true, product: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export async function getCatalog() {
+  const { householdId } = await requireHousehold();
+  const result = await listCatalogProducts(householdId);
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
+  return result;
 }
 
 export async function getStores() {
@@ -47,16 +65,37 @@ export async function addShoppingItem(formData: FormData) {
   revalidatePath("/shopping");
 }
 
-export async function toggleShoppingItem(formData: FormData) {
+export async function markProductNeededAction(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
+  const productId = formData.get("productId") as string;
+  const listId = formData.get("listId") as string;
+  const quantity = parseInt((formData.get("quantity") as string) || "1", 10);
+  await assertShoppingList(householdId, listId);
+
+  const result = await markProductNeeded(householdId, {
+    productId,
+    quantity,
+    shopping_list_id: listId,
+  });
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
+  revalidatePath("/shopping");
+}
+
+export async function markItemBought(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const id = formData.get("id") as string;
-  const checked = formData.get("checked") === "true";
-  const result = await prisma.shoppingItem.updateMany({
-    where: { id, shoppingList: { householdId } },
-    data: { checked },
+  const result = await markShoppingItemBought(householdId, {
+    id,
+    update_inventory: true,
+    source: "manual",
   });
-  if (result.count === 0) throw new Error("Shopping item not found");
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
   revalidatePath("/shopping");
+  revalidatePath("/inventory");
 }
 
 export async function createStore(formData: FormData) {
@@ -66,23 +105,16 @@ export async function createStore(formData: FormData) {
   revalidatePath("/shopping");
 }
 
-export async function deleteShoppingItem(formData: FormData) {
-  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
-  const id = formData.get("id") as string;
-  const result = await prisma.shoppingItem.deleteMany({
-    where: { id, shoppingList: { householdId } },
-  });
-  if (result.count === 0) throw new Error("Shopping item not found");
-  revalidatePath("/shopping");
-}
-
 export async function getFilteredItems(listId: string, storeId?: string) {
   const { householdId } = await requireHousehold();
   const list = await prisma.shoppingList.findFirst({
     where: { id: listId, householdId },
     include: {
       items: {
-        where: storeId ? { storeId } : undefined,
+        where: {
+          checked: false,
+          ...(storeId ? { storeId } : {}),
+        },
         include: { store: true },
       },
     },

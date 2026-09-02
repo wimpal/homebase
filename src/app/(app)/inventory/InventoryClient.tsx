@@ -62,6 +62,10 @@ export function InventoryClient({
               <div><Label>Category</Label><Input name="category" /></div>
               <div><Label>Quantity</Label><Input name="quantity" type="number" min="0" defaultValue="1" /></div>
               <div><Label>Low stock threshold</Label><Input name="lowStockAt" type="number" min="0" defaultValue="1" /></div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" name="autoAddWhenLowStock" id="autoAddWhenLowStock" className="h-4 w-4 rounded border-zinc-300" />
+                <Label htmlFor="autoAddWhenLowStock">Auto-add to shopping when low stock</Label>
+              </div>
               <div><Label>Barcode</Label><Input name="barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} /></div>
               <div>
                 <Label>Location</Label>
