@@ -3,10 +3,17 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-await prisma.$executeRawUnsafe(`
-  CREATE UNIQUE INDEX IF NOT EXISTS "Product_household_name_ci"
-  ON "Product" ("householdId", LOWER("name"));
-`);
+async function main() {
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "Product_household_name_ci"
+    ON "Product" ("householdId", LOWER("name"));
+  `);
+  console.log("Product name CI index ensured.");
+}
 
-console.log("Product name CI index ensured.");
-await prisma.$disconnect();
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
