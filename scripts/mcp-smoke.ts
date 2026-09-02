@@ -706,13 +706,12 @@ async function runInventoryUpdateSmokeRemote(callTool: CallTool) {
     id: string;
     quantity: number;
   }[];
-  const product =
-    products.find((p) => p.quantity >= 1) ?? products[0] ?? undefined;
+  const product = products.find((p) => p.quantity >= 1);
   if (!product) {
     console.log(
-      "NOTE: no inventory products on NAS — inventory.update tests skipped (remote mode)",
+      "NOTE: no inventory products with quantity >= 1 on NAS — inventory.update tests skipped (remote mode)",
     );
-    ok("homebase.inventory.update (skipped, empty household)");
+    ok("homebase.inventory.update (skipped, no positive stock)");
     return;
   }
 
@@ -737,7 +736,8 @@ async function runInventoryUpdateChecks(
     delta: -1,
   });
   if (deltaResult.isError) {
-    fail("homebase.inventory.update (delta) tool error");
+    const errText = deltaResult.content?.[0]?.text ?? "(no detail)";
+    fail(`homebase.inventory.update (delta) tool error: ${errText}`);
   }
   const afterDelta = parseToolPayload(deltaResult) as {
     change_id: string;
