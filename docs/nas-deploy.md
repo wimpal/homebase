@@ -69,7 +69,8 @@ Or manually:
 
 ```bash
 docker compose up -d --build
-docker compose exec worker npx prisma db push
+docker compose exec worker npx tsx scripts/migrate-shopping-slots.ts
+docker compose exec worker npx prisma db push --accept-data-loss
 docker compose exec app npm run db:seed   # optional demo data
 ```
 
@@ -117,7 +118,7 @@ The script:
 
 1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
 2. SSH → `docker compose up --build -d`
-3. `prisma db push` inside the **worker** container (app image has no Prisma 6 CLI — `npx` would fetch Prisma 7)
+3. `npx tsx scripts/migrate-shopping-slots.ts` then `prisma db push --accept-data-loss` inside the **worker** container (migration backfills orphan shopping rows before T-035 NOT NULL on `productId`)
 4. Curl `/health` on port 3000
 
 Legacy alternative (SSH + on-NAS `deploy.sh` only):
@@ -138,7 +139,8 @@ git pull
 ### What `deploy.sh` does
 
 1. `docker compose up -d --build` — rebuild app + worker, restart all services
-2. `prisma db push` — apply any schema changes
+2. `migrate-shopping-slots.ts` — T-035 data cleanup (safe to re-run)
+3. `prisma db push --accept-data-loss` — apply schema changes
 
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 

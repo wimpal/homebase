@@ -1,18 +1,29 @@
 /**
- * One-off data migration for T-035: merge duplicate products, backfill productId
- * on shopping items, dedupe slots.
+ * T-035 data migration — raw SQL only so it runs BEFORE `prisma db push`
+ * on databases that still have the pre-T-035 schema (no autoAddWhenLowStock,
+ * nullable productId, etc.).
  *
- * Safe to re-run (idempotent-ish). Works with post-T-035 Prisma schema (required
- * productId) by using raw SQL for orphan rows.
- *
- * Run once per database when upgrading from pre-T-035:
  *   npx tsx scripts/migrate-shopping-slots.ts
  *
- * If productId is already NOT NULL and backfilled, orphan step is a no-op.
+ * Safe to re-run. Deploy order: this script → db push --accept-data-loss
  */
+import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+function newProductId(): string {
+  const time = Date.now().toString(36);
+  const rand = randomBytes(8).toString("base64url").replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return `cm${time}${rand}`.slice(0, 25);
+}
+
+type ProductRow = {
+  id: string;
+  householdId: string;
+  name: string;
+  createdAt: Date;
+};
 
 type OrphanRow = {
   id: string;
@@ -21,12 +32,23 @@ type OrphanRow = {
   householdId: string;
 };
 
-async function mergeDuplicateProducts() {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: "asc" },
-  });
+type SlotRow = {
+  id: string;
+  shoppingListId: string;
+  productId: string | null;
+  quantity: number;
+  checked: boolean;
+  createdAt: Date;
+};
 
-  const groups = new Map<string, typeof products>();
+async function mergeDuplicateProducts() {
+  const products = await prisma.$queryRaw<ProductRow[]>`
+    SELECT id, "householdId", name, "createdAt"
+    FROM "Product"
+    ORDER BY "createdAt" ASC
+  `;
+
+  const groups = new Map<string, ProductRow[]>();
   for (const p of products) {
     const key = `${p.householdId}::${p.name.toLowerCase()}`;
     const list = groups.get(key) ?? [];
@@ -38,30 +60,17 @@ async function mergeDuplicateProducts() {
     if (group.length <= 1) continue;
     const [survivor, ...dupes] = group;
     for (const dupe of dupes) {
-      await prisma.stockItem.updateMany({
-        where: { productId: dupe.id },
-        data: { productId: survivor.id },
-      });
-      await prisma.shoppingItem.updateMany({
-        where: { productId: dupe.id },
-        data: { productId: survivor.id },
-      });
-      await prisma.barcode.updateMany({
-        where: { productId: dupe.id },
-        data: { productId: survivor.id },
-      });
-      await prisma.recipeIngredient.updateMany({
-        where: { productId: dupe.id },
-        data: { productId: survivor.id },
-      });
-      await prisma.product.delete({ where: { id: dupe.id } });
+      await prisma.$executeRaw`UPDATE "StockItem" SET "productId" = ${survivor.id} WHERE "productId" = ${dupe.id}`;
+      await prisma.$executeRaw`UPDATE "ShoppingItem" SET "productId" = ${survivor.id} WHERE "productId" = ${dupe.id}`;
+      await prisma.$executeRaw`UPDATE "Barcode" SET "productId" = ${survivor.id} WHERE "productId" = ${dupe.id}`;
+      await prisma.$executeRaw`UPDATE "RecipeIngredient" SET "productId" = ${survivor.id} WHERE "productId" = ${dupe.id}`;
+      await prisma.$executeRaw`DELETE FROM "Product" WHERE id = ${dupe.id}`;
       console.log(`Merged product "${dupe.name}" -> ${survivor.id}`);
     }
   }
 }
 
 async function backfillShoppingProductIds() {
-  // Raw SQL: Prisma client rejects productId: null once schema marks it required.
   const orphans = await prisma.$queryRaw<OrphanRow[]>`
     SELECT si.id, si.name, si."shoppingListId", sl."householdId"
     FROM "ShoppingItem" si
@@ -76,17 +85,27 @@ async function backfillShoppingProductIds() {
 
   for (const item of orphans) {
     const name = item.name.trim();
-    const existing = await prisma.product.findMany({
-      where: { householdId: item.householdId },
-    });
+    const existing = await prisma.$queryRaw<ProductRow[]>`
+      SELECT id, "householdId", name, "createdAt"
+      FROM "Product"
+      WHERE "householdId" = ${item.householdId}
+    `;
     let product = existing.find(
       (p) => p.name.toLowerCase() === name.toLowerCase(),
     );
 
     if (!product) {
-      product = await prisma.product.create({
-        data: { householdId: item.householdId, name },
-      });
+      const newId = newProductId();
+      await prisma.$executeRaw`
+        INSERT INTO "Product" (id, "householdId", name, "lowStockAt", "createdAt", "updatedAt")
+        VALUES (${newId}, ${item.householdId}, ${name}, 1, NOW(), NOW())
+      `;
+      product = {
+        id: newId,
+        householdId: item.householdId,
+        name,
+        createdAt: new Date(),
+      };
       console.log(`Created product "${name}" for orphan shopping item`);
     }
 
@@ -99,12 +118,16 @@ async function backfillShoppingProductIds() {
 }
 
 async function dedupeSlots() {
-  const items = await prisma.shoppingItem.findMany({
-    orderBy: { createdAt: "asc" },
-  });
+  const items = await prisma.$queryRaw<SlotRow[]>`
+    SELECT id, "shoppingListId", "productId", quantity, checked, "createdAt"
+    FROM "ShoppingItem"
+    WHERE "productId" IS NOT NULL
+    ORDER BY "createdAt" ASC
+  `;
 
-  const groups = new Map<string, typeof items>();
+  const groups = new Map<string, SlotRow[]>();
   for (const item of items) {
+    if (!item.productId) continue;
     const key = `${item.shoppingListId}::${item.productId}`;
     const list = groups.get(key) ?? [];
     list.push(item);
@@ -116,28 +139,22 @@ async function dedupeSlots() {
 
     const unchecked = group.filter((i) => !i.checked);
     const keeper =
-      unchecked.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ??
+      unchecked.sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      )[0] ??
       group.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
     const totalQty = group.reduce((sum, i) => sum + i.quantity, 0);
-    await prisma.shoppingItem.update({
-      where: { id: keeper.id },
-      data: { quantity: totalQty },
-    });
+    await prisma.$executeRaw`
+      UPDATE "ShoppingItem" SET quantity = ${totalQty} WHERE id = ${keeper.id}
+    `;
 
     const toDelete = group.filter((i) => i.id !== keeper.id);
-    await prisma.shoppingItem.deleteMany({
-      where: { id: { in: toDelete.map((i) => i.id) } },
-    });
+    for (const row of toDelete) {
+      await prisma.$executeRaw`DELETE FROM "ShoppingItem" WHERE id = ${row.id}`;
+    }
     console.log(`Deduped ${group.length} slots for product ${keeper.productId}`);
   }
-}
-
-async function ensureCiIndex() {
-  await prisma.$executeRawUnsafe(`
-    CREATE UNIQUE INDEX IF NOT EXISTS "Product_household_name_ci"
-    ON "Product" ("householdId", LOWER("name"));
-  `);
 }
 
 async function main() {
@@ -147,13 +164,7 @@ async function main() {
   await backfillShoppingProductIds();
   console.log("Deduping shopping slots...");
   await dedupeSlots();
-  console.log("Ensuring case-insensitive product name index...");
-  try {
-    await ensureCiIndex();
-  } catch (e) {
-    console.warn("CI index (may already exist):", e);
-  }
-  console.log("Done.");
+  console.log("Done. Run: npx prisma db push --accept-data-loss");
 }
 
 main()
