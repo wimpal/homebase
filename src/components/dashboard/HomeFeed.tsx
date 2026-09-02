@@ -3,6 +3,9 @@ import { markNotificationRead } from "@/core/notifications/service";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { getLocale, getTranslations } from "next-intl/server";
+import { formatDateTime } from "@/lib/utils";
+import { isLocale, localeToBcp47 } from "@/i18n/config";
 
 interface NotificationItem {
   id: string;
@@ -14,7 +17,11 @@ interface NotificationItem {
   createdAt: Date;
 }
 
-export function HomeFeed({ notifications }: { notifications: NotificationItem[] }) {
+export async function HomeFeed({ notifications }: { notifications: NotificationItem[] }) {
+  const t = await getTranslations("dashboard");
+  const localeRaw = await getLocale();
+  const bcp47 = localeToBcp47(isLocale(localeRaw) ? localeRaw : "en");
+
   async function handleMarkRead(formData: FormData) {
     "use server";
     const id = formData.get("id") as string;
@@ -27,12 +34,12 @@ export function HomeFeed({ notifications }: { notifications: NotificationItem[] 
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Bell className="h-5 w-5 text-emerald-600" />
-          Home Feed
+          {t("homeFeed")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {notifications.length === 0 ? (
-          <p className="text-sm text-zinc-500">No notifications yet.</p>
+          <p className="text-sm text-zinc-500">{t("noNotifications")}</p>
         ) : (
           <ul className="space-y-3">
             {notifications.map((n) => (
@@ -51,14 +58,14 @@ export function HomeFeed({ notifications }: { notifications: NotificationItem[] 
                     )}
                     <p className="text-zinc-600 dark:text-zinc-400">{n.message}</p>
                     <p className="mt-1 text-xs text-zinc-400">
-                      {new Date(n.createdAt).toLocaleString()}
+                      {formatDateTime(n.createdAt, bcp47)}
                     </p>
                   </div>
                   {!n.read && (
                     <form action={handleMarkRead}>
                       <input type="hidden" name="id" value={n.id} />
                       <button type="submit" className="text-xs text-emerald-600 hover:underline">
-                        Mark read
+                        {t("markRead")}
                       </button>
                     </form>
                   )}

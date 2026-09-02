@@ -1,0 +1,408 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Instellingen",
+    "signOut": "Uitloggen",
+    "home": "HomeBase"
+  },
+  "modules": {
+    "inventory": {
+      "name": "Voorraad",
+      "description": "Huishoudproducten en voorraadniveaus bijhouden"
+    },
+    "shopping": {
+      "name": "Boodschappen",
+      "description": "Slimme boodschappenlijsten en winkelfilters"
+    },
+    "tasks": {
+      "name": "Taken",
+      "description": "Klussen, projecten en to-do's"
+    },
+    "plants": {
+      "name": "Planten",
+      "description": "Plantverzorging en wateringschema's"
+    },
+    "pets": {
+      "name": "Huisdieren",
+      "description": "Huisdierinfo, afspraken en voeding"
+    },
+    "calendar": {
+      "name": "Agenda",
+      "description": "Huishoudelijke evenementen en planning"
+    },
+    "routines": {
+      "name": "Routines",
+      "description": "Gedeelde routines met gamificatie"
+    },
+    "recipes": {
+      "name": "Recepten",
+      "description": "Recepten gekoppeld aan voorraad"
+    },
+    "budget": {
+      "name": "Budget",
+      "description": "Budgetbeheer en uitgaven"
+    },
+    "delivery": {
+      "name": "Bezorging",
+      "description": "Pakketten volgen en meldingen"
+    },
+    "smart_home": {
+      "name": "Smart Home",
+      "description": "Sensoren, Hue-lampen en camera's"
+    },
+    "messaging": {
+      "name": "Berichten",
+      "description": "Huishoudelijke groepsberichten"
+    },
+    "home": {
+      "name": "Home",
+      "description": "Dashboard"
+    }
+  },
+  "common": {
+    "add": "Toevoegen",
+    "save": "Opslaan",
+    "create": "Aanmaken",
+    "complete": "Voltooien",
+    "title": "Titel",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "quantity": "Aantal",
+    "category": "Categorie",
+    "none": "Geen",
+    "location": "Locatie",
+    "notes": "Notities",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "send": "Versturen",
+    "update": "Bijwerken",
+    "log": "Loggen",
+    "on": "Aan",
+    "off": "Uit",
+    "failed": "Mislukt",
+    "noneOption": "Geen",
+    "due": "Deadline",
+    "next": "Volgende",
+    "by": "Door",
+    "min": "min",
+    "pts": "ptn",
+    "emDash": "—",
+    "soon": "Binnenkort",
+    "last": "Laatst",
+    "started": "Gestart",
+    "completed": "Voltooid",
+    "items": "Items",
+    "guests": "Gasten",
+    "atHome": "Thuis",
+    "outside": "Buitenshuis",
+    "track": "Volgen",
+    "expected": "Verwacht",
+    "window": "Venster",
+    "package": "Pakket",
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen",
+    "use": "Gebruiken",
+    "yearsOld": "{age} jaar oud"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": {
+      "title": "Taal",
+      "description": "Kies de taal voor de app-interface",
+      "english": "English",
+      "dutch": "Nederlands"
+    },
+    "modules": {
+      "title": "Modules",
+      "description": "Functies in- of uitschakelen voor je huishouden"
+    },
+    "push": {
+      "title": "Pushmeldingen",
+      "description": "Ontvang herinneringen op je apparaat (installeer als PWA voor het beste resultaat)",
+      "enable": "Pushmeldingen inschakelen",
+      "notSupported": "Pushmeldingen worden niet ondersteund in deze browser",
+      "vapidMissing": "VAPID-sleutels niet geconfigureerd. Stel NEXT_PUBLIC_VAPID_PUBLIC_KEY in in .env",
+      "permissionDenied": "Meldingstoestemming geweigerd",
+      "subscribed": "Ingeschreven voor pushmeldingen!",
+      "saveFailed": "Abonnement opslaan mislukt",
+      "subscriptionFailed": "Inschrijving mislukt"
+    },
+    "visitor": {
+      "title": "Bezoekersvoorkeuren",
+      "description": "Voorkeuren van gasten bijhouden (bijv. thee-voorkeuren)",
+      "visitorName": "Naam bezoeker",
+      "preferencesJson": "Voorkeuren (JSON)"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "HomeBase",
+      "description": "Log in op je huishouden",
+      "submit": "Inloggen",
+      "noAccount": "Geen account?",
+      "createHousehold": "Huishouden aanmaken"
+    },
+    "register": {
+      "title": "Huishouden aanmaken",
+      "description": "Stel je HomeBase-account in",
+      "yourName": "Je naam",
+      "householdName": "Naam huishouden",
+      "householdPlaceholder": "Het Jansen Gezin",
+      "submit": "Account aanmaken",
+      "hasAccount": "Heb je al een account?",
+      "signIn": "Inloggen"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Je huishouden in één oogopslag",
+    "todoList": "To-do lijst",
+    "noChores": "Geen aankomende klussen.",
+    "due": "Deadline: {date}",
+    "avgDuration": "~{minutes} min gem.",
+    "lowStock": "Lage voorraad",
+    "allStocked": "Alles op voorraad!",
+    "homeFeed": "Home feed",
+    "noNotifications": "Nog geen meldingen.",
+    "markRead": "Markeer als gelezen",
+    "today": {
+      "title": "Vandaag",
+      "dayOfYear": "Dag van het jaar",
+      "weekOfYear": "Week van het jaar",
+      "daysLeft": "Dagen resterend",
+      "yearProgress": "Jaarvoortgang"
+    }
+  },
+  "shopping": {
+    "title": "Boodschappen",
+    "subtitle": "Catalogus en boodschappenlijst",
+    "catalog": "Catalogus",
+    "searchProducts": "Producten zoeken...",
+    "noProductsMatch": "Geen producten gevonden.",
+    "onList": "Op lijst",
+    "need": "Nodig",
+    "addItem": "Item toevoegen",
+    "item": "Item",
+    "searchOrType": "Zoeken of nieuw product typen...",
+    "tagsComma": "Tags (kommagescheiden)",
+    "store": "Winkel",
+    "anyStore": "Elke winkel",
+    "addToList": "Toevoegen aan lijst",
+    "stores": "Winkels",
+    "storeName": "Winkelnaam",
+    "all": "Alle",
+    "nothingNeeded": "Niets nodig op dit moment.",
+    "markBought": "Markeer als gekocht",
+    "autoAdded": "Automatisch toegevoegd"
+  },
+  "inventory": {
+    "title": "Voorraad",
+    "subtitle": "Producten en voorraadniveaus bijhouden",
+    "scanBarcode": "Barcode scannen",
+    "addProduct": "Product toevoegen",
+    "lowStockThreshold": "Drempel lage voorraad",
+    "autoAddShopping": "Automatisch toevoegen aan boodschappen bij lage voorraad",
+    "barcode": "Barcode",
+    "expiryDate": "Vervaldatum",
+    "addProductBtn": "Product toevoegen",
+    "addLocation": "Locatie toevoegen",
+    "locationPlaceholder": "Voorraadkast, Koelkast...",
+    "products": "Producten ({count})",
+    "noProducts": "Nog geen producten.",
+    "stock": "Voorraad: {total} (laag bij {threshold})",
+    "barcodeLabel": "Barcode: {codes}",
+    "addStock": "Voorraad toevoegen",
+    "scanner": {
+      "title": "Barcode scannen",
+      "cameraError": "Cameratoegang geweigerd of niet beschikbaar"
+    }
+  },
+  "tasks": {
+    "title": "Taken",
+    "subtitle": "Klussen en huishoudprojecten",
+    "chores": "Klussen",
+    "history": "Geschiedenis",
+    "projects": "Projecten",
+    "addChore": "Klus toevoegen",
+    "intervalDays": "Interval (dagen)",
+    "deadline": "Deadline",
+    "addChoreBtn": "Klus toevoegen",
+    "noActiveChores": "Geen actieve klussen. Voltooide items staan in Geschiedenis.",
+    "avg": "Gem.: {minutes} min",
+    "startTimer": "Timer starten",
+    "noHistory": "Nog geen voltooide klussen.",
+    "newProject": "Nieuw project",
+    "stepsPlaceholder": "Verf kopen\nMuren voorbereiden\nSchilderen",
+    "stepsOnePerLine": "Stappen (één per regel)",
+    "createProject": "Project aanmaken",
+    "stepsComplete": "{done}/{total} stappen voltooid",
+    "progressUpdate": "Voortgangsupdate...",
+    "addUpdate": "Update toevoegen"
+  },
+  "recipes": {
+    "title": "Recepten",
+    "subtitle": "Recepten gekoppeld aan voorraad met timers",
+    "recipesTab": "Recepten",
+    "leftoversTab": "Bevroren restjes",
+    "addRecipe": "Recept toevoegen",
+    "servings": "Porties",
+    "ingredientsPerLine": "Ingrediënten (naam|hoeveelheid per regel)",
+    "ingredientsPlaceholder": "Bloem|2 kopjes\nEieren|3",
+    "timersPerLine": "Timers (label|minuten per regel)",
+    "timersPlaceholder": "Bakken|30\nRusten|10",
+    "instructions": "Bereidingswijze",
+    "saveRecipe": "Recept opslaan",
+    "ingredients": "Ingrediënten",
+    "inStock": "(op voorraad: {name})",
+    "trackLeftover": "Restje bijhouden",
+    "expires": "Vervalt",
+    "recipe": "Recept",
+    "addLeftover": "Restje toevoegen",
+    "noLeftovers": "Geen bevroren restjes bijgehouden.",
+    "servingsFrozen": "{servings} porties · Bevroren {date}"
+  },
+  "smartHome": {
+    "title": "Smart Home",
+    "subtitle": "Sensoren, lampen en camera's",
+    "noReadings": "Voeg sensorwaarden toe voor aanbevelingen.",
+    "recommendations": {
+      "warmAir": "Open ramen voor frisse lucht - temperatuur is warm en luchtvochtigheid is matig.",
+      "poorAir": "Luchtkwaliteit is slecht - open ramen of zet ventilatie aan.",
+      "highHumidity": "Hoge luchtvochtigheid - open ramen kort voor ventilatie.",
+      "good": "Omstandigheden zijn goed - ramen kunnen dicht blijven."
+    },
+    "sensors": "Sensoren",
+    "ikeaLights": "IKEA-lampen",
+    "hueLights": "Hue-lampen",
+    "cameras": "Camera's",
+    "logReading": "Waarde loggen",
+    "tempPlaceholder": "Temp °C",
+    "humidityPlaceholder": "Luchtvochtigheid %",
+    "aqiPlaceholder": "LKI",
+    "humidity": "Luchtvochtigheid",
+    "airQuality": "Luchtkwaliteit",
+    "trends": "Trends",
+    "dirigeraSetup": "Stel {ip} en {token} in in {env} op de NAS, en deploy opnieuw. Koppel met {cmd}. Zie {doc}.",
+    "noIkeaLights": "Geen IKEA-lampen gevonden op de Dirigera-hub.",
+    "unreachable": "Onbereikbaar",
+    "addHueLight": "Hue-lamp toevoegen",
+    "livingRoomPlaceholder": "Woonkamerlamp",
+    "addCamera": "Camera toevoegen",
+    "frontDoorPlaceholder": "Voordeur",
+    "configureStream": "Configureer stream-URL in apparaatinstellingen"
+  },
+  "calendar": {
+    "title": "Agenda",
+    "subtitle": "Evenementen, gasten en voorbereiding",
+    "events": "Evenementen",
+    "lastTime": "Laatste keer",
+    "createEvent": "Evenement aanmaken",
+    "start": "Start",
+    "end": "Einde",
+    "reminderMinutes": "Herinnering (minuten van tevoren)",
+    "itemsNeeded": "Benodigde items (kommagescheiden)",
+    "itemsPlaceholder": "stoelen, snacks",
+    "guestsOnePerLine": "Gasten (één per regel)",
+    "createEventBtn": "Evenement aanmaken",
+    "logEvent": "Gebeurtenis loggen",
+    "whatHappened": "Wat is er gebeurd?",
+    "whatHappenedPlaceholder": "Luchtfilter vervangen",
+    "when": "Wanneer"
+  },
+  "plants": {
+    "title": "Planten",
+    "subtitle": "Wateringschema's en voortgangsfoto's",
+    "addPlant": "Plant toevoegen",
+    "species": "Soort",
+    "waterEveryDays": "Water elke (dagen)",
+    "addPlantBtn": "Plant toevoegen",
+    "nextWatering": "Volgende keer water: {date}",
+    "wateringNotes": "Wateringsnotities...",
+    "markWatered": "Markeer als bewaterd"
+  },
+  "pets": {
+    "title": "Huisdieren",
+    "subtitle": "Huisdierverzorging, afspraken en voeding",
+    "addPet": "Huisdier toevoegen",
+    "breed": "Ras",
+    "birthDate": "Geboortedatum",
+    "addPetBtn": "Huisdier toevoegen",
+    "feedingRoutines": "Voedingsroutines",
+    "upcoming": "Aankomend",
+    "totalVisits": "Totaal bezoeken",
+    "mealName": "Maaltijdnaam",
+    "amountPlaceholder": "1 kop",
+    "addFeeding": "Voeding toevoegen",
+    "vetCheckup": "Dierenartscontrole",
+    "addAppointment": "Afspraak toevoegen",
+    "feeding": "Voeding",
+    "appointments": "Afspraken",
+    "atTime": "{name} om {time} ({amount})",
+    "atTimeNoAmount": "{name} om {time}"
+  },
+  "routines": {
+    "title": "Routines",
+    "subtitle": "Gedeelde routines met gamificatie",
+    "dayStreak": "{count} dagen streak",
+    "createRoutine": "Routine aanmaken",
+    "fromTemplate": "Van sjabloon",
+    "tasksCount": "{name} ({count} taken)",
+    "taskTitle": "Taaktitel",
+    "daily": "Dagelijks",
+    "weekly": "Wekelijks",
+    "monthly": "Maandelijks",
+    "noDependency": "Geen afhankelijkheid",
+    "after": "Na: {title}",
+    "addTask": "Taak toevoegen",
+    "dependsOn": "Afhankelijk van: {titles}"
+  },
+  "budget": {
+    "title": "Budget",
+    "subtitle": "Uitgaven per categorie bijhouden",
+    "createBudget": "Budget aanmaken",
+    "amount": "Bedrag",
+    "period": "Periode",
+    "monthly": "Maandelijks",
+    "weekly": "Wekelijks",
+    "yearly": "Jaarlijks",
+    "createBudgetBtn": "Budget aanmaken",
+    "logExpense": "Uitgave loggen",
+    "budget": "Budget",
+    "logExpenseBtn": "Uitgave loggen",
+    "spent": "Uitgegeven: {amount}",
+    "remaining": "Resterend: {amount}",
+    "budgetAmount": "Budget: {amount}"
+  },
+  "delivery": {
+    "title": "Pakketten volgen",
+    "subtitle": "Pakketten volgen en aankomstmeldingen",
+    "addPackage": "Pakket toevoegen",
+    "carrier": "Vervoerder",
+    "carrierPlaceholder": "PostNL, DHL...",
+    "trackingNumber": "Trackingnummer",
+    "trackingUrl": "Tracking-URL",
+    "expectedDate": "Verwachte datum",
+    "earliestTime": "Vroegste bezorgtijd",
+    "latestTime": "Laatste bezorgtijd",
+    "addPackageBtn": "Pakket toevoegen",
+    "statusPending": "IN AFWACHTING",
+    "statusInTransit": "ONDERWEG",
+    "statusOutForDelivery": "BEZORGING BEZIG",
+    "statusDelivered": "BEZORGD",
+    "statusException": "PROBLEEM"
+  },
+  "messages": {
+    "title": "Berichten",
+    "subtitle": "Huishoudelijke chat en verzoeken",
+    "groupChat": "Groepschat",
+    "requests": "Verzoeken",
+    "sendMessage": "Bericht versturen",
+    "messagePlaceholder": "Bericht aan het huishouden...",
+    "newRequest": "Nieuw verzoek",
+    "type": "Type",
+    "grocery": "Boodschappen",
+    "task": "Taak",
+    "submitRequest": "Verzoek indienen",
+    "byStatus": "Door {name} · {status}"
+  }
+}

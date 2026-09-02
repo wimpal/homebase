@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +41,6 @@ interface Project {
 
 const initialFormState: ChoreFormState = {};
 
-function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString();
-}
-
 export function TasksClient({
   chores,
   projects,
@@ -54,6 +50,9 @@ export function TasksClient({
   projects: Project[];
   history: ChoreHistoryItem[];
 }) {
+  const t = useTranslations("tasks");
+  const tc = useTranslations("common");
+  const format = useFormatter();
   const [timerChore, setTimerChore] = useState<string | null>(null);
   const [timerStartedAt, setTimerStartedAt] = useState<Record<string, string>>({});
   const [elapsed, setElapsed] = useState(0);
@@ -66,6 +65,11 @@ export function TasksClient({
     completeChoreWithState,
     initialFormState,
   );
+
+  function formatDateTime(iso: string | null) {
+    if (!iso) return tc("emDash");
+    return format.dateTime(new Date(iso), { dateStyle: "short", timeStyle: "short" });
+  }
 
   function startTimer(choreId: string) {
     if (intervalId) clearInterval(intervalId);
@@ -91,8 +95,8 @@ export function TasksClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Tasks</h1>
-        <p className="text-zinc-500">Chores and home projects</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
       {formError && (
@@ -103,27 +107,27 @@ export function TasksClient({
 
       <Tabs defaultValue="chores">
         <TabsList>
-          <TabsTrigger value="chores">Chores</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="chores">{t("chores")}</TabsTrigger>
+          <TabsTrigger value="history">{t("history")}</TabsTrigger>
+          <TabsTrigger value="projects">{t("projects")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chores" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Add Chore</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("addChore")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createAction} className="grid gap-3 md:grid-cols-2">
-                <div><Label>Title</Label><Input name="title" required /></div>
-                <div><Label>Interval (days)</Label><Input name="intervalDays" type="number" /></div>
-                <div><Label>Deadline</Label><Input name="deadline" type="datetime-local" /></div>
-                <div className="md:col-span-2"><Label>Description</Label><Textarea name="description" /></div>
-                <Button type="submit" disabled={createPending}>Add Chore</Button>
+                <div><Label>{tc("title")}</Label><Input name="title" required /></div>
+                <div><Label>{t("intervalDays")}</Label><Input name="intervalDays" type="number" /></div>
+                <div><Label>{t("deadline")}</Label><Input name="deadline" type="datetime-local" /></div>
+                <div className="md:col-span-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
+                <Button type="submit" disabled={createPending}>{t("addChoreBtn")}</Button>
               </form>
             </CardContent>
           </Card>
 
           {chores.length === 0 && (
-            <p className="text-sm text-zinc-500">No active chores. Completed items are in History.</p>
+            <p className="text-sm text-zinc-500">{t("noActiveChores")}</p>
           )}
 
           {chores.map((chore) => {
@@ -136,11 +140,10 @@ export function TasksClient({
                 )
               : null;
 
-            const dueLabel = chore.nextDue
-              ? new Date(chore.nextDue).toLocaleDateString()
-              : chore.deadline
-                ? new Date(chore.deadline).toLocaleDateString()
-                : null;
+            const dueDate = chore.nextDue ?? chore.deadline;
+            const dueLabel = dueDate
+              ? format.dateTime(new Date(dueDate), { dateStyle: "medium" })
+              : null;
 
             return (
               <Card key={chore.id}>
@@ -149,10 +152,10 @@ export function TasksClient({
                     <p className="font-medium">{chore.title}</p>
                     {dueLabel && (
                       <p className="text-sm text-zinc-500">
-                        {chore.intervalDays ? "Next" : "Due"}: {dueLabel}
+                        {chore.intervalDays ? tc("next") : tc("due")}: {dueLabel}
                       </p>
                     )}
-                    {avg && <p className="text-xs text-zinc-400">Avg: {avg} min</p>}
+                    {avg && <p className="text-xs text-zinc-400">{t("avg", { minutes: avg })}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     {timerChore === chore.id ? (
@@ -171,19 +174,19 @@ export function TasksClient({
                             <input type="hidden" name="startedAt" value={timerStartedAt[chore.id]} />
                           )}
                           <Button type="submit" size="sm" disabled={completePending}>
-                            Complete
+                            {tc("complete")}
                           </Button>
                         </form>
                       </>
                     ) : (
                       <>
                         <Button variant="outline" size="sm" onClick={() => startTimer(chore.id)}>
-                          Start Timer
+                          {t("startTimer")}
                         </Button>
                         <form action={completeAction}>
                           <input type="hidden" name="choreId" value={chore.id} />
                           <Button type="submit" size="sm" disabled={completePending}>
-                            Complete
+                            {tc("complete")}
                           </Button>
                         </form>
                       </>
@@ -197,25 +200,25 @@ export function TasksClient({
 
         <TabsContent value="history" className="space-y-4">
           {history.length === 0 ? (
-            <p className="text-sm text-zinc-500">No completed chores yet.</p>
+            <p className="text-sm text-zinc-500">{t("noHistory")}</p>
           ) : (
             history.map((entry) => (
               <Card key={entry.id}>
                 <CardContent className="space-y-1 p-4">
                   <p className="font-medium">{entry.title}</p>
                   <p className="text-sm text-zinc-500">
-                    Completed: {formatDateTime(entry.completed_at)}
+                    {tc("completed")}: {formatDateTime(entry.completed_at)}
                   </p>
                   {entry.started_at && (
                     <p className="text-sm text-zinc-500">
-                      Started: {formatDateTime(entry.started_at)}
+                      {tc("started")}: {formatDateTime(entry.started_at)}
                     </p>
                   )}
                   {entry.duration_min != null && (
-                    <p className="text-xs text-zinc-400">{entry.duration_min} min</p>
+                    <p className="text-xs text-zinc-400">{entry.duration_min} {tc("min")}</p>
                   )}
                   {entry.completed_by && (
-                    <p className="text-xs text-zinc-400">By {entry.completed_by}</p>
+                    <p className="text-xs text-zinc-400">{tc("by")} {entry.completed_by}</p>
                   )}
                 </CardContent>
               </Card>
@@ -225,13 +228,13 @@ export function TasksClient({
 
         <TabsContent value="projects" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">New Project</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("newProject")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createProject} className="space-y-3">
-                <div><Label>Title</Label><Input name="title" required /></div>
-                <div><Label>Description</Label><Textarea name="description" /></div>
-                <div><Label>Steps (one per line)</Label><Textarea name="steps" placeholder="Buy paint&#10;Prep walls&#10;Paint" /></div>
-                <Button type="submit">Create Project</Button>
+                <div><Label>{tc("title")}</Label><Input name="title" required /></div>
+                <div><Label>{tc("description")}</Label><Textarea name="description" /></div>
+                <div><Label>{t("stepsOnePerLine")}</Label><Textarea name="steps" placeholder={t("stepsPlaceholder")} /></div>
+                <Button type="submit">{t("createProject")}</Button>
               </form>
             </CardContent>
           </Card>
@@ -243,7 +246,7 @@ export function TasksClient({
               <Card key={project.id}>
                 <CardHeader>
                   <CardTitle className="text-base">{project.title}</CardTitle>
-                  <p className="text-sm text-zinc-500">{done}/{total} steps complete</p>
+                  <p className="text-sm text-zinc-500">{t("stepsComplete", { done, total })}</p>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {project.steps.map((step) => (
@@ -256,9 +259,9 @@ export function TasksClient({
                   ))}
                   <form action={addProjectUpdate} className="space-y-2 border-t pt-3">
                     <input type="hidden" name="projectId" value={project.id} />
-                    <Textarea name="comment" placeholder="Progress update..." required />
+                    <Textarea name="comment" placeholder={t("progressUpdate")} required />
                     <Input name="photo" type="file" accept="image/*" />
-                    <Button type="submit" size="sm">Add Update</Button>
+                    <Button type="submit" size="sm">{t("addUpdate")}</Button>
                   </form>
                   {project.updates.map((u, i) => (
                     <div key={i} className="rounded bg-zinc-50 p-2 text-sm dark:bg-zinc-900">

@@ -5,11 +5,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", {
+export function formatCurrency(amount: number, locale = "en-US") {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency: "EUR",
   }).format(amount);
+}
+
+export function formatDateTime(
+  date: Date | string | number,
+  locale = "en-US",
+  options?: Intl.DateTimeFormatOptions,
+) {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toLocaleString(locale, options);
+}
+
+export function formatDate(
+  date: Date | string | number,
+  locale = "en-US",
+  options?: Intl.DateTimeFormatOptions,
+) {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toLocaleDateString(locale, options);
 }
 
 export function getTodayInfo(date = new Date()) {

@@ -165,35 +165,30 @@ Legend: **Done** · **Partial** · **Missing** · **Risk** (security/ops gap)
 
 | README claim | Status | Current implementation | Gaps & changes needed |
 |--------------|--------|------------------------|------------------------|
-| Smart lists | **Partial** | `shopping/page.tsx` uses `lists[0]` only | **T-035:** catalog + need view; multi-list deferred |
-| Auto-population | **Partial** | Scheduler adds rows globally | **T-035:** per-product `autoAddWhenLowStock` (default off) |
-| Store filtering | **Done** | `?store=` query, `getFilteredItems` | — |
-| Tags | **Partial** | Tags stored on `ShoppingItem` | Tag filter UI; slot remembers last tags |
+| Product catalog + need list | **Done** (T-035) | `Product` catalog; one slot per product; needed/bought lifecycle; `ShoppingClient` (catalog desktop, typeahead mobile); MCP `complete_item` | — |
+| Purchase history | **Partial** | `PurchaseEvent` + `lastPurchasedAt` on buy; no UI | Predictions UI deferred |
+| Auto-population | **Done** (T-035) | Low-stock notifies always; list add only when `autoAddWhenLowStock` on (default off) | — |
+| Store filtering | **Done** | `?store=` query, needed items only | — |
+| Tags | **Partial** | Tags on slots; remembered on re-need | Tag filter UI |
+| Smart lists (multi-list) | **Partial** | Primary list only (`lists[0]`) | Multi-list CRUD, list switcher |
 
-**T-035 design (accepted 2026-09-02, ADR-010):** `Product` = persistent catalog;
-one primary-list slot per product; needed items only on main view; bought clears
-need + purchase event + inventory bump when stock-tracked; desktop catalog panel +
-mobile typeahead; unique product name per household.
+**T-035 shipped (2026-09-02, ADR-010, NAS verified):** Persistent `Product` catalog; one primary-list slot per `(shoppingListId, productId)`; needed = `checked: false`; bought hides from list, logs purchase, bumps inventory when stock exists; desktop catalog panel + mobile typeahead; MCP dedupe on `add_item`.
 
-**Implementation plan (T-035 — before Phase 6 multi-list work):**
+**Deploy / migration (existing DBs):** `scripts/migrate-shopping-slots.ts` (raw SQL, before `db push`) → `prisma db push` → `scripts/ensure-product-ci-index.ts`. Wired in `deploy-nas.ps1`, `deploy.sh`, `docs/nas-deploy.md`.
 
-1. **Schema:** `PurchaseEvent` (or equivalent), `Product.lastPurchasedAt`,
-   `Product.autoAddWhenLowStock` (default false), unique `(householdId, name)`;
-   unique `(shoppingListId, productId)` on slots.
-2. **Domain:** `markNeeded`, `markBought`, upsert slot; migrate orphan free-text rows.
-3. **UI:** Catalog browse/search + needed list (desktop); quick-add typeahead (mobile).
-4. **Scheduler:** Auto-add only when product opt-in is on.
-5. **MCP:** Update contract notes for `list`, `add_item`, implement `complete_item`.
+**Remaining (Phase 6+):**
 
-**Future (after T-035 data exists):**
+1. **Multi-list** — create/rename/delete lists, switcher (primary list hard-coded today).
+2. **Tags** — filter/group by tag on shopping page.
+3. **Product delete UI** — wire `canDeleteProduct` on inventory.
+4. **Purchase history UI** — read `PurchaseEvent` (data capture live since T-035).
 
-- **Replenishment predictions** — suggest re-need from purchase history cadence.
-- **Receipt capture** — extend existing opportunity (Phase 7+): OCR line items →
-  match/create `Product`, append purchase events, optional BudgetTracker handoff.
-  See opportunity backlog row “Receipt capture and expense import”.
+**Future (after enough purchase data):**
 
-**Files:** `src/modules/shopping/`, `src/domain/shopping/`, `src/app/(app)/shopping/`,
-`prisma/schema.prisma`, `src/core/scheduler/index.ts`
+- **Replenishment predictions** — suggest re-need from purchase cadence.
+- **Receipt capture** — OCR line items → match/create `Product`, append purchase events (see opportunity backlog).
+
+**Files:** `src/domain/shopping/`, `src/modules/shopping/`, `src/app/(app)/shopping/`, `prisma/schema.prisma`, `scripts/migrate-shopping-slots.ts`, `src/core/scheduler/index.ts`
 
 ---
 
@@ -413,7 +408,7 @@ The feature audit describes implementation gaps. This section defines the user-f
 | Area | User outcome | Done when | Important edge cases |
 |------|--------------|-----------|----------------------|
 | Inventory | I know what I own, where it is, and what needs replacing | Scan, create, adjust, edit, archive/delete, and review expiring stock from a phone; every change identifies product and location | Duplicate barcode, negative/zero quantities, expired batches, deleted location, simultaneous stock adjustment |
-| Shopping | Our household has one trustworthy purchase plan | Multiple named lists, item ownership/source, tag/store filtering, quick check-off, and explicit auto-added-item behavior | Disabled inventory module, deleted product/store/list, duplicates, offline read-only view |
+| Shopping | Our household has one trustworthy purchase plan | **T-035 done:** catalog, need/bought slots, store filter, opt-in auto-add, MCP dedupe; **remaining:** multi-list, tag filters, purchase history UI | Disabled inventory module, deleted product with open need, duplicates without CI index, offline read-only view |
 | Tasks and projects | We know what is due, who completed it, and what remains | Recurring task lifecycle, history, assignment-ready data model, project step ordering, and one-click dashboard completion | Overdue recurrence, timezone boundaries, deleted assignee, concurrent completion, notification deduplication |
 | Calendar | We can prepare for events instead of just recording them | Mobile-friendly week/month agenda, event CRUD, reminder delivery once, guests/prep list, and prep-to-shopping hand-off | All-day/timezone semantics, past events, duplicate prep items, event deletion after generated items |
 | Plants and pets | Care occurs on schedule with a useful history | Care logs, photos where useful, appointment/feeding/reminder workflows, and overdue/complete states | Missed care, rescheduled appointment, pet/plant removal with history retention, alert deduplication |
@@ -432,7 +427,7 @@ These journeys are the primary end-to-end test scenarios for product releases. T
 ```mermaid
 flowchart TD
   InventoryChange[InventoryChange] --> ThresholdCheck{BelowThreshold}
-  ThresholdCheck -->|yes| ShoppingItem[AutoShoppingItem]
+  ThresholdCheck -->|yes + opt-in| ShoppingItem[AutoShoppingItem]
   CalendarEvent[CalendarEventWithPrep] --> PrepReview[ReviewPrepItems]
   PrepReview --> ShoppingList[AddToShoppingList]
   RecipeCook[CookRecipe] --> StockPreview[ConfirmIngredientUsage]
@@ -685,7 +680,7 @@ Each phase has an **exit gate** — do not start the next phase until the gate i
 
 **Inventory** — see audit section above.
 
-**Shopping** — multi-list, tags, guards.
+**Shopping** — T-035 core **done** (2026-09-02); remaining: multi-list, tag filters, product delete UI.
 
 **Tasks** — full lifecycle, dashboard actions, scheduler dedup.
 

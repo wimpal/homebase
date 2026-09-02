@@ -16,6 +16,7 @@ import { requireHousehold } from "@/core/auth/session";
 import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
 import { Trophy, Star } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export default async function RoutinesPage() {
   const { householdId } = await requireHousehold();
@@ -25,21 +26,23 @@ export default async function RoutinesPage() {
     getRoutineTemplates(),
     getUserGamification(),
   ]);
+  const t = await getTranslations("routines");
+  const tc = await getTranslations("common");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Routines</h1>
-          <p className="text-zinc-500">Shared routines with gamification</p>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-zinc-500">{t("subtitle")}</p>
         </div>
         {gamification.points && (
           <div className="flex items-center gap-4 rounded-lg bg-emerald-50 px-4 py-2 dark:bg-emerald-950">
             <div className="flex items-center gap-1">
               <Trophy className="h-4 w-4 text-amber-500" />
-              <span className="font-bold">{gamification.points.points}</span> pts
+              <span className="font-bold">{gamification.points.points}</span> {tc("pts")}
             </div>
-            <div className="text-sm text-zinc-500">{gamification.points.streak} day streak</div>
+            <div className="text-sm text-zinc-500">{t("dayStreak", { count: gamification.points.streak })}</div>
           </div>
         )}
       </div>
@@ -56,25 +59,25 @@ export default async function RoutinesPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Create Routine</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("createRoutine")}</CardTitle></CardHeader>
           <CardContent>
             <form action={createRoutine} className="space-y-3">
-              <div><Label>Name</Label><Input name="name" required /></div>
-              <div><Label>Description</Label><Textarea name="description" /></div>
-              <Button type="submit">Create</Button>
+              <div><Label>{tc("name")}</Label><Input name="name" required /></div>
+              <div><Label>{tc("description")}</Label><Textarea name="description" /></div>
+              <Button type="submit">{tc("create")}</Button>
             </form>
           </CardContent>
         </Card>
 
         {templates.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-base">From Template</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("fromTemplate")}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {templates.map((t) => (
-                <form key={t.id} action={createRoutineFromTemplate} className="flex items-center justify-between">
-                  <input type="hidden" name="templateId" value={t.id} />
-                  <span className="text-sm">{t.name} ({t.tasks.length} tasks)</span>
-                  <Button type="submit" size="sm" variant="outline">Use</Button>
+              {templates.map((tmpl) => (
+                <form key={tmpl.id} action={createRoutineFromTemplate} className="flex items-center justify-between">
+                  <input type="hidden" name="templateId" value={tmpl.id} />
+                  <span className="text-sm">{t("tasksCount", { name: tmpl.name, count: tmpl.tasks.length })}</span>
+                  <Button type="submit" size="sm" variant="outline">{tc("use")}</Button>
                 </form>
               ))}
             </CardContent>
@@ -93,36 +96,36 @@ export default async function RoutinesPage() {
           <CardContent className="space-y-3">
             <form action={addRoutineTask} className="flex flex-wrap gap-2 border-b pb-3">
               <input type="hidden" name="routineId" value={routine.id} />
-              <Input name="title" placeholder="Task title" className="w-40" required />
+              <Input name="title" placeholder={t("taskTitle")} className="w-40" required />
               <select name="recurrence" className="h-10 rounded-md border px-2 text-sm">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{t("daily")}</option>
+                <option value="weekly">{t("weekly")}</option>
+                <option value="monthly">{t("monthly")}</option>
               </select>
               <Input name="points" type="number" defaultValue="10" className="w-16" />
               <select name="dependsOnTaskId" className="h-10 rounded-md border px-2 text-sm">
-                <option value="">No dependency</option>
-                {routine.tasks.map((t) => (
-                  <option key={t.id} value={t.id}>After: {t.title}</option>
+                <option value="">{t("noDependency")}</option>
+                {routine.tasks.map((task) => (
+                  <option key={task.id} value={task.id}>{t("after", { title: task.title })}</option>
                 ))}
               </select>
-              <Button type="submit" size="sm">Add Task</Button>
+              <Button type="submit" size="sm">{t("addTask")}</Button>
             </form>
 
             {routine.tasks.map((task) => (
               <div key={task.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">{task.title}</p>
-                  <p className="text-xs text-zinc-500">{task.recurrence} · {task.points} pts</p>
+                  <p className="text-xs text-zinc-500">{task.recurrence} · {task.points} {tc("pts")}</p>
                   {task.dependsOn.length > 0 && (
                     <p className="text-xs text-amber-600">
-                      Depends on: {task.dependsOn.map((d) => d.dependsOnTask.title).join(", ")}
+                      {t("dependsOn", { titles: task.dependsOn.map((d) => d.dependsOnTask.title).join(", ") })}
                     </p>
                   )}
                 </div>
                 <form action={completeRoutineTask}>
                   <input type="hidden" name="taskId" value={task.id} />
-                  <Button type="submit" size="sm">Complete</Button>
+                  <Button type="submit" size="sm">{tc("complete")}</Button>
                 </form>
               </div>
             ))}

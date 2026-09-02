@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Home, Settings, LogOut } from "lucide-react";
 import { MODULE_ICONS, type ModuleNavItem } from "@/core/modules/registry";
@@ -13,21 +14,22 @@ interface SidebarProps {
 
 export function Sidebar({ modules, householdName }: SidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   const links = [
-    { href: "/dashboard", name: "Dashboard", icon: Home },
+    { href: "/dashboard", name: t("dashboard"), icon: Home },
     ...modules.map((m) => ({
       href: m.href,
       name: m.name,
       icon: MODULE_ICONS[m.id],
     })),
-    { href: "/settings", name: "Settings", icon: Settings },
+    { href: "/settings", name: t("settings"), icon: Settings },
   ];
 
   return (
     <aside className="flex w-64 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
       <div className="border-b border-zinc-200 p-6 dark:border-zinc-800">
-        <h1 className="text-xl font-bold text-emerald-700">HomeBase</h1>
+        <h1 className="text-xl font-bold text-emerald-700">{t("home")}</h1>
         <p className="text-sm text-zinc-500">{householdName}</p>
       </div>
       <nav className="flex-1 space-y-1 p-4">
@@ -58,7 +60,7 @@ export function Sidebar({ modules, householdName }: SidebarProps) {
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            {t("signOut")}
           </button>
         </form>
       </div>

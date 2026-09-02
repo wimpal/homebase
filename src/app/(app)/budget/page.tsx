@@ -9,55 +9,61 @@ import { requireHousehold } from "@/core/auth/session";
 import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
+import { getLocale, getTranslations } from "next-intl/server";
+import { isLocale, localeToBcp47 } from "@/i18n/config";
 
 export default async function BudgetPage() {
   const { householdId } = await requireHousehold();
   await requireModule(householdId, ModuleId.BUDGET);
   const budgets = await getBudgets();
+  const t = await getTranslations("budget");
+  const tc = await getTranslations("common");
+  const localeRaw = await getLocale();
+  const bcp47 = localeToBcp47(isLocale(localeRaw) ? localeRaw : "en");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Budget</h1>
-        <p className="text-zinc-500">Track spending by category</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Create Budget</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("createBudget")}</CardTitle></CardHeader>
           <CardContent>
             <form action={createBudget} className="space-y-3">
-              <div><Label>Name</Label><Input name="name" required /></div>
-              <div><Label>Category</Label><Input name="category" required /></div>
-              <div><Label>Amount</Label><Input name="amount" type="number" step="0.01" required /></div>
+              <div><Label>{tc("name")}</Label><Input name="name" required /></div>
+              <div><Label>{tc("category")}</Label><Input name="category" required /></div>
+              <div><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
               <div>
-                <Label>Period</Label>
+                <Label>{t("period")}</Label>
                 <select name="period" className="flex h-10 w-full rounded-md border px-3 text-sm">
-                  <option value="monthly">Monthly</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="yearly">Yearly</option>
+                  <option value="monthly">{t("monthly")}</option>
+                  <option value="weekly">{t("weekly")}</option>
+                  <option value="yearly">{t("yearly")}</option>
                 </select>
               </div>
-              <Button type="submit">Create Budget</Button>
+              <Button type="submit">{t("createBudgetBtn")}</Button>
             </form>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Log Expense</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("logExpense")}</CardTitle></CardHeader>
           <CardContent>
             <form action={addExpense} className="space-y-3">
-              <div><Label>Description</Label><Input name="description" required /></div>
-              <div><Label>Amount</Label><Input name="amount" type="number" step="0.01" required /></div>
-              <div><Label>Category</Label><Input name="category" /></div>
+              <div><Label>{tc("description")}</Label><Input name="description" required /></div>
+              <div><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
+              <div><Label>{tc("category")}</Label><Input name="category" /></div>
               <div>
-                <Label>Budget</Label>
+                <Label>{t("budget")}</Label>
                 <select name="budgetId" className="flex h-10 w-full rounded-md border px-3 text-sm">
-                  <option value="">None</option>
+                  <option value="">{tc("noneOption")}</option>
                   {budgets.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
-              <Button type="submit">Log Expense</Button>
+              <Button type="submit">{t("logExpenseBtn")}</Button>
             </form>
           </CardContent>
         </Card>
@@ -75,14 +81,14 @@ export default async function BudgetPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Spent: {formatCurrency(spent)}</span>
-                  <span>Remaining: {formatCurrency(remaining)}</span>
+                  <span>{t("spent", { amount: formatCurrency(spent, bcp47) })}</span>
+                  <span>{t("remaining", { amount: formatCurrency(remaining, bcp47) })}</span>
                 </div>
                 <Progress value={percent} />
-                <p className="text-xs text-zinc-400">Budget: {formatCurrency(budget.amount)}</p>
+                <p className="text-xs text-zinc-400">{t("budgetAmount", { amount: formatCurrency(budget.amount, bcp47) })}</p>
                 {budget.expenses.slice(0, 5).map((e) => (
                   <p key={e.id} className="text-sm text-zinc-600">
-                    {e.description}: {formatCurrency(e.amount)}
+                    {e.description}: {formatCurrency(e.amount, bcp47)}
                   </p>
                 ))}
               </CardContent>

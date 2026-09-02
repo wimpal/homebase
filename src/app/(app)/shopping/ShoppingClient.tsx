@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,8 @@ export function ShoppingClient({
   stores: Store[];
   storeFilter?: string;
 }) {
+  const t = useTranslations("shopping");
+  const tc = useTranslations("common");
   const [catalogQuery, setCatalogQuery] = useState("");
   const [quickQuery, setQuickQuery] = useState("");
 
@@ -66,25 +69,24 @@ export function ShoppingClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Shopping</h1>
-        <p className="text-zinc-500">Catalog and shopping list</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Catalog — desktop only */}
         <Card className="hidden lg:block lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Catalog</CardTitle>
+            <CardTitle className="text-base">{t("catalog")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Input
-              placeholder="Search products..."
+              placeholder={t("searchProducts")}
               value={catalogQuery}
               onChange={(e) => setCatalogQuery(e.target.value)}
             />
             <div className="max-h-[28rem] space-y-2 overflow-y-auto">
               {filteredCatalog.length === 0 ? (
-                <p className="text-sm text-zinc-500">No products match.</p>
+                <p className="text-sm text-zinc-500">{t("noProductsMatch")}</p>
               ) : (
                 filteredCatalog.map((p) => (
                   <div
@@ -98,13 +100,13 @@ export function ShoppingClient({
                       )}
                     </div>
                     {p.needed ? (
-                      <span className="ml-2 text-xs text-emerald-600">On list</span>
+                      <span className="ml-2 text-xs text-emerald-600">{t("onList")}</span>
                     ) : (
                       <form action={markProductNeededAction}>
                         <input type="hidden" name="listId" value={listId} />
                         <input type="hidden" name="productId" value={p.id} />
                         <Button type="submit" size="sm" variant="outline">
-                          Need
+                          {t("need")}
                         </Button>
                       </form>
                     )}
@@ -115,22 +117,21 @@ export function ShoppingClient({
           </CardContent>
         </Card>
 
-        {/* Quick add — mobile typeahead + desktop fallback */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Add Item</CardTitle>
+            <CardTitle className="text-base">{t("addItem")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={addShoppingItem} className="space-y-3">
               <input type="hidden" name="listId" value={listId} />
               <div>
-                <Label>Item</Label>
+                <Label>{t("item")}</Label>
                 <Input
                   name="name"
                   required
                   value={quickQuery}
                   onChange={(e) => setQuickQuery(e.target.value)}
-                  placeholder="Search or type new product..."
+                  placeholder={t("searchOrType")}
                   autoComplete="off"
                 />
                 {typeaheadMatches.length > 0 && quickQuery.trim() && (
@@ -144,7 +145,7 @@ export function ShoppingClient({
                         >
                           {p.name}
                           {p.needed && (
-                            <span className="ml-2 text-xs text-emerald-600">on list</span>
+                            <span className="ml-2 text-xs text-emerald-600">{t("onList").toLowerCase()}</span>
                           )}
                         </button>
                       </li>
@@ -153,20 +154,20 @@ export function ShoppingClient({
                 )}
               </div>
               <div>
-                <Label>Quantity</Label>
+                <Label>{tc("quantity")}</Label>
                 <Input name="quantity" type="number" min="1" defaultValue="1" />
               </div>
               <div>
-                <Label>Tags (comma-separated)</Label>
+                <Label>{t("tagsComma")}</Label>
                 <Input name="tags" placeholder="dairy, urgent" />
               </div>
               <div>
-                <Label>Store</Label>
+                <Label>{t("store")}</Label>
                 <select
                   name="storeId"
                   className="flex h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
                 >
-                  <option value="">Any store</option>
+                  <option value="">{t("anyStore")}</option>
                   {stores.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -174,26 +175,26 @@ export function ShoppingClient({
                   ))}
                 </select>
               </div>
-              <Button type="submit">Add to list</Button>
+              <Button type="submit">{t("addToList")}</Button>
             </form>
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Stores</CardTitle>
+            <CardTitle className="text-base">{t("stores")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={createStore} className="flex gap-2">
-              <Input name="name" placeholder="Store name" required />
-              <Button type="submit">Add</Button>
+              <Input name="name" placeholder={t("storeName")} required />
+              <Button type="submit">{tc("add")}</Button>
             </form>
             <div className="mt-3 flex flex-wrap gap-2">
               <a
                 href="/shopping"
                 className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
               >
-                All
+                {t("all")}
               </a>
               {stores.map((s) => (
                 <a
@@ -215,7 +216,7 @@ export function ShoppingClient({
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nothing needed right now.</p>
+            <p className="text-sm text-zinc-500">{t("nothingNeeded")}</p>
           ) : (
             <ul className="space-y-2">
               {items.map((item) => (
@@ -226,7 +227,7 @@ export function ShoppingClient({
                   <div className="flex items-center gap-3">
                     <form action={markItemBought}>
                       <input type="hidden" name="id" value={item.id} />
-                      <button type="submit" title="Mark bought">
+                      <button type="submit" title={t("markBought")}>
                         <Checkbox checked={false} />
                       </button>
                     </form>
@@ -235,19 +236,19 @@ export function ShoppingClient({
                         {item.name} x{item.quantity}
                       </p>
                       {item.autoAdded && (
-                        <span className="text-xs text-amber-600">Auto-added</span>
+                        <span className="text-xs text-amber-600">{t("autoAdded")}</span>
                       )}
                       {item.store && (
                         <span className="text-xs text-zinc-400"> @ {item.store.name}</span>
                       )}
                       {item.tags.length > 0 && (
                         <div className="mt-1 flex gap-1">
-                          {item.tags.map((t) => (
+                          {item.tags.map((tag) => (
                             <span
-                              key={t}
+                              key={tag}
                               className="rounded bg-zinc-100 px-1.5 text-xs dark:bg-zinc-800"
                             >
-                              {t}
+                              {tag}
                             </span>
                           ))}
                         </div>

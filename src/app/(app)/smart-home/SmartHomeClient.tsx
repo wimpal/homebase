@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import {
 } from "@/modules/smarthome/actions";
 import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
 import type { DirigeraLight } from "@/domain/smarthome/types";
-import { getWindowRecommendation } from "@/lib/smarthome";
+import { getWindowRecommendationKey } from "@/lib/smarthome";
 import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -44,6 +45,9 @@ export function SmartHomeClient({
   readings: Reading[];
   dirigera: DirigeraLightsResult;
 }) {
+  const t = useTranslations("smartHome");
+  const tc = useTranslations("common");
+  const format = useFormatter();
   const [hueStatus, setHueStatus] = useState<Record<string, string>>({});
   const [ikeaLights, setIkeaLights] = useState<DirigeraLight[]>(dirigera.lights);
   const [ikeaPending, setIkeaPending] = useState<Record<string, boolean>>({});
@@ -57,11 +61,11 @@ export function SmartHomeClient({
 
   const latest = readings[0];
   const recommendation = latest
-    ? getWindowRecommendation(latest)
-    : "Add sensor readings to get recommendations.";
+    ? t(`recommendations.${getWindowRecommendationKey(latest)}`)
+    : t("noReadings");
 
   const chartData = [...readings].reverse().map((r) => ({
-    time: new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    time: format.dateTime(new Date(r.createdAt), { hour: "2-digit", minute: "2-digit" }),
     temp: r.temperature,
     humidity: r.humidity,
     aqi: r.airQuality,
@@ -71,7 +75,7 @@ export function SmartHomeClient({
     const result = await controlHueLight(deviceId, on);
     setHueStatus((prev) => ({
       ...prev,
-      [deviceId]: result.success ? (on ? "On" : "Off") : result.error || "Failed",
+      [deviceId]: result.success ? (on ? tc("on") : tc("off")) : result.error || tc("failed"),
     }));
   }
 
@@ -97,7 +101,7 @@ export function SmartHomeClient({
     if (result.success) {
       await refreshIkeaLights();
     } else {
-      setIkeaError(result.error ?? "Failed to update light");
+      setIkeaError(result.error ?? tc("failed"));
       await refreshIkeaLights();
     }
 
@@ -110,13 +114,12 @@ export function SmartHomeClient({
 
   const lights = devices.filter((d) => d.type === "LIGHT");
   const cameras = devices.filter((d) => d.type === "CAMERA");
-  const sensors = devices.filter((d) => d.type === "SENSOR");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Smart Home</h1>
-        <p className="text-zinc-500">Sensors, lights, and cameras</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
@@ -128,21 +131,21 @@ export function SmartHomeClient({
 
       <Tabs defaultValue="sensors">
         <TabsList>
-          <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="ikea-lights">IKEA Lights</TabsTrigger>
-          <TabsTrigger value="lights">Hue Lights</TabsTrigger>
-          <TabsTrigger value="cameras">Cameras</TabsTrigger>
+          <TabsTrigger value="sensors">{t("sensors")}</TabsTrigger>
+          <TabsTrigger value="ikea-lights">{t("ikeaLights")}</TabsTrigger>
+          <TabsTrigger value="lights">{t("hueLights")}</TabsTrigger>
+          <TabsTrigger value="cameras">{t("cameras")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sensors" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Log Reading</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("logReading")}</CardTitle></CardHeader>
             <CardContent>
               <form action={addSensorReading} className="flex flex-wrap gap-2">
-                <Input name="temperature" type="number" step="0.1" placeholder="Temp °C" className="w-28" />
-                <Input name="humidity" type="number" step="0.1" placeholder="Humidity %" className="w-28" />
-                <Input name="airQuality" type="number" step="0.1" placeholder="AQI" className="w-28" />
-                <Button type="submit">Log</Button>
+                <Input name="temperature" type="number" step="0.1" placeholder={t("tempPlaceholder")} className="w-28" />
+                <Input name="humidity" type="number" step="0.1" placeholder={t("humidityPlaceholder")} className="w-28" />
+                <Input name="airQuality" type="number" step="0.1" placeholder={t("aqiPlaceholder")} className="w-28" />
+                <Button type="submit">{tc("log")}</Button>
               </form>
             </CardContent>
           </Card>
@@ -151,22 +154,22 @@ export function SmartHomeClient({
             <div className="grid grid-cols-3 gap-3">
               <Card><CardContent className="p-4 text-center">
                 <Thermometer className="mx-auto h-5 w-5 text-red-500" />
-                <p className="text-2xl font-bold">{latest.temperature ?? "—"}°</p>
+                <p className="text-2xl font-bold">{latest.temperature ?? tc("emDash")}°</p>
               </CardContent></Card>
               <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-zinc-500">Humidity</p>
-                <p className="text-2xl font-bold">{latest.humidity ?? "—"}%</p>
+                <p className="text-xs text-zinc-500">{t("humidity")}</p>
+                <p className="text-2xl font-bold">{latest.humidity ?? tc("emDash")}%</p>
               </CardContent></Card>
               <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-zinc-500">Air Quality</p>
-                <p className="text-2xl font-bold">{latest.airQuality ?? "—"}</p>
+                <p className="text-xs text-zinc-500">{t("airQuality")}</p>
+                <p className="text-2xl font-bold">{latest.airQuality ?? tc("emDash")}</p>
               </CardContent></Card>
             </div>
           )}
 
           {chartData.length > 1 && (
             <Card>
-              <CardHeader><CardTitle className="text-base">Trends</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{t("trends")}</CardTitle></CardHeader>
               <CardContent className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
@@ -186,11 +189,14 @@ export function SmartHomeClient({
           {!dirigera.configured ? (
             <Card>
               <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
-                <p>Set <code className="text-xs">DIRIGERA_IP</code> and{" "}
-                  <code className="text-xs">DIRIGERA_TOKEN</code> in <code className="text-xs">.env</code> on
-                  the NAS, then redeploy. Pair with{" "}
-                  <code className="text-xs">npx dirigera authenticate</code>. See{" "}
-                  <code className="text-xs">docs/nas-deploy.md</code>.
+                <p>
+                  {t.rich("dirigeraSetup", {
+                    ip: () => <code className="text-xs">DIRIGERA_IP</code>,
+                    token: () => <code className="text-xs">DIRIGERA_TOKEN</code>,
+                    env: () => <code className="text-xs">.env</code>,
+                    cmd: () => <code className="text-xs">npx dirigera authenticate</code>,
+                    doc: () => <code className="text-xs">docs/nas-deploy.md</code>,
+                  })}
                 </p>
               </CardContent>
             </Card>
@@ -203,7 +209,7 @@ export function SmartHomeClient({
           ) : dirigera.lights.length === 0 ? (
             <Card>
               <CardContent className="p-4 text-sm text-zinc-500">
-                No IKEA lights found on the Dirigera hub.
+                {t("noIkeaLights")}
               </CardContent>
             </Card>
           ) : (
@@ -228,7 +234,7 @@ export function SmartHomeClient({
                           <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
                         )}
                         {!light.isReachable && (
-                          <span className="ml-2 text-xs text-amber-600">Unreachable</span>
+                          <span className="ml-2 text-xs text-amber-600">{t("unreachable")}</span>
                         )}
                       </div>
                     </div>
@@ -236,7 +242,7 @@ export function SmartHomeClient({
                       checked={light.isOn}
                       disabled={!light.isReachable || ikeaPending[light.id]}
                       onCheckedChange={(checked) => handleIkeaToggle(light.id, checked)}
-                      aria-label={`${light.name} ${light.isOn ? "on" : "off"}`}
+                      aria-label={`${light.name} ${light.isOn ? tc("on") : tc("off")}`}
                     />
                   </CardContent>
                 </Card>
@@ -247,13 +253,13 @@ export function SmartHomeClient({
 
         <TabsContent value="lights" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Add Hue Light</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("addHueLight")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createDevice} className="flex gap-2">
                 <input type="hidden" name="type" value="LIGHT" />
-                <Input name="name" placeholder="Living room lamp" required />
+                <Input name="name" placeholder={t("livingRoomPlaceholder")} required />
                 <Input name="config" placeholder='{"lightId": 1}' />
-                <Button type="submit">Add</Button>
+                <Button type="submit">{tc("add")}</Button>
               </form>
             </CardContent>
           </Card>
@@ -267,8 +273,8 @@ export function SmartHomeClient({
                   {hueStatus[light.id] && <span className="text-xs text-zinc-500">{hueStatus[light.id]}</span>}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => toggleLight(light.id, true)}>On</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleLight(light.id, false)}>Off</Button>
+                  <Button size="sm" onClick={() => toggleLight(light.id, true)}>{tc("on")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleLight(light.id, false)}>{tc("off")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -277,13 +283,13 @@ export function SmartHomeClient({
 
         <TabsContent value="cameras" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Add Camera</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("addCamera")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createDevice} className="flex gap-2">
                 <input type="hidden" name="type" value="CAMERA" />
-                <Input name="name" placeholder="Front door" required />
+                <Input name="name" placeholder={t("frontDoorPlaceholder")} required />
                 <Input name="config" placeholder='{"streamUrl": "http://..."}' />
-                <Button type="submit">Add</Button>
+                <Button type="submit">{tc("add")}</Button>
               </form>
             </CardContent>
           </Card>
@@ -299,7 +305,7 @@ export function SmartHomeClient({
                   {config?.streamUrl ? (
                     <img src={config.streamUrl} alt={cam.name} className="max-h-48 rounded" />
                   ) : (
-                    <p className="text-sm text-zinc-500">Configure stream URL in device settings</p>
+                    <p className="text-sm text-zinc-500">{t("configureStream")}</p>
                   )}
                 </CardContent>
               </Card>

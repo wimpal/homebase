@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,9 @@ interface Recipe {
 }
 
 export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
+  const t = useTranslations("recipes");
+  const tc = useTranslations("common");
+  const format = useFormatter();
   const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
 
   function startTimer(id: string, minutes: number) {
@@ -44,27 +48,27 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Recipes</h1>
-        <p className="text-zinc-500">Recipes linked to inventory with timers</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <Tabs defaultValue="recipes">
         <TabsList>
-          <TabsTrigger value="recipes">Recipes</TabsTrigger>
-          <TabsTrigger value="leftovers">Frozen Leftovers</TabsTrigger>
+          <TabsTrigger value="recipes">{t("recipesTab")}</TabsTrigger>
+          <TabsTrigger value="leftovers">{t("leftoversTab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="recipes" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Add Recipe</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("addRecipe")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createRecipe} className="space-y-3">
-                <div><Label>Title</Label><Input name="title" required /></div>
-                <div><Label>Servings</Label><Input name="servings" type="number" defaultValue="4" /></div>
-                <div><Label>Ingredients (name|quantity per line)</Label><Textarea name="ingredients" placeholder="Flour|2 cups&#10;Eggs|3" /></div>
-                <div><Label>Timers (label|minutes per line)</Label><Textarea name="timers" placeholder="Bake|30&#10;Rest|10" /></div>
-                <div><Label>Instructions</Label><Textarea name="instructions" rows={5} required /></div>
-                <Button type="submit">Save Recipe</Button>
+                <div><Label>{tc("title")}</Label><Input name="title" required /></div>
+                <div><Label>{t("servings")}</Label><Input name="servings" type="number" defaultValue="4" /></div>
+                <div><Label>{t("ingredientsPerLine")}</Label><Textarea name="ingredients" placeholder={t("ingredientsPlaceholder")} /></div>
+                <div><Label>{t("timersPerLine")}</Label><Textarea name="timers" placeholder={t("timersPlaceholder")} /></div>
+                <div><Label>{t("instructions")}</Label><Textarea name="instructions" rows={5} required /></div>
+                <Button type="submit">{t("saveRecipe")}</Button>
               </form>
             </CardContent>
           </Card>
@@ -74,31 +78,34 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
               <CardHeader><CardTitle className="text-base">{recipe.title}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium">Ingredients</p>
+                  <p className="text-sm font-medium">{t("ingredients")}</p>
                   <ul className="text-sm text-zinc-600">
                     {recipe.ingredients.map((ing, i) => (
-                      <li key={i}>{ing.quantity} {ing.name} {ing.product && `(in stock: ${ing.product.name})`}</li>
+                      <li key={i}>
+                        {ing.quantity} {ing.name}{" "}
+                        {ing.product && t("inStock", { name: ing.product.name })}
+                      </li>
                     ))}
                   </ul>
                 </div>
                 {recipe.timers.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {recipe.timers.map((t) => (
+                    {recipe.timers.map((timer) => (
                       <Button
-                        key={t.id}
+                        key={timer.id}
                         variant="outline"
                         size="sm"
-                        onClick={() => startTimer(t.id, t.minutes)}
-                        disabled={!!activeTimers[t.id]}
+                        onClick={() => startTimer(timer.id, timer.minutes)}
+                        disabled={!!activeTimers[timer.id]}
                       >
                         <Timer className="mr-1 h-3 w-3" />
-                        {t.label} ({activeTimers[t.id] != null ? formatTimer(activeTimers[t.id]) : `${t.minutes}m`})
+                        {timer.label} ({activeTimers[timer.id] != null ? formatTimer(activeTimers[timer.id]) : `${timer.minutes}m`})
                       </Button>
                     ))}
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium">Instructions</p>
+                  <p className="text-sm font-medium">{t("instructions")}</p>
                   <p className="whitespace-pre-wrap text-sm text-zinc-600">{recipe.instructions}</p>
                 </div>
               </CardContent>
@@ -108,33 +115,38 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
 
         <TabsContent value="leftovers">
           <Card>
-            <CardHeader><CardTitle className="text-base">Track Leftover</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("trackLeftover")}</CardTitle></CardHeader>
             <CardContent>
               <form action={addLeftover} className="grid gap-3 md:grid-cols-2">
-                <div><Label>Name</Label><Input name="name" required /></div>
-                <div><Label>Servings</Label><Input name="servings" type="number" defaultValue="1" /></div>
-                <div><Label>Expires</Label><Input name="expiresAt" type="date" /></div>
+                <div><Label>{tc("name")}</Label><Input name="name" required /></div>
+                <div><Label>{t("servings")}</Label><Input name="servings" type="number" defaultValue="1" /></div>
+                <div><Label>{t("expires")}</Label><Input name="expiresAt" type="date" /></div>
                 <div>
-                  <Label>Recipe</Label>
+                  <Label>{t("recipe")}</Label>
                   <select name="recipeId" className="flex h-10 w-full rounded-md border px-3 text-sm">
-                    <option value="">None</option>
+                    <option value="">{tc("noneOption")}</option>
                     {recipes.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
                   </select>
                 </div>
-                <Button type="submit">Add Leftover</Button>
+                <Button type="submit">{t("addLeftover")}</Button>
               </form>
             </CardContent>
           </Card>
 
           {recipes.flatMap((r) => r.leftovers).length === 0 ? (
-            <p className="text-sm text-zinc-500">No frozen leftovers tracked.</p>
+            <p className="text-sm text-zinc-500">{t("noLeftovers")}</p>
           ) : (
             recipes.flatMap((r) =>
               r.leftovers.map((l) => (
                 <Card key={l.name + l.frozenAt.toString()}>
                   <CardContent className="p-4">
                     <p className="font-medium">{l.name}</p>
-                    <p className="text-sm text-zinc-500">{l.servings} servings · Frozen {new Date(l.frozenAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-zinc-500">
+                      {t("servingsFrozen", {
+                        servings: l.servings,
+                        date: format.dateTime(new Date(l.frozenAt), { dateStyle: "medium" }),
+                      })}
+                    </p>
                   </CardContent>
                 </Card>
               ))

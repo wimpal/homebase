@@ -1,0 +1,408 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "home": "HomeBase"
+  },
+  "modules": {
+    "inventory": {
+      "name": "Inventory",
+      "description": "Track household products and stock levels"
+    },
+    "shopping": {
+      "name": "Shopping",
+      "description": "Smart shopping lists and store filtering"
+    },
+    "tasks": {
+      "name": "Tasks",
+      "description": "Chores, projects, and to-do lists"
+    },
+    "plants": {
+      "name": "Plants",
+      "description": "Plant care and watering schedules"
+    },
+    "pets": {
+      "name": "Pets",
+      "description": "Pet info, appointments, and feeding"
+    },
+    "calendar": {
+      "name": "Calendar",
+      "description": "Household events and scheduling"
+    },
+    "routines": {
+      "name": "Routines",
+      "description": "Shared routines with gamification"
+    },
+    "recipes": {
+      "name": "Recipes",
+      "description": "Recipes linked to inventory"
+    },
+    "budget": {
+      "name": "Budget",
+      "description": "Budget tracking and expenses"
+    },
+    "delivery": {
+      "name": "Delivery",
+      "description": "Package tracking and alerts"
+    },
+    "smart_home": {
+      "name": "Smart Home",
+      "description": "Sensors, Hue lights, and cameras"
+    },
+    "messaging": {
+      "name": "Messages",
+      "description": "Household group messaging"
+    },
+    "home": {
+      "name": "Home",
+      "description": "Dashboard"
+    }
+  },
+  "common": {
+    "add": "Add",
+    "save": "Save",
+    "create": "Create",
+    "complete": "Complete",
+    "title": "Title",
+    "name": "Name",
+    "description": "Description",
+    "quantity": "Quantity",
+    "category": "Category",
+    "none": "None",
+    "location": "Location",
+    "notes": "Notes",
+    "email": "Email",
+    "password": "Password",
+    "send": "Send",
+    "update": "Update",
+    "log": "Log",
+    "on": "On",
+    "off": "Off",
+    "failed": "Failed",
+    "noneOption": "None",
+    "due": "Due",
+    "next": "Next",
+    "by": "By",
+    "min": "min",
+    "pts": "pts",
+    "emDash": "—",
+    "soon": "Soon",
+    "last": "Last",
+    "started": "Started",
+    "completed": "Completed",
+    "items": "Items",
+    "guests": "Guests",
+    "atHome": "At home",
+    "outside": "Outside",
+    "track": "Track",
+    "expected": "Expected",
+    "window": "Window",
+    "package": "Package",
+    "approve": "Approve",
+    "reject": "Reject",
+    "use": "Use",
+    "yearsOld": "{age} years old"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "title": "Language",
+      "description": "Choose the language for the app interface",
+      "english": "English",
+      "dutch": "Nederlands"
+    },
+    "modules": {
+      "title": "Modules",
+      "description": "Toggle features on or off for your household"
+    },
+    "push": {
+      "title": "Push Notifications",
+      "description": "Get reminders on your device (install as PWA for best results)",
+      "enable": "Enable Push Notifications",
+      "notSupported": "Push notifications not supported in this browser",
+      "vapidMissing": "VAPID keys not configured. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env",
+      "permissionDenied": "Notification permission denied",
+      "subscribed": "Subscribed to push notifications!",
+      "saveFailed": "Failed to save subscription",
+      "subscriptionFailed": "Subscription failed"
+    },
+    "visitor": {
+      "title": "Visitor Preferences",
+      "description": "Track preferences for guests (e.g. tea preferences)",
+      "visitorName": "Visitor name",
+      "preferencesJson": "Preferences (JSON)"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "HomeBase",
+      "description": "Sign in to your household",
+      "submit": "Sign in",
+      "noAccount": "No account?",
+      "createHousehold": "Create household"
+    },
+    "register": {
+      "title": "Create Household",
+      "description": "Set up your HomeBase account",
+      "yourName": "Your name",
+      "householdName": "Household name",
+      "householdPlaceholder": "The Smith Home",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Your household at a glance",
+    "todoList": "To-Do List",
+    "noChores": "No upcoming chores.",
+    "due": "Due: {date}",
+    "avgDuration": "~{minutes} min avg",
+    "lowStock": "Low Stock",
+    "allStocked": "All stocked up!",
+    "homeFeed": "Home Feed",
+    "noNotifications": "No notifications yet.",
+    "markRead": "Mark read",
+    "today": {
+      "title": "Today",
+      "dayOfYear": "Day of year",
+      "weekOfYear": "Week of year",
+      "daysLeft": "Days left",
+      "yearProgress": "Year progress"
+    }
+  },
+  "shopping": {
+    "title": "Shopping",
+    "subtitle": "Catalog and shopping list",
+    "catalog": "Catalog",
+    "searchProducts": "Search products...",
+    "noProductsMatch": "No products match.",
+    "onList": "On list",
+    "need": "Need",
+    "addItem": "Add Item",
+    "item": "Item",
+    "searchOrType": "Search or type new product...",
+    "tagsComma": "Tags (comma-separated)",
+    "store": "Store",
+    "anyStore": "Any store",
+    "addToList": "Add to list",
+    "stores": "Stores",
+    "storeName": "Store name",
+    "all": "All",
+    "nothingNeeded": "Nothing needed right now.",
+    "markBought": "Mark bought",
+    "autoAdded": "Auto-added"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "subtitle": "Track products and stock levels",
+    "scanBarcode": "Scan Barcode",
+    "addProduct": "Add Product",
+    "lowStockThreshold": "Low stock threshold",
+    "autoAddShopping": "Auto-add to shopping when low stock",
+    "barcode": "Barcode",
+    "expiryDate": "Expiry date",
+    "addProductBtn": "Add Product",
+    "addLocation": "Add Location",
+    "locationPlaceholder": "Pantry, Fridge...",
+    "products": "Products ({count})",
+    "noProducts": "No products yet.",
+    "stock": "Stock: {total} (low at {threshold})",
+    "barcodeLabel": "Barcode: {codes}",
+    "addStock": "Add Stock",
+    "scanner": {
+      "title": "Scan Barcode",
+      "cameraError": "Camera access denied or unavailable"
+    }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Chores and home projects",
+    "chores": "Chores",
+    "history": "History",
+    "projects": "Projects",
+    "addChore": "Add Chore",
+    "intervalDays": "Interval (days)",
+    "deadline": "Deadline",
+    "addChoreBtn": "Add Chore",
+    "noActiveChores": "No active chores. Completed items are in History.",
+    "avg": "Avg: {minutes} min",
+    "startTimer": "Start Timer",
+    "noHistory": "No completed chores yet.",
+    "newProject": "New Project",
+    "stepsPlaceholder": "Buy paint\nPrep walls\nPaint",
+    "stepsOnePerLine": "Steps (one per line)",
+    "createProject": "Create Project",
+    "stepsComplete": "{done}/{total} steps complete",
+    "progressUpdate": "Progress update...",
+    "addUpdate": "Add Update"
+  },
+  "recipes": {
+    "title": "Recipes",
+    "subtitle": "Recipes linked to inventory with timers",
+    "recipesTab": "Recipes",
+    "leftoversTab": "Frozen Leftovers",
+    "addRecipe": "Add Recipe",
+    "servings": "Servings",
+    "ingredientsPerLine": "Ingredients (name|quantity per line)",
+    "ingredientsPlaceholder": "Flour|2 cups\nEggs|3",
+    "timersPerLine": "Timers (label|minutes per line)",
+    "timersPlaceholder": "Bake|30\nRest|10",
+    "instructions": "Instructions",
+    "saveRecipe": "Save Recipe",
+    "ingredients": "Ingredients",
+    "inStock": "(in stock: {name})",
+    "trackLeftover": "Track Leftover",
+    "expires": "Expires",
+    "recipe": "Recipe",
+    "addLeftover": "Add Leftover",
+    "noLeftovers": "No frozen leftovers tracked.",
+    "servingsFrozen": "{servings} servings · Frozen {date}"
+  },
+  "smartHome": {
+    "title": "Smart Home",
+    "subtitle": "Sensors, lights, and cameras",
+    "noReadings": "Add sensor readings to get recommendations.",
+    "recommendations": {
+      "warmAir": "Open windows for fresh air - temperature is warm and humidity is moderate.",
+      "poorAir": "Air quality is poor - open windows or run ventilation.",
+      "highHumidity": "High humidity - open windows briefly to ventilate.",
+      "good": "Conditions look good - windows can stay closed."
+    },
+    "sensors": "Sensors",
+    "ikeaLights": "IKEA Lights",
+    "hueLights": "Hue Lights",
+    "cameras": "Cameras",
+    "logReading": "Log Reading",
+    "tempPlaceholder": "Temp °C",
+    "humidityPlaceholder": "Humidity %",
+    "aqiPlaceholder": "AQI",
+    "humidity": "Humidity",
+    "airQuality": "Air Quality",
+    "trends": "Trends",
+    "dirigeraSetup": "Set {ip} and {token} in {env} on the NAS, then redeploy. Pair with {cmd}. See {doc}.",
+    "noIkeaLights": "No IKEA lights found on the Dirigera hub.",
+    "unreachable": "Unreachable",
+    "addHueLight": "Add Hue Light",
+    "livingRoomPlaceholder": "Living room lamp",
+    "addCamera": "Add Camera",
+    "frontDoorPlaceholder": "Front door",
+    "configureStream": "Configure stream URL in device settings"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "Events, guests, and preparation",
+    "events": "Events",
+    "lastTime": "Last Time",
+    "createEvent": "Create Event",
+    "start": "Start",
+    "end": "End",
+    "reminderMinutes": "Reminder (minutes before)",
+    "itemsNeeded": "Items needed (comma-separated)",
+    "itemsPlaceholder": "chairs, snacks",
+    "guestsOnePerLine": "Guests (one per line)",
+    "createEventBtn": "Create Event",
+    "logEvent": "Log Event",
+    "whatHappened": "What happened?",
+    "whatHappenedPlaceholder": "Changed air filter",
+    "when": "When"
+  },
+  "plants": {
+    "title": "Plants",
+    "subtitle": "Watering schedules and progress photos",
+    "addPlant": "Add Plant",
+    "species": "Species",
+    "waterEveryDays": "Water every (days)",
+    "addPlantBtn": "Add Plant",
+    "nextWatering": "Next watering: {date}",
+    "wateringNotes": "Watering notes...",
+    "markWatered": "Mark Watered"
+  },
+  "pets": {
+    "title": "Pets",
+    "subtitle": "Pet care, appointments, and feeding",
+    "addPet": "Add Pet",
+    "breed": "Breed",
+    "birthDate": "Birth date",
+    "addPetBtn": "Add Pet",
+    "feedingRoutines": "Feeding routines",
+    "upcoming": "Upcoming",
+    "totalVisits": "Total visits",
+    "mealName": "Meal name",
+    "amountPlaceholder": "1 cup",
+    "addFeeding": "Add Feeding",
+    "vetCheckup": "Vet checkup",
+    "addAppointment": "Add Appointment",
+    "feeding": "Feeding",
+    "appointments": "Appointments",
+    "atTime": "{name} at {time} ({amount})",
+    "atTimeNoAmount": "{name} at {time}"
+  },
+  "routines": {
+    "title": "Routines",
+    "subtitle": "Shared routines with gamification",
+    "dayStreak": "{count} day streak",
+    "createRoutine": "Create Routine",
+    "fromTemplate": "From Template",
+    "tasksCount": "{name} ({count} tasks)",
+    "taskTitle": "Task title",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "noDependency": "No dependency",
+    "after": "After: {title}",
+    "addTask": "Add Task",
+    "dependsOn": "Depends on: {titles}"
+  },
+  "budget": {
+    "title": "Budget",
+    "subtitle": "Track spending by category",
+    "createBudget": "Create Budget",
+    "amount": "Amount",
+    "period": "Period",
+    "monthly": "Monthly",
+    "weekly": "Weekly",
+    "yearly": "Yearly",
+    "createBudgetBtn": "Create Budget",
+    "logExpense": "Log Expense",
+    "budget": "Budget",
+    "logExpenseBtn": "Log Expense",
+    "spent": "Spent: {amount}",
+    "remaining": "Remaining: {amount}",
+    "budgetAmount": "Budget: {amount}"
+  },
+  "delivery": {
+    "title": "Delivery Tracking",
+    "subtitle": "Track packages and get arrival alerts",
+    "addPackage": "Add Package",
+    "carrier": "Carrier",
+    "carrierPlaceholder": "UPS, FedEx...",
+    "trackingNumber": "Tracking number",
+    "trackingUrl": "Tracking URL",
+    "expectedDate": "Expected date",
+    "earliestTime": "Earliest delivery time",
+    "latestTime": "Latest delivery time",
+    "addPackageBtn": "Add Package",
+    "statusPending": "PENDING",
+    "statusInTransit": "IN TRANSIT",
+    "statusOutForDelivery": "OUT FOR DELIVERY",
+    "statusDelivered": "DELIVERED",
+    "statusException": "EXCEPTION"
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Household chat and requests",
+    "groupChat": "Group Chat",
+    "requests": "Requests",
+    "sendMessage": "Send Message",
+    "messagePlaceholder": "Message the household...",
+    "newRequest": "New Request",
+    "type": "Type",
+    "grocery": "Grocery",
+    "task": "Task",
+    "submitRequest": "Submit Request",
+    "byStatus": "By {name} · {status}"
+  }
+}

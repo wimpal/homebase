@@ -15,112 +15,113 @@ import {
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { moduleKey } from "@/i18n/config";
 
 export interface ModuleDefinition {
   id: ModuleId;
-  name: string;
-  description: string;
+  nameKey: string;
+  descriptionKey: string;
   icon: LucideIcon;
   href: string;
   defaultEnabled: boolean;
 }
 
 /** Serializable subset for passing from Server Components to client Sidebar */
-export type ModuleNavItem = Pick<ModuleDefinition, "id" | "name" | "href">;
+export type ModuleNavItem = Pick<ModuleDefinition, "id" | "href"> & { name: string };
 
 export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: ModuleId.INVENTORY,
-    name: "Inventory",
-    description: "Track household products and stock levels",
+    nameKey: "inventory",
+    descriptionKey: "inventory",
     icon: Box,
     href: "/inventory",
     defaultEnabled: true,
   },
   {
     id: ModuleId.SHOPPING,
-    name: "Shopping",
-    description: "Smart shopping lists and store filtering",
+    nameKey: "shopping",
+    descriptionKey: "shopping",
     icon: ShoppingCart,
     href: "/shopping",
     defaultEnabled: true,
   },
   {
     id: ModuleId.TASKS,
-    name: "Tasks",
-    description: "Chores, projects, and to-do lists",
+    nameKey: "tasks",
+    descriptionKey: "tasks",
     icon: Wrench,
     href: "/tasks",
     defaultEnabled: true,
   },
   {
     id: ModuleId.PLANTS,
-    name: "Plants",
-    description: "Plant care and watering schedules",
+    nameKey: "plants",
+    descriptionKey: "plants",
     icon: Flower2,
     href: "/plants",
     defaultEnabled: false,
   },
   {
     id: ModuleId.PETS,
-    name: "Pets",
-    description: "Pet info, appointments, and feeding",
+    nameKey: "pets",
+    descriptionKey: "pets",
     icon: Dog,
     href: "/pets",
     defaultEnabled: false,
   },
   {
     id: ModuleId.CALENDAR,
-    name: "Calendar",
-    description: "Household events and scheduling",
+    nameKey: "calendar",
+    descriptionKey: "calendar",
     icon: Calendar,
     href: "/calendar",
     defaultEnabled: true,
   },
   {
     id: ModuleId.ROUTINES,
-    name: "Routines",
-    description: "Shared routines with gamification",
+    nameKey: "routines",
+    descriptionKey: "routines",
     icon: Repeat,
     href: "/routines",
     defaultEnabled: true,
   },
   {
     id: ModuleId.RECIPES,
-    name: "Recipes",
-    description: "Recipes linked to inventory",
+    nameKey: "recipes",
+    descriptionKey: "recipes",
     icon: ChefHat,
     href: "/recipes",
     defaultEnabled: true,
   },
   {
     id: ModuleId.BUDGET,
-    name: "Budget",
-    description: "Budget tracking and expenses",
+    nameKey: "budget",
+    descriptionKey: "budget",
     icon: Wallet,
     href: "/budget",
     defaultEnabled: true,
   },
   {
     id: ModuleId.DELIVERY,
-    name: "Delivery",
-    description: "Package tracking and alerts",
+    nameKey: "delivery",
+    descriptionKey: "delivery",
     icon: Package,
     href: "/delivery",
     defaultEnabled: true,
   },
   {
     id: ModuleId.SMART_HOME,
-    name: "Smart Home",
-    description: "Sensors, Hue lights, and cameras",
+    nameKey: "smart_home",
+    descriptionKey: "smart_home",
     icon: Lightbulb,
     href: "/smart-home",
     defaultEnabled: false,
   },
   {
     id: ModuleId.MESSAGING,
-    name: "Messages",
-    description: "Household group messaging",
+    nameKey: "messaging",
+    descriptionKey: "messaging",
     icon: MessageSquare,
     href: "/messages",
     defaultEnabled: true,
@@ -133,8 +134,8 @@ export const MODULE_ICONS = Object.fromEntries(
 
 export const DASHBOARD_MODULE: ModuleDefinition = {
   id: ModuleId.INVENTORY,
-  name: "Home",
-  description: "Dashboard",
+  nameKey: "home",
+  descriptionKey: "home",
   icon: Home,
   href: "/dashboard",
   defaultEnabled: true,
@@ -149,3 +150,5 @@ export function getModuleByHref(href: string) {
 }
 
 export const ALL_MODULE_IDS = MODULE_REGISTRY.map((m) => m.id);
+
+export { moduleKey };

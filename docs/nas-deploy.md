@@ -139,8 +139,9 @@ git pull
 ### What `deploy.sh` does
 
 1. `docker compose up -d --build` — rebuild app + worker, restart all services
-2. `migrate-shopping-slots.ts` — T-035 data cleanup (safe to re-run)
+2. `migrate-shopping-slots.ts` — T-035 data cleanup (raw SQL, before push; safe to re-run)
 3. `prisma db push --accept-data-loss` — apply schema changes
+4. `ensure-product-ci-index.ts` — case-insensitive unique product names per household
 
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 

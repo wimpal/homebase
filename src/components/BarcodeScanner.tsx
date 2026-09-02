@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import { Button } from "@/components/ui/button";
 import { Camera, X } from "lucide-react";
@@ -11,6 +12,7 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
+  const t = useTranslations("inventory.scanner");
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,12 +34,12 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           if (result && active) {
             onScan(result.getText());
             active = false;
-            stream.getTracks().forEach((t) => t.stop());
+            stream.getTracks().forEach((track) => track.stop());
             reader.reset();
           }
         });
       } catch {
-        setError("Camera access denied or unavailable");
+        setError(t("cameraError"));
       }
     }
 
@@ -46,7 +48,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
       active = false;
       reader.reset();
     };
-  }, [onScan]);
+  }, [onScan, t]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -54,7 +56,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
         <div className="mb-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
             <Camera className="h-5 w-5" />
-            Scan Barcode
+            {t("title")}
           </h3>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
