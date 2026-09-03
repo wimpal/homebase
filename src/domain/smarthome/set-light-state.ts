@@ -27,6 +27,12 @@ function canReceive(device: Light, attribute: string): boolean {
   return device.capabilities?.canReceive?.includes(attribute) ?? false;
 }
 
+/**
+ * Dirigera applies only the *first* key in a single attributes PATCH bag
+ * (isOn+lightLevel → only isOn; lightLevel+colorTemperature → only lightLevel).
+ * colorHue+colorSaturation are the exception — send as one pair.
+ * Issue one patch per attribute group.
+ */
 export async function setDirigeraLightState(
   deviceId: string,
   on: boolean,
@@ -83,41 +89,39 @@ export async function setDirigeraLightState(
       return { success: false, error: DIRIGERA_NO_COLOR_TEMP };
     }
 
-    const attributes: {
-      isOn: boolean;
-      lightLevel?: number;
-      colorTemperature?: number;
-      colorHue?: number;
-      colorSaturation?: number;
-    } = {
-      isOn: input.data.on,
+    const id = input.data.deviceId;
+    const patch = async (attributes: Record<string, unknown>) => {
+      await client.devices.setAttributes({ id, attributes });
     };
+
+    if (light.attributes.isOn !== input.data.on) {
+      await patch({ isOn: input.data.on });
+    }
 
     if (input.data.on) {
       if (brightness != null) {
-        attributes.lightLevel = brightness;
+        await patch({ lightLevel: brightness });
       }
       if (colorTempKelvin != null) {
-        attributes.colorTemperature = clampKelvin(
-          colorTempKelvin,
-          light.attributes.colorTemperatureMin,
-          light.attributes.colorTemperatureMax,
-        );
+        await patch({
+          colorTemperature: clampKelvin(
+            colorTempKelvin,
+            light.attributes.colorTemperatureMin,
+            light.attributes.colorTemperatureMax,
+          ),
+        });
       }
       if (colorHex != null) {
         const hs = hexToHueSaturation(colorHex);
         if (!hs) {
           return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
         }
-        attributes.colorHue = hs.colorHue;
-        attributes.colorSaturation = hs.colorSaturation;
+        await patch({
+          colorHue: hs.colorHue,
+          colorSaturation: hs.colorSaturation,
+        });
       }
     }
-
-    await client.devices.setAttributes({
-      id: input.data.deviceId,
-      attributes,
-    });
 
     return { success: true };
   } catch (err) {

@@ -74,7 +74,9 @@ Household **Settings → modules → Smart Home** gates the **Smart Home UI** on
 
 Do **not** send `color_hex` and `color_temp_kelvin` in the same `set_state` call — Homebase rejects with `Specify colour or color temperature, not both`. Capability refusals: `Device does not support colour` / `Device does not support color temperature`.
 
-Not every IKEA lamp supports RGB. Prefer **Ballon** (Kantoor) for colour/warmth smoke after confirming `supports_*` via `lights.list`. Use **Woonkamer** for brightness-only room checks if useful.
+**Hub quirk:** Dirigera applies only the first attribute in a single PATCH attributes bag (`isOn`+`lightLevel` → only on/off). Homebase therefore issues **separate** patches for on/off, brightness, warmth, and colour (hue+saturation stay one pair).
+
+Not every IKEA lamp supports RGB. Prefer **Ballon** (Kantoor) for warmth/brightness smoke; **paarse lamp** / **bank lamp** / **eettafel lamp** (Woonkamer) for colour (`supports_color: true`). Confirm with `lights.list`.
 
 ## Test lamp (this household)
 
