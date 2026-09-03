@@ -1,7 +1,12 @@
 import type { Light } from "dirigera";
 import { z } from "zod";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
-import { clampKelvin, hexToHueSaturation, parseColorHex } from "./color";
+import {
+  clampKelvin,
+  findIkeaColorPreset,
+  hexToHueSaturation,
+  resolveIkeaColorHex,
+} from "./color";
 import {
   DIRIGERA_COLOUR_AND_TEMP,
   DIRIGERA_DEVICE_UNREACHABLE,
@@ -21,6 +26,7 @@ const setLightStateInput = z.object({
   brightness: z.number().min(0).max(100).optional(),
   colorTempKelvin: z.number().finite().optional(),
   colorHex: z.string().optional(),
+  colorPreset: z.string().optional(),
 });
 
 function canReceive(device: Light, attribute: string): boolean {
@@ -53,17 +59,34 @@ export async function setDirigeraLightState(
     brightness: options.brightness,
     colorTempKelvin: options.colorTempKelvin,
     colorHex: options.colorHex,
+    colorPreset: options.colorPreset,
   });
   if (!input.success) {
     return { success: false, error: "Invalid input" };
   }
 
-  const { brightness, colorTempKelvin, colorHex } = input.data;
-  if (colorTempKelvin != null && colorHex != null) {
+  const { brightness, colorTempKelvin, colorHex, colorPreset } = input.data;
+  const wantsColour = colorHex != null || colorPreset != null;
+  if (colorTempKelvin != null && wantsColour) {
     return { success: false, error: DIRIGERA_COLOUR_AND_TEMP };
   }
-  if (colorHex != null && !parseColorHex(colorHex)) {
+  if (colorHex != null && colorPreset != null) {
     return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
+  }
+
+  let resolvedHex: string | undefined;
+  if (colorPreset != null) {
+    const preset = findIkeaColorPreset(colorPreset);
+    if (!preset || !preset.chromatic) {
+      return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
+    }
+    resolvedHex = preset.hex;
+  } else if (colorHex != null) {
+    const snapped = resolveIkeaColorHex(colorHex);
+    if (!snapped) {
+      return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
+    }
+    resolvedHex = snapped;
   }
 
   try {
@@ -82,7 +105,7 @@ export async function setDirigeraLightState(
 
     const light = device as Light;
 
-    if (colorHex != null && !canReceive(light, "colorHue") && !canReceive(light, "colorSaturation")) {
+    if (resolvedHex != null && !canReceive(light, "colorHue") && !canReceive(light, "colorSaturation")) {
       return { success: false, error: DIRIGERA_NO_COLOUR };
     }
     if (colorTempKelvin != null && !canReceive(light, "colorTemperature")) {
@@ -111,8 +134,8 @@ export async function setDirigeraLightState(
           ),
         });
       }
-      if (colorHex != null) {
-        const hs = hexToHueSaturation(colorHex);
+      if (resolvedHex != null) {
+        const hs = hexToHueSaturation(resolvedHex);
         if (!hs) {
           return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
         }

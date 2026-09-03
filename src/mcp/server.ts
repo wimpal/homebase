@@ -349,6 +349,7 @@ export function createMcpServer(householdId: string): McpServer {
           ? { color_temp_kelvin: light.colorTempKelvin }
           : {}),
         ...(light.colorHex != null ? { color_hex: light.colorHex } : {}),
+        ...(light.colorPreset != null ? { color_preset: light.colorPreset } : {}),
         supports_brightness: light.supportsBrightness,
         supports_color_temp: light.supportsColorTemp,
         supports_color: light.supportsColor,
@@ -361,7 +362,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.lights.set_state",
     {
       description:
-        'Turn an IKEA light on or off, optionally set brightness (0–100), colour temperature (Kelvin), or colour (#RRGGBB). Requires device_id from lights.list. Colour and color temperature are mutually exclusive. Use for "dim to 30%", "warm white", "make it red". Not audited in homebase.changes v1.',
+        'Turn an IKEA light on or off, optionally set brightness (0–100), colour temperature (Kelvin), or an IKEA colour preset / #RRGGBB (snapped to Tradfri presets). Colour and color temperature are mutually exclusive. Prefer color_preset (e.g. saturated_red, blue, lime) over free hex. Not audited in homebase.changes v1.',
       inputSchema: {
         device_id: z.string().min(1).describe("Dirigera device id from lights.list"),
         on: z.boolean(),
@@ -378,10 +379,16 @@ export function createMcpServer(householdId: string): McpServer {
         color_hex: z
           .string()
           .optional()
-          .describe("#RRGGBB colour; only when on is true"),
+          .describe("#RRGGBB; snapped to nearest IKEA chromatic preset when on is true"),
+        color_preset: z
+          .string()
+          .optional()
+          .describe(
+            "IKEA chromatic preset id: blue, light_blue, saturated_purple, lime, light_purple, yellow, saturated_pink, dark_peach, saturated_red, pink, peach, warm_amber, light_pink",
+          ),
       },
     },
-    async ({ device_id, on, brightness, color_temp_kelvin, color_hex }) => {
+    async ({ device_id, on, brightness, color_temp_kelvin, color_hex, color_preset }) => {
       const result = await setDirigeraLightState(
         device_id,
         on,
@@ -390,6 +397,7 @@ export function createMcpServer(householdId: string): McpServer {
               brightness,
               colorTempKelvin: color_temp_kelvin,
               colorHex: color_hex,
+              colorPreset: color_preset,
             }
           : undefined,
       );

@@ -140,6 +140,7 @@ export async function controlDirigeraLight(
     brightness?: number;
     colorTempKelvin?: number;
     colorHex?: string;
+    colorPreset?: string;
   },
 ) {
   await requireMutationAccess(ModuleId.SMART_HOME);

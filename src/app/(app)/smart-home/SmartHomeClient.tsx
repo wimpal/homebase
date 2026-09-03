@@ -15,8 +15,10 @@ import {
   getDirigeraLights,
 } from "@/modules/smarthome/actions";
 import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
+import { IKEA_CHROMATIC_PRESETS } from "@/domain/smarthome/color";
 import type { DirigeraLight } from "@/domain/smarthome/types";
 import { getWindowRecommendationKey } from "@/lib/smarthome";
+import { cn } from "@/lib/utils";
 import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -118,6 +120,7 @@ export function SmartHomeClient({
       brightness?: number;
       colorTempKelvin?: number;
       colorHex?: string;
+      colorPreset?: string;
     },
   ) {
     setIkeaError(null);
@@ -343,29 +346,44 @@ export function SmartHomeClient({
                       )}
 
                       {light.isReachable && light.supportsColor && (
-                        <form
-                          className="flex flex-wrap items-center gap-3 text-sm"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const form = e.currentTarget;
-                            const hex = new FormData(form).get("color")?.toString() ?? "";
-                            if (!hex) return;
-                            void handleIkeaState(light.id, { colorHex: hex.toUpperCase() });
-                          }}
-                        >
-                          <span className="w-28 text-zinc-500">{t("colour")}</span>
-                          <input
-                            type="color"
-                            name="color"
-                            defaultValue={colourValue}
-                            key={`${light.id}-hex-${colourValue}`}
-                            disabled={disabled}
-                            className="h-8 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0 dark:border-zinc-700"
-                          />
-                          <Button type="submit" size="sm" disabled={disabled}>
-                            {t("apply")}
-                          </Button>
-                        </form>
+                        <div className="space-y-2 text-sm">
+                          <span className="text-zinc-500">{t("colour")}</span>
+                          <div className="flex flex-wrap gap-2">
+                            {IKEA_CHROMATIC_PRESETS.map((preset) => {
+                              const selected =
+                                light.colorPreset === preset.id ||
+                                light.colorHex?.toUpperCase() === preset.hex;
+                              return (
+                                <button
+                                  key={preset.id}
+                                  type="button"
+                                  title={preset.name}
+                                  disabled={disabled}
+                                  aria-label={preset.name}
+                                  aria-pressed={selected}
+                                  onClick={() =>
+                                    void handleIkeaState(light.id, {
+                                      colorPreset: preset.id,
+                                    })
+                                  }
+                                  className={cn(
+                                    "h-8 w-8 rounded-md border-2 shadow-sm transition disabled:opacity-50",
+                                    selected
+                                      ? "border-emerald-600 ring-2 ring-emerald-600/40"
+                                      : "border-zinc-300 dark:border-zinc-600",
+                                  )}
+                                  style={{ backgroundColor: preset.hex }}
+                                />
+                              );
+                            })}
+                          </div>
+                          {(light.colorPreset || colourValue) && (
+                            <p className="text-xs text-zinc-500">
+                              {IKEA_CHROMATIC_PRESETS.find((p) => p.id === light.colorPreset)
+                                ?.name ?? colourValue}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </CardContent>
                   </Card>

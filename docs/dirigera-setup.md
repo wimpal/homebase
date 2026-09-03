@@ -76,6 +76,28 @@ Do **not** send `color_hex` and `color_temp_kelvin` in the same `set_state` call
 
 **Hub quirk:** Dirigera applies only the first attribute in a single PATCH attributes bag (`isOn`+`lightLevel` → only on/off). Homebase therefore issues **separate** patches for on/off, brightness, warmth, and colour (hue+saturation stay one pair).
 
+### Colour presets (Tradfri / IKEA Home smart)
+
+RGB lamps snap to the official chromatic hex presets (same set as the IKEA app property 5706). Smart Home UI shows these as colour buttons; MCP prefers `color_preset` over free hex:
+
+| id | Hex | Name |
+|---|---|---|
+| `blue` | `#4A418A` | Blue |
+| `light_blue` | `#6C83BA` | Light blue |
+| `saturated_purple` | `#8F2686` | Saturated purple |
+| `lime` | `#A9D62B` | Lime |
+| `light_purple` | `#C984BB` | Light purple |
+| `yellow` | `#D6E44B` | Yellow |
+| `saturated_pink` | `#D9337C` | Saturated pink |
+| `dark_peach` | `#DA5D41` | Dark peach |
+| `saturated_red` | `#DC4B31` | Saturated red |
+| `pink` | `#E491AF` | Pink |
+| `peach` | `#E57345` | Peach |
+| `warm_amber` | `#E78834` | Warm amber |
+| `light_pink` | `#E8BEDD` | Light pink |
+
+Whites (warm/cool) use the **warmth** control / `color_temp_kelvin`, not colour buttons.
+
 Not every IKEA lamp supports RGB. Prefer **Ballon** (Kantoor) for warmth/brightness smoke; **paarse lamp** / **bank lamp** / **eettafel lamp** (Woonkamer) for colour (`supports_color: true`). Confirm with `lights.list`.
 
 ## Test lamp (this household)

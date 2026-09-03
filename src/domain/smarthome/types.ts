@@ -6,6 +6,7 @@ export interface DirigeraLight {
   lightLevel?: number;
   colorTempKelvin?: number;
   colorHex?: string;
+  colorPreset?: string;
   colorTempMin?: number;
   colorTempMax?: number;
   supportsBrightness: boolean;
@@ -32,4 +33,5 @@ export interface SetDirigeraLightStateOptions {
   brightness?: number;
   colorTempKelvin?: number;
   colorHex?: string;
+  colorPreset?: string;
 }

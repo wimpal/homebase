@@ -1,6 +1,13 @@
 export { getDirigeraClient, isDirigeraConfigured } from "./client";
 export { verifyDirigeraConnectivity } from "./connectivity";
 export {
+  IKEA_CHROMATIC_PRESETS,
+  IKEA_COLOR_PRESETS,
+  findIkeaColorPreset,
+  nearestIkeaColorPreset,
+  resolveIkeaColorHex,
+} from "./color";
+export {
   DIRIGERA_AUTH_FAILED,
   DIRIGERA_COLOUR_AND_TEMP,
   DIRIGERA_DEVICE_UNREACHABLE,
