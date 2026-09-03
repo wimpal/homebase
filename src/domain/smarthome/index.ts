@@ -5,6 +5,7 @@ export {
   IKEA_COLOR_PRESETS,
   findIkeaColorPreset,
   nearestIkeaColorPreset,
+  nearestIkeaColorPresetFromHs,
   resolveIkeaColorHex,
 } from "./color";
 export {

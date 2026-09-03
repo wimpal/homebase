@@ -1,7 +1,7 @@
 import type { Light } from "dirigera";
 import { DomainError } from "@/domain/error";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
-import { hueSaturationToHex, nearestIkeaColorPreset } from "./color";
+import { hueSaturationToHex, nearestIkeaColorPresetFromHs } from "./color";
 import { DIRIGERA_HUB_UNREACHABLE, DIRIGERA_NOT_CONFIGURED } from "./errors";
 import type { DirigeraLight } from "./types";
 
@@ -40,9 +40,11 @@ function mapLight(device: Light): DirigeraLight {
     attrs.colorSaturation != null &&
     colorMode !== "temperature"
   ) {
-    const rawHex = hueSaturationToHex(attrs.colorHue, attrs.colorSaturation);
-    const nearest = nearestIkeaColorPreset(rawHex);
-    colorHex = nearest?.hex ?? rawHex;
+    const nearest = nearestIkeaColorPresetFromHs(
+      attrs.colorHue,
+      attrs.colorSaturation,
+    );
+    colorHex = nearest?.hex ?? hueSaturationToHex(attrs.colorHue, attrs.colorSaturation);
     colorPreset = nearest?.id;
   }
 

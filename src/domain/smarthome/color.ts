@@ -1,4 +1,4 @@
-/** Hex (#RRGGBB) ↔ Dirigera hue/saturation + IKEA Tradfri colour presets. */
+/** Hex (#RRGGBB) ↔ Dirigera hue/saturation (HSV) + IKEA Tradfri colour presets. */
 
 const HEX_RE = /^#([0-9a-fA-F]{6})$/;
 
@@ -32,6 +32,7 @@ export const IKEA_COLOR_PRESETS = [
 ] as const;
 
 export type IkeaColorPresetId = (typeof IKEA_COLOR_PRESETS)[number]["id"];
+export type IkeaColorPreset = (typeof IKEA_COLOR_PRESETS)[number];
 
 export const IKEA_CHROMATIC_PRESETS = IKEA_COLOR_PRESETS.filter((p) => p.chromatic);
 
@@ -53,50 +54,10 @@ function normalizeHex(hex: string): string | null {
   return `#${toByte(rgb.r)}${toByte(rgb.g)}${toByte(rgb.b)}`.toUpperCase();
 }
 
-export function findIkeaColorPreset(
-  idOrHex: string,
-): (typeof IKEA_COLOR_PRESETS)[number] | undefined {
-  const raw = idOrHex.trim();
-  const byId = IKEA_COLOR_PRESETS.find((p) => p.id === raw.toLowerCase().replace(/\s+/g, "_"));
-  if (byId) return byId;
-  const hex = normalizeHex(raw.startsWith("#") ? raw : `#${raw}`);
-  if (!hex) return undefined;
-  return IKEA_COLOR_PRESETS.find((p) => p.hex === hex);
-}
-
-/** Euclidean RGB distance → nearest IKEA preset (chromatic-only by default). */
-export function nearestIkeaColorPreset(
+/** Dirigera uses HSV-style hue (0–360) + saturation (0–1), not HSL. */
+export function hexToHueSaturation(
   hex: string,
-  options?: { chromaticOnly?: boolean },
-): (typeof IKEA_COLOR_PRESETS)[number] | null {
-  const rgb = parseColorHex(hex);
-  if (!rgb) return null;
-  const pool = options?.chromaticOnly === false ? IKEA_COLOR_PRESETS : IKEA_CHROMATIC_PRESETS;
-  let best: (typeof IKEA_COLOR_PRESETS)[number] | null = null;
-  let bestDist = Infinity;
-  for (const preset of pool) {
-    const pr = parseColorHex(preset.hex)!;
-    const dist =
-      (rgb.r - pr.r) ** 2 + (rgb.g - pr.g) ** 2 + (rgb.b - pr.b) ** 2;
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = preset;
-    }
-  }
-  return best;
-}
-
-/** Resolve write colour: exact preset id/hex, else snap arbitrary hex to nearest chromatic. */
-export function resolveIkeaColorHex(input: string): string | null {
-  const exact = findIkeaColorPreset(input);
-  if (exact) return exact.hex;
-  const normalized = normalizeHex(input);
-  if (!normalized) return null;
-  return nearestIkeaColorPreset(normalized)?.hex ?? null;
-}
-
-/** Convert #RRGGBB to Dirigera colorHue (0–360) and colorSaturation (0–1). */
-export function hexToHueSaturation(hex: string): { colorHue: number; colorSaturation: number } | null {
+): { colorHue: number; colorSaturation: number } | null {
   const rgb = parseColorHex(hex);
   if (!rgb) return null;
 
@@ -116,9 +77,7 @@ export function hexToHueSaturation(hex: string): { colorHue: number; colorSatura
     if (hue < 0) hue += 360;
   }
 
-  const lightness = (max + min) / 2;
-  const saturation =
-    delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+  const saturation = max === 0 ? 0 : delta / max;
 
   return {
     colorHue: Math.round(hue * 1000) / 1000,
@@ -126,7 +85,7 @@ export function hexToHueSaturation(hex: string): { colorHue: number; colorSatura
   };
 }
 
-/** Best-effort Dirigera HS → #RRGGBB (saturation 0–1, hue 0–360). */
+/** Dirigera HS (HSV, V=1) → #RRGGBB. */
 export function hueSaturationToHex(colorHue: number, colorSaturation: number): string {
   const h = ((colorHue % 360) + 360) % 360;
   const s = Math.min(1, Math.max(0, colorSaturation));
@@ -165,6 +124,93 @@ export function hueSaturationToHex(colorHue: number, colorSaturation: number): s
       .padStart(2, "0");
 
   return `#${toByte(r)}${toByte(g)}${toByte(b)}`.toUpperCase();
+}
+
+function circularHueDelta(a: number, b: number): number {
+  let d = Math.abs(a - b) % 360;
+  if (d > 180) d = 360 - d;
+  return d;
+}
+
+/** Distance in Dirigera HS space (hue degrees + saturation 0–1). */
+function hsDistance(
+  h1: number,
+  s1: number,
+  h2: number,
+  s2: number,
+): number {
+  const dh = circularHueDelta(h1, h2) / 180;
+  const ds = s1 - s2;
+  // Hue-dominant: dark_peach / saturated_red / peach sit within a few degrees;
+  // RGB nearest-neighbour and sat-weighted HS both mis-assign after hub drift.
+  return dh * dh * 25 + ds * ds * 0.15;
+}
+
+const PRESET_HS: ReadonlyMap<
+  string,
+  { colorHue: number; colorSaturation: number }
+> = new Map(
+  IKEA_COLOR_PRESETS.map((p) => {
+    const hs = hexToHueSaturation(p.hex)!;
+    return [p.id, hs] as const;
+  }),
+);
+
+export function findIkeaColorPreset(idOrHex: string): IkeaColorPreset | undefined {
+  const raw = idOrHex.trim();
+  const byId = IKEA_COLOR_PRESETS.find(
+    (p) => p.id === raw.toLowerCase().replace(/\s+/g, "_"),
+  );
+  if (byId) return byId;
+  const hex = normalizeHex(raw.startsWith("#") ? raw : `#${raw}`);
+  if (!hex) return undefined;
+  return IKEA_COLOR_PRESETS.find((p) => p.hex === hex);
+}
+
+/** Nearest preset from Dirigera hub hue/saturation (preferred matcher). */
+export function nearestIkeaColorPresetFromHs(
+  colorHue: number,
+  colorSaturation: number,
+  options?: { chromaticOnly?: boolean },
+): IkeaColorPreset | null {
+  const pool =
+    options?.chromaticOnly === false ? IKEA_COLOR_PRESETS : IKEA_CHROMATIC_PRESETS;
+  let best: IkeaColorPreset | null = null;
+  let bestDist = Infinity;
+  for (const preset of pool) {
+    const hs = PRESET_HS.get(preset.id);
+    if (!hs) continue;
+    const dist = hsDistance(
+      colorHue,
+      colorSaturation,
+      hs.colorHue,
+      hs.colorSaturation,
+    );
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = preset;
+    }
+  }
+  return best;
+}
+
+/** Nearest preset from a hex (via HSV), chromatic-only by default. */
+export function nearestIkeaColorPreset(
+  hex: string,
+  options?: { chromaticOnly?: boolean },
+): IkeaColorPreset | null {
+  const hs = hexToHueSaturation(hex);
+  if (!hs) return null;
+  return nearestIkeaColorPresetFromHs(hs.colorHue, hs.colorSaturation, options);
+}
+
+/** Resolve write colour: exact preset id/hex, else snap arbitrary hex to nearest chromatic. */
+export function resolveIkeaColorHex(input: string): string | null {
+  const exact = findIkeaColorPreset(input);
+  if (exact) return exact.hex;
+  const normalized = normalizeHex(input);
+  if (!normalized) return null;
+  return nearestIkeaColorPreset(normalized)?.hex ?? null;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,10 +54,27 @@ export function SmartHomeClient({
   const [ikeaLights, setIkeaLights] = useState<DirigeraLight[]>(dirigera.lights);
   const [ikeaPending, setIkeaPending] = useState<Record<string, boolean>>({});
   const [ikeaError, setIkeaError] = useState<string | null>(null);
+  /** Hub nearest-match mislabels close oranges; keep the swatch the user actually picked. */
+  const ikeaColorPickRef = useRef<Record<string, string>>({});
+
+  function applyIkeaColorPicks(lights: DirigeraLight[]): DirigeraLight[] {
+    return lights.map((light) => {
+      const pick = ikeaColorPickRef.current[light.id];
+      if (!pick) return light;
+      const preset = IKEA_CHROMATIC_PRESETS.find((p) => p.id === pick);
+      if (!preset) return light;
+      return {
+        ...light,
+        colorPreset: preset.id,
+        colorHex: preset.hex,
+        colorTempKelvin: undefined,
+      };
+    });
+  }
 
   useEffect(() => {
     if (dirigera.configured && !dirigera.error) {
-      setIkeaLights(dirigera.lights);
+      setIkeaLights(applyIkeaColorPicks(dirigera.lights));
     }
   }, [dirigera]);
 
@@ -89,7 +106,7 @@ export function SmartHomeClient({
       return;
     }
     setIkeaError(null);
-    setIkeaLights(fresh.lights);
+    setIkeaLights(applyIkeaColorPicks(fresh.lights));
   }
 
   async function handleIkeaToggle(lightId: string, on: boolean) {
@@ -126,8 +143,34 @@ export function SmartHomeClient({
     setIkeaError(null);
     setIkeaPending((prev) => ({ ...prev, [lightId]: true }));
 
+    if (options.colorTempKelvin != null) {
+      delete ikeaColorPickRef.current[lightId];
+    }
+    if (options.colorPreset) {
+      ikeaColorPickRef.current[lightId] = options.colorPreset;
+      const preset = IKEA_CHROMATIC_PRESETS.find((p) => p.id === options.colorPreset);
+      if (preset) {
+        setIkeaLights((prev) =>
+          prev.map((light) =>
+            light.id === lightId
+              ? {
+                  ...light,
+                  isOn: true,
+                  colorPreset: preset.id,
+                  colorHex: preset.hex,
+                  colorTempKelvin: undefined,
+                }
+              : light,
+          ),
+        );
+      }
+    }
+
     const result = await controlDirigeraLight(lightId, true, options);
     if (!result.success) {
+      if (options.colorPreset) {
+        delete ikeaColorPickRef.current[lightId];
+      }
       setIkeaError(result.error ?? tc("failed"));
     }
     await refreshIkeaLights();
