@@ -607,8 +607,11 @@ async function runLightsSmoke(callTool: CallTool) {
   }
   ok(`homebase.lights.list (${lights.length} light(s))`);
 
-  // Non-Dirigera id — never matches a hub uuid; GET 404 only, no PATCH (T-034 / T-038).
-  const staleProbeId = "t034-stale-device-id-probe";
+  // Valid UUID shape that will not match a real Dirigera device (T-034 / T-038 — GET only, no PATCH).
+  const staleProbeId = "00000000-0000-4000-8000-000000000000";
+  if (lights.some((l) => l.id === staleProbeId)) {
+    fail("stale-id probe id unexpectedly present in lights.list — pick another reserved uuid");
+  }
   const staleResult = await callTool(27, "homebase.lights.set_state", {
     device_id: staleProbeId,
     on: false,
