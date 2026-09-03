@@ -66,6 +66,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ## Production (Docker / NAS)
 
 - NAS app setup: **[docs/nas-deploy.md](docs/nas-deploy.md)**
+- IKEA Dirigera pairing / MCP lights: **[docs/dirigera-setup.md](docs/dirigera-setup.md)**
 - **Backup & restore:** **[docs/backup-restore.md](docs/backup-restore.md)** — daily `backup-nas.sh`, restore drill
 - **New PC / automated deploy:** **[docs/nas-pc-setup.md](docs/nas-pc-setup.md)** — SSH key, `docker` group, `npm run deploy:nas`
 

@@ -195,7 +195,7 @@ export function SmartHomeClient({
                     token: () => <code className="text-xs">DIRIGERA_TOKEN</code>,
                     env: () => <code className="text-xs">.env</code>,
                     cmd: () => <code className="text-xs">npx dirigera authenticate</code>,
-                    doc: () => <code className="text-xs">docs/nas-deploy.md</code>,
+                    doc: () => <code className="text-xs">docs/dirigera-setup.md</code>,
                   })}
                 </p>
               </CardContent>

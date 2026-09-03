@@ -1,9 +1,10 @@
 import type { Light } from "dirigera";
 import { DomainError } from "@/domain/error";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
+import { DIRIGERA_HUB_UNREACHABLE, DIRIGERA_NOT_CONFIGURED } from "./errors";
 import type { DirigeraLight } from "./types";
 
-function isLightDevice(device: { type: string; deviceType: string }): boolean {
+export function isLightDevice(device: { type: string; deviceType: string }): boolean {
   return device.type === "light" || device.deviceType === "light";
 }
 
@@ -25,20 +26,20 @@ function mapLight(device: Light): DirigeraLight {
 
 export async function listDirigeraLights(): Promise<DirigeraLight[] | DomainError> {
   if (!isDirigeraConfigured()) {
-    return DomainError.unavailable("Dirigera not configured");
-  }
-
-  const client = await getDirigeraClient();
-  if (!client) {
-    return DomainError.unavailable("Dirigera not configured");
+    return DomainError.unavailable(DIRIGERA_NOT_CONFIGURED);
   }
 
   try {
+    const client = await getDirigeraClient();
+    if (!client) {
+      return DomainError.unavailable(DIRIGERA_NOT_CONFIGURED);
+    }
+
     const devices = await client.devices.list();
     return devices
       .filter(isLightDevice)
       .map((device) => mapLight(device as Light));
   } catch {
-    return DomainError.unavailable("Failed to reach Dirigera hub");
+    return DomainError.unavailable(DIRIGERA_HUB_UNREACHABLE);
   }
 }

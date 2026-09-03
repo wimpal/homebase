@@ -3,10 +3,11 @@
  * Requires: dev server running, SERVICE_TOKEN + MCP_HOUSEHOLD_ID in .env
  *
  * Usage:
- *   npm run mcp:smoke                              # local — lights.list only (T-038)
+ *   npm run mcp:smoke                              # local — lights.list + stale-id probe (T-038)
  *   npm run mcp:smoke:full                         # local — lights write smoke (pinned test device)
- *   MCP_BASE_URL=http://192.168.1.142:3000 npm run mcp:smoke   # NAS deploy — list-only, never toggles
- *
+ *   MCP_BASE_URL=http://192.168.1.142:3000 npm run mcp:smoke   # NAS deploy — no real-lamp toggles
+ *   PowerShell: $env:MCP_BASE_URL="http://192.168.1.142:3000"; npm run mcp:smoke
+
  * Lights write smoke (local only): HOMEBASE_SMOKE_LIGHTS_WRITE=1 + DIRIGERA_TEST_DEVICE_ID
  */
 import { readFileSync } from "node:fs";
@@ -585,14 +586,19 @@ async function runLightsSmoke(callTool: CallTool) {
 
   if (lightsListResult.isError) {
     const payload = parseToolPayload(lightsListResult) as {
-      error?: { code?: string };
+      error?: { code?: string; message?: string };
     };
-    if (payload.error?.code === "unavailable") {
+    if (
+      payload.error?.code === "unavailable" &&
+      payload.error?.message === "Dirigera not configured"
+    ) {
       console.log("NOTE: Dirigera not configured on target — lights smoke skipped");
       ok("homebase.lights.list (skipped, Dirigera unavailable)");
       return;
     }
-    fail("homebase.lights.list tool error");
+    fail(
+      `homebase.lights.list tool error: ${payload.error?.message ?? JSON.stringify(payload)}`,
+    );
   }
 
   const lights = parseToolPayload(lightsListResult) as LightRow[];
@@ -600,6 +606,26 @@ async function runLightsSmoke(callTool: CallTool) {
     fail("homebase.lights.list did not return an array");
   }
   ok(`homebase.lights.list (${lights.length} light(s))`);
+
+  // Non-Dirigera id — never matches a hub uuid; GET 404 only, no PATCH (T-034 / T-038).
+  const staleProbeId = "t034-stale-device-id-probe";
+  const staleResult = await callTool(27, "homebase.lights.set_state", {
+    device_id: staleProbeId,
+    on: false,
+  });
+  if (staleResult.isError) {
+    fail("homebase.lights.set_state stale-id probe crashed (MCP isError)");
+  }
+  const stalePayload = parseToolPayload(staleResult) as {
+    success: boolean;
+    error?: string;
+  };
+  if (stalePayload.success !== false || stalePayload.error !== "Unknown or stale device_id") {
+    fail(
+      `stale-id probe expected success:false error "Unknown or stale device_id", got ${JSON.stringify(stalePayload)}`,
+    );
+  }
+  ok("homebase.lights.set_state (stale device_id → success:false)");
 
   if (lights.length === 0) {
     console.log("NOTE: no IKEA lights on hub — write smoke skipped");

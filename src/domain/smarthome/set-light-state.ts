@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
+import {
+  DIRIGERA_DEVICE_UNREACHABLE,
+  DIRIGERA_NOT_CONFIGURED,
+  DIRIGERA_UNKNOWN_DEVICE,
+  classifyDirigeraHubError,
+} from "./errors";
+import { isLightDevice } from "./list-lights";
 import type { DirigeraMutationResult } from "./types";
 
 const setLightStateInput = z.object({
@@ -14,7 +21,7 @@ export async function setDirigeraLightState(
   brightness?: number,
 ): Promise<DirigeraMutationResult> {
   if (!isDirigeraConfigured()) {
-    return { success: false, error: "Dirigera not configured" };
+    return { success: false, error: DIRIGERA_NOT_CONFIGURED };
   }
 
   const input = setLightStateInput.safeParse({ deviceId, on, brightness });
@@ -22,12 +29,20 @@ export async function setDirigeraLightState(
     return { success: false, error: "Invalid input" };
   }
 
-  const client = await getDirigeraClient();
-  if (!client) {
-    return { success: false, error: "Dirigera not configured" };
-  }
-
   try {
+    const client = await getDirigeraClient();
+    if (!client) {
+      return { success: false, error: DIRIGERA_NOT_CONFIGURED };
+    }
+
+    const device = await client.devices.get({ id: input.data.deviceId });
+    if (!isLightDevice(device)) {
+      return { success: false, error: DIRIGERA_UNKNOWN_DEVICE };
+    }
+    if (!device.isReachable) {
+      return { success: false, error: DIRIGERA_DEVICE_UNREACHABLE };
+    }
+
     const attributes: { isOn: boolean; lightLevel?: number } = {
       isOn: input.data.on,
     };
@@ -41,7 +56,7 @@ export async function setDirigeraLightState(
     });
 
     return { success: true };
-  } catch {
-    return { success: false, error: "Failed to reach Dirigera hub" };
+  } catch (err) {
+    return { success: false, error: classifyDirigeraHubError(err) };
   }
 }
