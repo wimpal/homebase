@@ -63,6 +63,19 @@ Household **Settings → modules → Smart Home** gates the **Smart Home UI** on
 - Live query from the hub — no Prisma `Device` rows required.
 - Some lamps may report `reachable: false` (Zigbee mesh). `set_state` does not write in that case; it returns `Device unreachable (Zigbee mesh)`.
 
+### Colour, brightness, and warmth (T-040)
+
+| Public field | Hub attribute | Notes |
+|---|---|---|
+| `brightness` (0–100) | `lightLevel` | Applied only when `on: true` |
+| `color_temp_kelvin` | `colorTemperature` | Kelvin; clamped to device `colorTemperatureMin`/`Max` (often inverted on the hub) |
+| `color_hex` (`#RRGGBB`) | `colorHue` + `colorSaturation` | Homebase converts hex ↔ HS |
+| `supports_brightness` / `supports_color_temp` / `supports_color` | `capabilities.canReceive` | `lightLevel`, `colorTemperature`, `colorHue` (+ `colorSaturation`) |
+
+Do **not** send `color_hex` and `color_temp_kelvin` in the same `set_state` call — Homebase rejects with `Specify colour or color temperature, not both`. Capability refusals: `Device does not support colour` / `Device does not support color temperature`.
+
+Not every IKEA lamp supports RGB. Prefer **Ballon** (Kantoor) for colour/warmth smoke after confirming `supports_*` via `lights.list`. Use **Woonkamer** for brightness-only room checks if useful.
+
 ## Test lamp (this household)
 
 | | |
@@ -72,11 +85,11 @@ Household **Settings → modules → Smart Home** gates the **Smart Home UI** on
 | Room-all | **Woonkamer** (~3 IKEA lamps) |
 | Count | ~6 IKEA lights; some may be unreachable |
 
-Verify live names and rooms with `homebase.lights.list` before chat smoke. Hub `room` strings are the match target.
+Verify live names, rooms, and `supports_*` with `homebase.lights.list` before chat smoke. Hub `room` strings are the match target.
 
 ## MCP smoke (list-only — do not toggle household lamps)
 
-Post-deploy smoke must not call `lights.set_state` on a real lamp (T-038) and must never run `party_mode`. It may probe a fake `device_id` to confirm a stale-id error (no PATCH).
+Post-deploy smoke must not call `lights.set_state` on a real lamp (T-038) and must never run `party_mode`. It may probe a fake `device_id` to confirm a stale-id error (no PATCH). List may include the new brightness/colour fields — still list-only.
 
 **PowerShell (this household NAS):**
 
@@ -94,7 +107,7 @@ For a local write round-trip on a pinned lamp that is **not** in daily use: `npm
 
 ## UI
 
-Smart Home → **IKEA Lights** tab lists live devices from the hub.
+Smart Home → **IKEA Lights** tab lists live devices from the hub. Per reachable lamp: on/off switch, plus brightness / warmth / colour controls when `supports_*` is true.
 
 ## Related
 

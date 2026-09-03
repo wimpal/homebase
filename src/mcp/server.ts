@@ -330,7 +330,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.lights.list",
     {
       description:
-        'List controllable IKEA lights from the Dirigera hub. Use for "which lights are on", "lights in the office", or before toggling a lamp by name. Does not include Philips Hue — IKEA/Dirigera only in v1.',
+        'List controllable IKEA lights from the Dirigera hub. Use for "which lights are on", "lights in the office", or before toggling a lamp by name. Returns brightness, colour/warmth state and capability hints when available. Does not include Philips Hue — IKEA/Dirigera only in v1.',
       inputSchema: {},
     },
     async () => {
@@ -338,12 +338,20 @@ export function createMcpServer(householdId: string): McpServer {
       if (isDomainError(result)) {
         return toolError(result);
       }
-      const lights = result.slice(0, 50).map(({ id, name, room, isOn, isReachable }) => ({
-        id,
-        name,
-        room,
-        isOn,
-        reachable: isReachable,
+      const lights = result.slice(0, 50).map((light) => ({
+        id: light.id,
+        name: light.name,
+        room: light.room,
+        isOn: light.isOn,
+        reachable: light.isReachable,
+        ...(light.lightLevel != null ? { brightness: light.lightLevel } : {}),
+        ...(light.colorTempKelvin != null
+          ? { color_temp_kelvin: light.colorTempKelvin }
+          : {}),
+        ...(light.colorHex != null ? { color_hex: light.colorHex } : {}),
+        supports_brightness: light.supportsBrightness,
+        supports_color_temp: light.supportsColorTemp,
+        supports_color: light.supportsColor,
       }));
       return toolJson(lights);
     },
@@ -353,7 +361,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.lights.set_state",
     {
       description:
-        'Turn an IKEA light on or off, optionally set brightness. Requires device_id from lights.list. Use for "turn off the office light", "dim the lamp to 30%". Not audited in homebase.changes v1.',
+        'Turn an IKEA light on or off, optionally set brightness (0–100), colour temperature (Kelvin), or colour (#RRGGBB). Requires device_id from lights.list. Colour and color temperature are mutually exclusive. Use for "dim to 30%", "warm white", "make it red". Not audited in homebase.changes v1.',
       inputSchema: {
         device_id: z.string().min(1).describe("Dirigera device id from lights.list"),
         on: z.boolean(),
@@ -363,13 +371,27 @@ export function createMcpServer(householdId: string): McpServer {
           .max(100)
           .optional()
           .describe("0–100; only applied when on is true"),
+        color_temp_kelvin: z
+          .number()
+          .optional()
+          .describe("Warmth in Kelvin; only when on is true; clamped to device range"),
+        color_hex: z
+          .string()
+          .optional()
+          .describe("#RRGGBB colour; only when on is true"),
       },
     },
-    async ({ device_id, on, brightness }) => {
+    async ({ device_id, on, brightness, color_temp_kelvin, color_hex }) => {
       const result = await setDirigeraLightState(
         device_id,
         on,
-        on ? brightness : undefined,
+        on
+          ? {
+              brightness,
+              colorTempKelvin: color_temp_kelvin,
+              colorHex: color_hex,
+            }
+          : undefined,
       );
       return toolJson({
         success: result.success,

@@ -1,32 +1,63 @@
+import type { Light } from "dirigera";
 import { z } from "zod";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
+import { clampKelvin, hexToHueSaturation, parseColorHex } from "./color";
 import {
+  DIRIGERA_COLOUR_AND_TEMP,
   DIRIGERA_DEVICE_UNREACHABLE,
+  DIRIGERA_INVALID_COLOUR_OR_TEMP,
+  DIRIGERA_NO_COLOUR,
+  DIRIGERA_NO_COLOR_TEMP,
   DIRIGERA_NOT_CONFIGURED,
   DIRIGERA_UNKNOWN_DEVICE,
   classifyDirigeraHubError,
 } from "./errors";
 import { isLightDevice } from "./list-lights";
-import type { DirigeraMutationResult } from "./types";
+import type { DirigeraMutationResult, SetDirigeraLightStateOptions } from "./types";
 
 const setLightStateInput = z.object({
   deviceId: z.string().min(1),
   on: z.boolean(),
   brightness: z.number().min(0).max(100).optional(),
+  colorTempKelvin: z.number().finite().optional(),
+  colorHex: z.string().optional(),
 });
+
+function canReceive(device: Light, attribute: string): boolean {
+  return device.capabilities?.canReceive?.includes(attribute) ?? false;
+}
 
 export async function setDirigeraLightState(
   deviceId: string,
   on: boolean,
-  brightness?: number,
+  brightnessOrOptions?: number | SetDirigeraLightStateOptions,
 ): Promise<DirigeraMutationResult> {
+  const options: SetDirigeraLightStateOptions =
+    typeof brightnessOrOptions === "number"
+      ? { brightness: brightnessOrOptions }
+      : (brightnessOrOptions ?? {});
+
   if (!isDirigeraConfigured()) {
     return { success: false, error: DIRIGERA_NOT_CONFIGURED };
   }
 
-  const input = setLightStateInput.safeParse({ deviceId, on, brightness });
+  const input = setLightStateInput.safeParse({
+    deviceId,
+    on,
+    brightness: options.brightness,
+    colorTempKelvin: options.colorTempKelvin,
+    colorHex: options.colorHex,
+  });
   if (!input.success) {
     return { success: false, error: "Invalid input" };
+  }
+
+  const { brightness, colorTempKelvin, colorHex } = input.data;
+  if (colorTempKelvin != null && colorHex != null) {
+    return { success: false, error: DIRIGERA_COLOUR_AND_TEMP };
+  }
+  if (colorHex != null && !parseColorHex(colorHex)) {
+    return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
   }
 
   try {
@@ -43,11 +74,44 @@ export async function setDirigeraLightState(
       return { success: false, error: DIRIGERA_DEVICE_UNREACHABLE };
     }
 
-    const attributes: { isOn: boolean; lightLevel?: number } = {
+    const light = device as Light;
+
+    if (colorHex != null && !canReceive(light, "colorHue") && !canReceive(light, "colorSaturation")) {
+      return { success: false, error: DIRIGERA_NO_COLOUR };
+    }
+    if (colorTempKelvin != null && !canReceive(light, "colorTemperature")) {
+      return { success: false, error: DIRIGERA_NO_COLOR_TEMP };
+    }
+
+    const attributes: {
+      isOn: boolean;
+      lightLevel?: number;
+      colorTemperature?: number;
+      colorHue?: number;
+      colorSaturation?: number;
+    } = {
       isOn: input.data.on,
     };
-    if (input.data.brightness != null) {
-      attributes.lightLevel = input.data.brightness;
+
+    if (input.data.on) {
+      if (brightness != null) {
+        attributes.lightLevel = brightness;
+      }
+      if (colorTempKelvin != null) {
+        attributes.colorTemperature = clampKelvin(
+          colorTempKelvin,
+          light.attributes.colorTemperatureMin,
+          light.attributes.colorTemperatureMax,
+        );
+      }
+      if (colorHex != null) {
+        const hs = hexToHueSaturation(colorHex);
+        if (!hs) {
+          return { success: false, error: DIRIGERA_INVALID_COLOUR_OR_TEMP };
+        }
+        attributes.colorHue = hs.colorHue;
+        attributes.colorSaturation = hs.colorSaturation;
+      }
     }
 
     await client.devices.setAttributes({

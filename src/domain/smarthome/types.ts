@@ -4,6 +4,13 @@ export interface DirigeraLight {
   room?: string;
   isOn: boolean;
   lightLevel?: number;
+  colorTempKelvin?: number;
+  colorHex?: string;
+  colorTempMin?: number;
+  colorTempMax?: number;
+  supportsBrightness: boolean;
+  supportsColorTemp: boolean;
+  supportsColor: boolean;
   isReachable: boolean;
 }
 
@@ -19,4 +26,10 @@ export interface DirigeraPartyModeResult {
   cycles?: number;
   restored?: boolean;
   error?: string;
+}
+
+export interface SetDirigeraLightStateOptions {
+  brightness?: number;
+  colorTempKelvin?: number;
+  colorHex?: string;
 }

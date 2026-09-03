@@ -136,10 +136,14 @@ export async function getDirigeraLights(): Promise<DirigeraLightsResult> {
 export async function controlDirigeraLight(
   deviceId: string,
   on: boolean,
-  brightness?: number,
+  options?: {
+    brightness?: number;
+    colorTempKelvin?: number;
+    colorHex?: string;
+  },
 ) {
   await requireMutationAccess(ModuleId.SMART_HOME);
-  const result = await setDirigeraLightState(deviceId, on, brightness);
+  const result = await setDirigeraLightState(deviceId, on, options);
   revalidatePath("/smart-home");
   return result;
 }

@@ -1,11 +1,16 @@
 import type { Light } from "dirigera";
 import { DomainError } from "@/domain/error";
 import { getDirigeraClient, isDirigeraConfigured } from "./client";
+import { hueSaturationToHex } from "./color";
 import { DIRIGERA_HUB_UNREACHABLE, DIRIGERA_NOT_CONFIGURED } from "./errors";
 import type { DirigeraLight } from "./types";
 
 export function isLightDevice(device: { type: string; deviceType: string }): boolean {
   return device.type === "light" || device.deviceType === "light";
+}
+
+function canReceive(device: Light, attribute: string): boolean {
+  return device.capabilities?.canReceive?.includes(attribute) ?? false;
 }
 
 function mapLight(device: Light): DirigeraLight {
@@ -14,12 +19,42 @@ function mapLight(device: Light): DirigeraLight {
     device.attributes.model ||
     device.id;
 
+  const supportsBrightness = canReceive(device, "lightLevel");
+  const supportsColorTemp = canReceive(device, "colorTemperature");
+  const supportsColor =
+    canReceive(device, "colorHue") || canReceive(device, "colorSaturation");
+
+  const attrs = device.attributes;
+  const colorMode = attrs.colorMode;
+
+  let colorTempKelvin: number | undefined;
+  let colorHex: string | undefined;
+
+  if (supportsColorTemp && attrs.colorTemperature != null && colorMode !== "color") {
+    colorTempKelvin = attrs.colorTemperature;
+  }
+  if (
+    supportsColor &&
+    attrs.colorHue != null &&
+    attrs.colorSaturation != null &&
+    colorMode !== "temperature"
+  ) {
+    colorHex = hueSaturationToHex(attrs.colorHue, attrs.colorSaturation);
+  }
+
   return {
     id: device.id,
     name,
     room: device.room?.name,
-    isOn: device.attributes.isOn ?? false,
-    lightLevel: device.attributes.lightLevel,
+    isOn: attrs.isOn ?? false,
+    lightLevel: attrs.lightLevel,
+    colorTempKelvin,
+    colorHex,
+    colorTempMin: attrs.colorTemperatureMin,
+    colorTempMax: attrs.colorTemperatureMax,
+    supportsBrightness,
+    supportsColorTemp,
+    supportsColor,
     isReachable: device.isReachable,
   };
 }

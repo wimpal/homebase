@@ -112,6 +112,40 @@ export function SmartHomeClient({
     });
   }
 
+  async function handleIkeaState(
+    lightId: string,
+    options: {
+      brightness?: number;
+      colorTempKelvin?: number;
+      colorHex?: string;
+    },
+  ) {
+    setIkeaError(null);
+    setIkeaPending((prev) => ({ ...prev, [lightId]: true }));
+
+    const result = await controlDirigeraLight(lightId, true, options);
+    if (!result.success) {
+      setIkeaError(result.error ?? tc("failed"));
+    }
+    await refreshIkeaLights();
+
+    setIkeaPending((prev) => {
+      const next = { ...prev };
+      delete next[lightId];
+      return next;
+    });
+  }
+
+  function kelvinBounds(light: DirigeraLight): { min: number; max: number } {
+    if (light.colorTempMin != null && light.colorTempMax != null) {
+      return {
+        min: Math.min(light.colorTempMin, light.colorTempMax),
+        max: Math.max(light.colorTempMin, light.colorTempMax),
+      };
+    }
+    return { min: 2200, max: 4000 };
+  }
+
   const lights = devices.filter((d) => d.type === "LIGHT");
   const cameras = devices.filter((d) => d.type === "CAMERA");
 
@@ -221,32 +255,122 @@ export function SmartHomeClient({
                   </CardContent>
                 </Card>
               )}
-              {ikeaLights.map((light) => (
-                <Card key={light.id}>
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-2">
-                      <Lightbulb
-                        className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
-                      />
-                      <div>
-                        <span>{light.name}</span>
-                        {light.room && (
-                          <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
-                        )}
-                        {!light.isReachable && (
-                          <span className="ml-2 text-xs text-amber-600">{t("unreachable")}</span>
-                        )}
+              {ikeaLights.map((light) => {
+                const busy = Boolean(ikeaPending[light.id]);
+                const disabled = !light.isReachable || busy;
+                const { min: kelvinMin, max: kelvinMax } = kelvinBounds(light);
+                const kelvinValue = light.colorTempKelvin ?? Math.round((kelvinMin + kelvinMax) / 2);
+                const brightnessValue = light.lightLevel ?? 100;
+                const colourValue = light.colorHex ?? "#FFFFFF";
+
+                return (
+                  <Card key={light.id}>
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <Lightbulb
+                            className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
+                          />
+                          <div>
+                            <span>{light.name}</span>
+                            {light.room && (
+                              <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
+                            )}
+                            {!light.isReachable && (
+                              <span className="ml-2 text-xs text-amber-600">{t("unreachable")}</span>
+                            )}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={light.isOn}
+                          disabled={disabled}
+                          onCheckedChange={(checked) => handleIkeaToggle(light.id, checked)}
+                          aria-label={`${light.name} ${light.isOn ? tc("on") : tc("off")}`}
+                        />
                       </div>
-                    </div>
-                    <Switch
-                      checked={light.isOn}
-                      disabled={!light.isReachable || ikeaPending[light.id]}
-                      onCheckedChange={(checked) => handleIkeaToggle(light.id, checked)}
-                      aria-label={`${light.name} ${light.isOn ? tc("on") : tc("off")}`}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
+
+                      {light.isReachable && light.supportsBrightness && (
+                        <label className="flex flex-wrap items-center gap-3 text-sm">
+                          <span className="w-28 text-zinc-500">{t("brightness")}</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            defaultValue={brightnessValue}
+                            key={`${light.id}-bri-${brightnessValue}`}
+                            disabled={disabled}
+                            className="min-w-[8rem] flex-1"
+                            onMouseUp={(e) =>
+                              handleIkeaState(light.id, {
+                                brightness: Number((e.target as HTMLInputElement).value),
+                              })
+                            }
+                            onTouchEnd={(e) =>
+                              handleIkeaState(light.id, {
+                                brightness: Number((e.target as HTMLInputElement).value),
+                              })
+                            }
+                          />
+                          <span className="w-10 text-right tabular-nums">{brightnessValue}</span>
+                        </label>
+                      )}
+
+                      {light.isReachable && light.supportsColorTemp && (
+                        <label className="flex flex-wrap items-center gap-3 text-sm">
+                          <span className="w-28 text-zinc-500">{t("warmth")}</span>
+                          <input
+                            type="range"
+                            min={kelvinMin}
+                            max={kelvinMax}
+                            step={50}
+                            defaultValue={kelvinValue}
+                            key={`${light.id}-k-${kelvinValue}`}
+                            disabled={disabled}
+                            className="min-w-[8rem] flex-1"
+                            onMouseUp={(e) =>
+                              handleIkeaState(light.id, {
+                                colorTempKelvin: Number((e.target as HTMLInputElement).value),
+                              })
+                            }
+                            onTouchEnd={(e) =>
+                              handleIkeaState(light.id, {
+                                colorTempKelvin: Number((e.target as HTMLInputElement).value),
+                              })
+                            }
+                          />
+                          <span className="w-14 text-right tabular-nums">{kelvinValue}</span>
+                        </label>
+                      )}
+
+                      {light.isReachable && light.supportsColor && (
+                        <form
+                          className="flex flex-wrap items-center gap-3 text-sm"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const form = e.currentTarget;
+                            const hex = new FormData(form).get("color")?.toString() ?? "";
+                            if (!hex) return;
+                            void handleIkeaState(light.id, { colorHex: hex.toUpperCase() });
+                          }}
+                        >
+                          <span className="w-28 text-zinc-500">{t("colour")}</span>
+                          <input
+                            type="color"
+                            name="color"
+                            defaultValue={colourValue}
+                            key={`${light.id}-hex-${colourValue}`}
+                            disabled={disabled}
+                            className="h-8 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0 dark:border-zinc-700"
+                          />
+                          <Button type="submit" size="sm" disabled={disabled}>
+                            {t("apply")}
+                          </Button>
+                        </form>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </>
           )}
         </TabsContent>

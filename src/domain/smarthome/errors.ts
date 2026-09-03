@@ -6,6 +6,13 @@ export const DIRIGERA_AUTH_FAILED = "Dirigera authentication failed";
 export const DIRIGERA_UNKNOWN_DEVICE = "Unknown or stale device_id";
 export const DIRIGERA_DEVICE_UNREACHABLE = "Device unreachable (Zigbee mesh)";
 
+/** T-040 additive capability / validation errors. */
+export const DIRIGERA_NO_COLOUR = "Device does not support colour";
+export const DIRIGERA_NO_COLOR_TEMP = "Device does not support color temperature";
+export const DIRIGERA_COLOUR_AND_TEMP =
+  "Specify colour or color temperature, not both";
+export const DIRIGERA_INVALID_COLOUR_OR_TEMP = "Invalid colour or color temperature";
+
 function httpStatus(err: unknown): number | undefined {
   if (typeof err !== "object" || err === null) return undefined;
   // Got sets `response` non-enumerable on RequestError — read it directly.
