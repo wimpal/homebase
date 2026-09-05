@@ -30,14 +30,20 @@ export async function HomeFeed({ notifications }: { notifications: NotificationI
   }
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Bell className="h-5 w-5 text-emerald-600" />
           {t("homeFeed")}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent
+        className={
+          notifications.length === 0
+            ? undefined
+            : "min-h-0 max-h-80 flex-1 overflow-y-auto"
+        }
+      >
         {notifications.length === 0 ? (
           <p className="text-sm text-zinc-500">{t("noNotifications")}</p>
         ) : (

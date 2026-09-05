@@ -38,14 +38,18 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <CheckSquare className="h-5 w-5 text-emerald-600" />
               {t("todoList")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent
+            className={
+              todos.length === 0 ? undefined : "min-h-0 max-h-80 overflow-y-auto"
+            }
+          >
             {todos.length === 0 ? (
               <p className="text-sm text-zinc-500">{t("noChores")}</p>
             ) : (
@@ -70,14 +74,18 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
               {t("lowStock")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent
+            className={
+              lowStock.length === 0 ? undefined : "min-h-0 max-h-80 overflow-y-auto"
+            }
+          >
             {lowStock.length === 0 ? (
               <p className="text-sm text-zinc-500">{t("allStocked")}</p>
             ) : (
