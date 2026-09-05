@@ -20,3 +20,11 @@ export interface SearchRecipesInput {
   query?: string;
   ingredients?: string[];
 }
+
+export interface AddRecipeInput {
+  title: string;
+  servings?: number;
+  ingredients: RecipeIngredientItem[];
+  steps: string[];
+  source_url?: string;
+}

@@ -1,13 +1,7 @@
 import { prisma } from "@/core/db";
 import { DomainError } from "@/domain/error";
+import { toRecipeDetail } from "./map";
 import type { RecipeDetail } from "./types";
-
-function parseSteps(instructions: string): string[] {
-  return instructions
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
 
 export async function getRecipe(
   householdId: string,
@@ -22,16 +16,5 @@ export async function getRecipe(
     return DomainError.notFound("Recipe not found.");
   }
 
-  return {
-    id: recipe.id,
-    name: recipe.title,
-    tags: [],
-    ingredients: recipe.ingredients.map((item) => ({
-      name: item.name,
-      quantity: item.quantity,
-    })),
-    servings: recipe.servings,
-    steps: parseSteps(recipe.instructions),
-    instructions: recipe.instructions,
-  };
+  return toRecipeDetail(recipe);
 }

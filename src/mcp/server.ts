@@ -3,7 +3,7 @@ import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
 import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
-import { getRecipe, searchRecipes } from "@/domain/recipes";
+import { addRecipe, getRecipe, searchRecipes } from "@/domain/recipes";
 import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
 import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from "@/domain/smarthome";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
@@ -319,6 +319,46 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ id }) => {
       const result = await getRecipe(householdId, id);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.recipes.add",
+    {
+      description:
+        'Save a structured recipe into Homebase after the user confirms extracted fields. Callers must send steps[] (one plain sentence per element, no leading "1."). Does not fetch URLs or scrape HTML — Mimir fetches/extracts first. Not for edit or delete.',
+      inputSchema: {
+        title: z.string().describe("Recipe title"),
+        servings: z
+          .number()
+          .int()
+          .optional()
+          .describe("Optional serving count; defaults to 4"),
+        ingredients: z
+          .array(
+            z.object({
+              name: z.string(),
+              quantity: z.string().describe("Free-text amount, e.g. 250 g"),
+            }),
+          )
+          .describe("At least one ingredient"),
+        steps: z
+          .array(z.string())
+          .describe(
+            "Ordered cook steps; required, ≥1. No leading step numbers inside each string.",
+          ),
+        source_url: z
+          .string()
+          .optional()
+          .describe("Optional source URL; ignored in v1 (not stored)"),
+      },
+    },
+    async (input) => {
+      const result = await addRecipe(householdId, input);
       if (isDomainError(result)) {
         return toolError(result);
       }

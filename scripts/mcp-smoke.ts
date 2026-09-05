@@ -235,6 +235,7 @@ async function main() {
     "homebase.lights.list",
     "homebase.lights.party_mode",
     "homebase.lights.set_state",
+    "homebase.recipes.add",
     "homebase.recipes.get",
     "homebase.recipes.search",
     "homebase.shopping_list.add_item",
@@ -244,10 +245,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 16 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 17 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 16 homebase tools");
+  ok("tools/list returns exactly 17 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -513,6 +514,96 @@ async function main() {
     console.log("NOTE: household has no recipes — search/get skipped");
     ok("homebase.recipes.search (no matches in household)");
   }
+
+  const smokeRecipeTitle = `Smoke Add ${Date.now()}`;
+  const smokeSteps = [
+    "Mix flour, milk and eggs into a smooth batter.",
+    "Heat a lightly oiled pan over medium heat.",
+    "Pour a ladle of batter, cook until golden, flip once.",
+  ];
+  const recipeAddResult = await callTool(24, "homebase.recipes.add", {
+    title: smokeRecipeTitle,
+    servings: 4,
+    ingredients: [
+      { name: "flour", quantity: "250 g" },
+      { name: "milk", quantity: "500 ml" },
+      { name: "egg", quantity: "2" },
+    ],
+    steps: smokeSteps,
+  });
+  if (recipeAddResult.isError) {
+    fail("homebase.recipes.add tool error");
+  }
+  const addedRecipe = parseToolPayload(recipeAddResult) as {
+    id: string;
+    name: string;
+    steps: string[];
+    ingredients: { name: string; quantity: string }[];
+  };
+  if (addedRecipe.name !== smokeRecipeTitle) {
+    fail(`recipes.add unexpected name: ${JSON.stringify(addedRecipe)}`);
+  }
+  if (
+    !Array.isArray(addedRecipe.steps) ||
+    addedRecipe.steps.length !== smokeSteps.length ||
+    addedRecipe.steps.some((s, i) => s !== smokeSteps[i])
+  ) {
+    fail(`recipes.add steps mismatch: ${JSON.stringify(addedRecipe.steps)}`);
+  }
+  ok("homebase.recipes.add");
+
+  const recipeGetAdded = await callTool(25, "homebase.recipes.get", {
+    id: addedRecipe.id,
+  });
+  if (recipeGetAdded.isError) {
+    fail("homebase.recipes.get after add tool error");
+  }
+  const gotAdded = parseToolPayload(recipeGetAdded) as {
+    id: string;
+    steps: string[];
+  };
+  if (
+    gotAdded.id !== addedRecipe.id ||
+    !Array.isArray(gotAdded.steps) ||
+    gotAdded.steps.length !== smokeSteps.length ||
+    gotAdded.steps.some((s, i) => s !== smokeSteps[i])
+  ) {
+    fail(`recipes.get after add steps mismatch: ${JSON.stringify(gotAdded)}`);
+  }
+  ok("recipes.add → get steps round-trip");
+
+  const recipeSearchAdded = await callTool(26, "homebase.recipes.search", {
+    query: smokeRecipeTitle,
+  });
+  if (recipeSearchAdded.isError) {
+    fail("homebase.recipes.search after add tool error");
+  }
+  const searchAfterAdd = parseToolPayload(recipeSearchAdded) as {
+    id: string;
+    name: string;
+  }[];
+  if (!searchAfterAdd.some((r) => r.id === addedRecipe.id)) {
+    fail(`recipes.search did not find added title ${smokeRecipeTitle}`);
+  }
+  ok("recipes.search finds added recipe");
+
+  const recipeDupResult = await callTool(27, "homebase.recipes.add", {
+    title: smokeRecipeTitle,
+    ingredients: [{ name: "flour", quantity: "1 cup" }],
+    steps: ["Do not overwrite."],
+  });
+  if (!recipeDupResult.isError) {
+    fail("expected conflict on duplicate recipe title");
+  }
+  const dupPayload = parseToolPayload(recipeDupResult) as {
+    error?: { message?: string; code?: string };
+  };
+  if (dupPayload.error?.message !== "Recipe title already exists") {
+    fail(
+      `expected Recipe title already exists, got ${JSON.stringify(dupPayload)}`,
+    );
+  }
+  ok("recipes.add rejects duplicate title");
 
   await runLightsSmoke(callTool);
 

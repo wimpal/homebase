@@ -3,6 +3,8 @@
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertBudget, assertRecipe } from "@/core/tenancy/assertHouseholdResource";
+import { addRecipe } from "@/domain/recipes";
+import { isDomainError } from "@/domain/error";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -19,35 +21,73 @@ export async function getRecipes() {
   });
 }
 
+export type RecipeFormState = { error?: string };
+
 export async function createRecipe(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
-  const title = formData.get("title") as string;
-  const instructions = formData.get("instructions") as string;
+  const title = (formData.get("title") as string) || "";
+  const instructions = (formData.get("instructions") as string) || "";
   const servings = parseInt((formData.get("servings") as string) || "4", 10);
   const ingredientsRaw = (formData.get("ingredients") as string) || "";
   const timersRaw = (formData.get("timers") as string) || "";
 
-  const ingredients = ingredientsRaw.split("\n").filter(Boolean).map((line) => {
-    const [name, quantity] = line.split("|").map((s) => s.trim());
-    return { name, quantity: quantity || "1" };
+  const ingredients = ingredientsRaw
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [name, quantity] = line.split("|").map((s) => s.trim());
+      return { name, quantity: quantity || "1" };
+    });
+
+  const steps = instructions
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const timers = timersRaw
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [label, minutes] = line.split("|").map((s) => s.trim());
+      return { label, minutes: parseInt(minutes, 10) || 5 };
+    });
+
+  const result = await addRecipe(householdId, {
+    title,
+    servings,
+    ingredients,
+    steps,
   });
 
-  const timers = timersRaw.split("\n").filter(Boolean).map((line) => {
-    const [label, minutes] = line.split("|").map((s) => s.trim());
-    return { label, minutes: parseInt(minutes, 10) || 5 };
-  });
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
 
-  await prisma.recipe.create({
-    data: {
-      householdId,
-      title,
-      instructions,
-      servings,
-      ingredients: { create: ingredients },
-      timers: { create: timers },
-    },
-  });
+  if (timers.length > 0) {
+    await prisma.recipeTimer.createMany({
+      data: timers.map((timer) => ({
+        recipeId: result.id,
+        label: timer.label,
+        minutes: timer.minutes,
+      })),
+    });
+  }
+
   revalidatePath("/recipes");
+}
+
+export async function createRecipeWithState(
+  _prev: RecipeFormState,
+  formData: FormData,
+): Promise<RecipeFormState> {
+  try {
+    await createRecipe(formData);
+    return {};
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to create recipe",
+    };
+  }
 }
 
 export async function addLeftover(formData: FormData) {

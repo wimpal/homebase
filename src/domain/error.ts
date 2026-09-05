@@ -30,6 +30,10 @@ export class DomainError extends Error {
     return new DomainError("invalid_input", message, false);
   }
 
+  static conflict(message: string): DomainError {
+    return new DomainError("conflict", message, false);
+  }
+
   static unavailable(message: string): DomainError {
     return new DomainError("unavailable", message, true);
   }
