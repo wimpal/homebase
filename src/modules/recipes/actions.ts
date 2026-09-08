@@ -90,6 +90,15 @@ export async function createRecipeWithState(
   }
 }
 
+export async function deleteRecipe(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertRecipe(householdId, id);
+  await prisma.recipe.delete({ where: { id } });
+  revalidatePath("/recipes");
+}
+
 export async function addLeftover(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const recipeId = (formData.get("recipeId") as string) || undefined;

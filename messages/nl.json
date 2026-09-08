@@ -257,6 +257,7 @@
     "timersPlaceholder": "Bakken|30\nRusten|10",
     "instructions": "Bereidingswijze",
     "saveRecipe": "Recept opslaan",
+    "deleteRecipe": "Verwijderen",
     "ingredients": "Ingrediënten",
     "inStock": "(op voorraad: {name})",
     "noRecipes": "Nog geen recepten. Voeg er een toe of vraag Mimir een recept op te slaan.",

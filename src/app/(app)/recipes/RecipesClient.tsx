@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createRecipeWithState,
+  deleteRecipe,
   addLeftover,
   type RecipeFormState,
 } from "@/modules/recipes/actions";
@@ -145,10 +146,20 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
               return (
                 <Card key={recipe.id}>
                   <CardHeader>
-                    <CardTitle className="text-base">{recipe.title}</CardTitle>
-                    <p className="text-sm text-zinc-500">
-                      {t("servingsCount", { count: recipe.servings })}
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-base">{recipe.title}</CardTitle>
+                        <p className="text-sm text-zinc-500">
+                          {t("servingsCount", { count: recipe.servings })}
+                        </p>
+                      </div>
+                      <form action={deleteRecipe}>
+                        <input type="hidden" name="id" value={recipe.id} />
+                        <Button type="submit" variant="outline" size="sm">
+                          {t("deleteRecipe")}
+                        </Button>
+                      </form>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
