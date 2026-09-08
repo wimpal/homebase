@@ -11,10 +11,17 @@ type RecipeWithIngredients = Prisma.RecipeGetPayload<{
 function toIngredientItems(
   ingredients: RecipeWithIngredients["ingredients"],
 ): RecipeIngredientItem[] {
-  return ingredients.map((item) => ({
-    name: item.name,
-    quantity: item.quantity,
-  }));
+  return ingredients.map((item) => {
+    const mapped: RecipeIngredientItem = {
+      name: item.name,
+      quantity: item.quantity,
+    };
+    const group = item.group?.trim();
+    if (group) {
+      mapped.group = group;
+    }
+    return mapped;
+  });
 }
 
 function toRecipeSummary(recipe: RecipeWithIngredients): RecipeSummary {

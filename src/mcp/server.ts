@@ -343,6 +343,13 @@ export function createMcpServer(householdId: string): McpServer {
             z.object({
               name: z.string(),
               quantity: z.string().describe("Free-text amount, e.g. 250 g"),
+              group: z
+                .string()
+                .max(40)
+                .optional()
+                .describe(
+                  "Optional subsection key (dressing, marinade, sauce, …); omit = main list",
+                ),
             }),
           )
           .describe("At least one ingredient"),

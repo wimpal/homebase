@@ -668,11 +668,12 @@ model Recipe {
 }
 
 model RecipeIngredient {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   recipeId  String
   productId String?
   name      String
   quantity  String
+  group     String?
 
   recipe  Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)

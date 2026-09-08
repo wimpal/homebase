@@ -1,6 +1,8 @@
 export interface RecipeIngredientItem {
   name: string;
   quantity: string;
+  /** Subsection key (dressing, marinade, …); omit when main/ungrouped. */
+  group?: string;
 }
 
 export interface RecipeSummary {

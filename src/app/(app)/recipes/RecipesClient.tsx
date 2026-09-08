@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { Fragment, useActionState, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,23 @@ interface Recipe {
   title: string;
   instructions: string;
   servings: number;
-  ingredients: { name: string; quantity: string; product: { name: string } | null }[];
+  ingredients: {
+    name: string;
+    quantity: string;
+    group: string | null;
+    product: { name: string } | null;
+  }[];
   timers: { id: string; label: string; minutes: number }[];
   leftovers: { name: string; servings: number; frozenAt: Date }[];
 }
+
+const GROUP_LABEL_KEYS: Record<string, string> = {
+  dressing: "groupDressing",
+  marinade: "groupMarinade",
+  sauce: "groupSauce",
+  topping: "groupTopping",
+  garnish: "groupGarnish",
+};
 
 const initialFormState: RecipeFormState = {};
 
@@ -33,6 +46,11 @@ function parseSteps(instructions: string): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function normalizeGroup(group: string | null | undefined): string | null {
+  const trimmed = group?.trim();
+  return trimmed || null;
 }
 
 export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
@@ -165,12 +183,34 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
                     <div>
                       <p className="text-sm font-medium">{t("ingredients")}</p>
                       <ul className="list-disc pl-5 text-sm text-zinc-600">
-                        {recipe.ingredients.map((ing, i) => (
-                          <li key={i}>
-                            {ing.quantity} {ing.name}{" "}
-                            {ing.product && t("inStock", { name: ing.product.name })}
-                          </li>
-                        ))}
+                        {recipe.ingredients.map((ing, i) => {
+                          const group = normalizeGroup(ing.group);
+                          const prevGroup = normalizeGroup(
+                            recipe.ingredients[i - 1]?.group,
+                          );
+                          const showHeading = Boolean(group) && group !== prevGroup;
+                          const labelKey = group
+                            ? GROUP_LABEL_KEYS[group]
+                            : undefined;
+                          const heading =
+                            group && labelKey
+                              ? t(labelKey as "groupDressing")
+                              : group;
+                          return (
+                            <Fragment key={i}>
+                              {showHeading && (
+                                <li className="mt-2 list-none -ml-5 font-medium text-zinc-800 first:mt-0">
+                                  {heading}
+                                </li>
+                              )}
+                              <li>
+                                {ing.quantity} {ing.name}{" "}
+                                {ing.product &&
+                                  t("inStock", { name: ing.product.name })}
+                              </li>
+                            </Fragment>
+                          );
+                        })}
                       </ul>
                     </div>
                     {recipe.timers.length > 0 && (

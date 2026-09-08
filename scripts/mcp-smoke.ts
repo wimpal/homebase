@@ -605,6 +605,65 @@ async function main() {
   }
   ok("recipes.add rejects duplicate title");
 
+  const groupRecipeTitle = `Smoke Add ${Date.now()}-groups`;
+  const groupIngredients = [
+    { name: "pasta", quantity: "300 gr" },
+    { name: "kip", quantity: "400 gr" },
+    { name: "Griekse yoghurt", quantity: "100 gr", group: "dressing" },
+    { name: "mayonaise", quantity: "2 el", group: "dressing" },
+  ];
+  const groupAddResult = await callTool(28, "homebase.recipes.add", {
+    title: groupRecipeTitle,
+    servings: 4,
+    ingredients: groupIngredients,
+    steps: ["Cook pasta.", "Mix dressing.", "Combine and serve."],
+  });
+  if (groupAddResult.isError) {
+    fail(
+      `homebase.recipes.add with groups tool error: ${groupAddResult.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const groupAdded = parseToolPayload(groupAddResult) as {
+    id: string;
+    ingredients: { name: string; quantity: string; group?: string }[];
+  };
+  const groupGetResult = await callTool(29, "homebase.recipes.get", {
+    id: groupAdded.id,
+  });
+  if (groupGetResult.isError) {
+    fail("homebase.recipes.get after group add tool error");
+  }
+  const groupGot = parseToolPayload(groupGetResult) as {
+    ingredients: { name: string; quantity: string; group?: string }[];
+  };
+  if (
+    !Array.isArray(groupGot.ingredients) ||
+    groupGot.ingredients.length !== groupIngredients.length
+  ) {
+    fail(
+      `group get ingredient count mismatch: ${JSON.stringify(groupGot.ingredients)}`,
+    );
+  }
+  for (let i = 0; i < groupIngredients.length; i++) {
+    const expected = groupIngredients[i];
+    const actual = groupGot.ingredients[i];
+    if (actual.name !== expected.name || actual.quantity !== expected.quantity) {
+      fail(
+        `group get order/name mismatch at ${i}: ${JSON.stringify(actual)}`,
+      );
+    }
+    if (expected.group) {
+      if (actual.group !== expected.group) {
+        fail(
+          `expected group "${expected.group}" at ${i}, got ${JSON.stringify(actual)}`,
+        );
+      }
+    } else if (actual.group) {
+      fail(`main ingredient at ${i} should omit group: ${JSON.stringify(actual)}`);
+    }
+  }
+  ok("recipes.add → get ingredient group round-trip");
+
   await runLightsSmoke(callTool);
 
   console.log("\nAll MCP smoke checks passed.");

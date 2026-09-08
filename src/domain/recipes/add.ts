@@ -7,6 +7,7 @@ const MAX_TITLE_LEN = 200;
 const MAX_INGREDIENTS = 50;
 const MAX_STEPS = 100;
 const MAX_STEP_LEN = 2000;
+const MAX_GROUP_LEN = 40;
 
 export async function addRecipe(
   householdId: string,
@@ -17,10 +18,14 @@ export async function addRecipe(
     .map((s) => s.trim())
     .filter(Boolean);
   const ingredients = (input.ingredients ?? [])
-    .map((item) => ({
-      name: (item.name ?? "").trim(),
-      quantity: (item.quantity ?? "").trim() || "1",
-    }))
+    .map((item) => {
+      const groupRaw = (item.group ?? "").trim();
+      return {
+        name: (item.name ?? "").trim(),
+        quantity: (item.quantity ?? "").trim() || "1",
+        group: groupRaw || null,
+      };
+    })
     .filter((item) => item.name);
 
   if (!title || steps.length === 0 || ingredients.length === 0) {
@@ -31,7 +36,8 @@ export async function addRecipe(
     title.length > MAX_TITLE_LEN ||
     ingredients.length > MAX_INGREDIENTS ||
     steps.length > MAX_STEPS ||
-    steps.some((s) => s.length > MAX_STEP_LEN)
+    steps.some((s) => s.length > MAX_STEP_LEN) ||
+    ingredients.some((item) => (item.group?.length ?? 0) > MAX_GROUP_LEN)
   ) {
     return DomainError.invalidInput("Recipe too large");
   }
@@ -65,6 +71,7 @@ export async function addRecipe(
         create: ingredients.map((item) => ({
           name: item.name,
           quantity: item.quantity,
+          group: item.group,
         })),
       },
     },
