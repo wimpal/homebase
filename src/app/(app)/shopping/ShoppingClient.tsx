@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmForm } from "@/components/ui/confirm-form";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   addShoppingItem,
   createStore,
   markItemBought,
   markProductNeededAction,
+  removeShoppingItem,
+  deleteStore,
 } from "@/modules/shopping/actions";
 import type { CatalogProduct } from "@/domain/shopping";
 
@@ -28,6 +31,66 @@ interface NeededItem {
   autoAdded: boolean;
   tags: string[];
   store: { name: string } | null;
+}
+
+function CatalogPanel({
+  catalog,
+  listId,
+  catalogQuery,
+  setCatalogQuery,
+  filteredCatalog,
+}: {
+  catalog: CatalogProduct[];
+  listId: string;
+  catalogQuery: string;
+  setCatalogQuery: (v: string) => void;
+  filteredCatalog: CatalogProduct[];
+}) {
+  const t = useTranslations("shopping");
+  return (
+    <Card className="lg:col-span-1">
+      <CardHeader>
+        <CardTitle className="text-base">{t("catalog")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Input
+          placeholder={t("searchProducts")}
+          value={catalogQuery}
+          onChange={(e) => setCatalogQuery(e.target.value)}
+        />
+        <div className="max-h-[28rem] space-y-2 overflow-y-auto">
+          {filteredCatalog.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t("noProductsMatch")}</p>
+          ) : (
+            filteredCatalog.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-lg border p-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{p.name}</p>
+                  {p.category && (
+                    <p className="truncate text-xs text-zinc-400">{p.category}</p>
+                  )}
+                </div>
+                {p.needed ? (
+                  <span className="ml-2 text-xs text-emerald-600">{t("onList")}</span>
+                ) : (
+                  <form action={markProductNeededAction}>
+                    <input type="hidden" name="listId" value={listId} />
+                    <input type="hidden" name="productId" value={p.id} />
+                    <Button type="submit" size="sm" variant="outline">
+                      {t("need")}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function ShoppingClient({
@@ -74,48 +137,15 @@ export function ShoppingClient({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="hidden lg:block lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">{t("catalog")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              placeholder={t("searchProducts")}
-              value={catalogQuery}
-              onChange={(e) => setCatalogQuery(e.target.value)}
-            />
-            <div className="max-h-[28rem] space-y-2 overflow-y-auto">
-              {filteredCatalog.length === 0 ? (
-                <p className="text-sm text-zinc-500">{t("noProductsMatch")}</p>
-              ) : (
-                filteredCatalog.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-lg border p-2"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{p.name}</p>
-                      {p.category && (
-                        <p className="truncate text-xs text-zinc-400">{p.category}</p>
-                      )}
-                    </div>
-                    {p.needed ? (
-                      <span className="ml-2 text-xs text-emerald-600">{t("onList")}</span>
-                    ) : (
-                      <form action={markProductNeededAction}>
-                        <input type="hidden" name="listId" value={listId} />
-                        <input type="hidden" name="productId" value={p.id} />
-                        <Button type="submit" size="sm" variant="outline">
-                          {t("need")}
-                        </Button>
-                      </form>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-1">
+          <CatalogPanel
+            catalog={catalog}
+            listId={listId}
+            catalogQuery={catalogQuery}
+            setCatalogQuery={setCatalogQuery}
+            filteredCatalog={filteredCatalog}
+          />
+        </div>
 
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -145,7 +175,9 @@ export function ShoppingClient({
                         >
                           {p.name}
                           {p.needed && (
-                            <span className="ml-2 text-xs text-emerald-600">{t("onList").toLowerCase()}</span>
+                            <span className="ml-2 text-xs text-emerald-600">
+                              {t("onList").toLowerCase()}
+                            </span>
                           )}
                         </button>
                       </li>
@@ -197,13 +229,23 @@ export function ShoppingClient({
                 {t("all")}
               </a>
               {stores.map((s) => (
-                <a
-                  key={s.id}
-                  href={`/shopping?store=${s.id}`}
-                  className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
-                >
-                  {s.name}
-                </a>
+                <div key={s.id} className="flex items-center gap-1">
+                  <a
+                    href={`/shopping?store=${s.id}`}
+                    className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
+                  >
+                    {s.name}
+                  </a>
+                  <ConfirmForm
+                    action={deleteStore}
+                    message={t("confirmDeleteStore")}
+                  >
+                    <input type="hidden" name="id" value={s.id} />
+                    <Button type="submit" variant="ghost" size="sm" className="h-6 px-1 text-xs">
+                      {tc("delete")}
+                    </Button>
+                  </ConfirmForm>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -216,22 +258,22 @@ export function ShoppingClient({
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t("nothingNeeded")}</p>
+            <EmptyState message={t("nothingNeeded")} />
           ) : (
             <ul className="space-y-2">
               {items.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <form action={markItemBought}>
                       <input type="hidden" name="id" value={item.id} />
-                      <button type="submit" title={t("markBought")}>
-                        <Checkbox checked={false} />
-                      </button>
+                      <Button type="submit" size="sm" variant="outline">
+                        {t("markBought")}
+                      </Button>
                     </form>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium">
                         {item.name} x{item.quantity}
                       </p>
@@ -255,6 +297,15 @@ export function ShoppingClient({
                       )}
                     </div>
                   </div>
+                  <ConfirmForm
+                    action={removeShoppingItem}
+                    message={t("confirmRemoveItem")}
+                  >
+                    <input type="hidden" name="id" value={item.id} />
+                    <Button type="submit" variant="destructive" size="sm">
+                      {tc("remove")}
+                    </Button>
+                  </ConfirmForm>
                 </li>
               ))}
             </ul>

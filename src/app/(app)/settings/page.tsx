@@ -3,15 +3,21 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ConfirmForm } from "@/components/ui/confirm-form";
 import { MODULE_REGISTRY } from "@/core/modules/registry";
 import { getEnabledModules, toggleModule } from "@/core/modules/settings";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
-import { getVisitorPreferences, saveVisitorPreference } from "@/modules/social/actions";
+import {
+  deleteVisitorPreference,
+  getVisitorPreferences,
+  saveVisitorPreference,
+} from "@/modules/social/actions";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PushNotificationSetup } from "./PushNotificationSetup";
 import { LanguageToggle } from "@/components/settings/LanguageToggle";
+import { ModuleToggle } from "@/components/settings/ModuleToggle";
 import { isLocale } from "@/i18n/config";
 
 async function handleToggleModule(formData: FormData) {
@@ -25,6 +31,7 @@ async function handleToggleModule(formData: FormData) {
 
 export default async function SettingsPage() {
   const { householdId, household, role } = await requireHousehold();
+  const isAdmin = role === "ADMIN";
   const enabledModules = await getEnabledModules(householdId);
   const enabledIds = new Set(enabledModules.map((m) => m.id));
   const visitorPrefs = await getVisitorPreferences();
@@ -57,6 +64,9 @@ export default async function SettingsPage() {
           <CardDescription>{t("modules.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!isAdmin && (
+            <p className="text-sm text-zinc-500">{t("modules.adminOnly")}</p>
+          )}
           {MODULE_REGISTRY.map((mod) => {
             const enabled = enabledIds.has(mod.id);
             const Icon = mod.icon;
@@ -69,13 +79,15 @@ export default async function SettingsPage() {
                     <p className="text-sm text-zinc-500">{tm(`${mod.descriptionKey}.description`)}</p>
                   </div>
                 </div>
-                <form action={handleToggleModule}>
-                  <input type="hidden" name="moduleId" value={mod.id} />
-                  <input type="hidden" name="enabled" value={(!enabled).toString()} />
-                  <button type="submit">
-                    <Switch checked={enabled} />
-                  </button>
-                </form>
+                {isAdmin ? (
+                  <ModuleToggle
+                    moduleId={mod.id}
+                    enabled={enabled}
+                    action={handleToggleModule}
+                  />
+                ) : (
+                  <Switch checked={enabled} disabled />
+                )}
               </div>
             );
           })}
@@ -101,9 +113,20 @@ export default async function SettingsPage() {
           {visitorPrefs.length > 0 && (
             <div className="mt-4 space-y-2">
               {visitorPrefs.map((vp) => (
-                <div key={vp.id} className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-                  <p className="font-medium">{vp.visitorName}</p>
-                  <p className="text-zinc-500">{JSON.stringify(vp.preferences)}</p>
+                <div key={vp.id} className="flex items-start justify-between gap-3 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+                  <div>
+                    <p className="font-medium">{vp.visitorName}</p>
+                    <p className="text-zinc-500">{JSON.stringify(vp.preferences)}</p>
+                  </div>
+                  <ConfirmForm
+                    action={deleteVisitorPreference}
+                    message={t("visitor.confirmDelete")}
+                  >
+                    <input type="hidden" name="id" value={vp.id} />
+                    <Button type="submit" variant="destructive" size="sm">
+                      {tc("delete")}
+                    </Button>
+                  </ConfirmForm>
                 </div>
               ))}
             </div>

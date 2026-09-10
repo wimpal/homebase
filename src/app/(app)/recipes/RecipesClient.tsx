@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useActionState, useState } from "react";
+import { Fragment, useActionState, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmForm } from "@/components/ui/confirm-form";
+import { CollapsibleCreate } from "@/components/ui/collapsible-create";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   createRecipeWithState,
   deleteRecipe,
   addLeftover,
+  deleteLeftover,
   type RecipeFormState,
 } from "@/modules/recipes/actions";
 import { Timer } from "lucide-react";
@@ -28,7 +32,6 @@ interface Recipe {
     product: { name: string } | null;
   }[];
   timers: { id: string; label: string; minutes: number }[];
-  leftovers: { name: string; servings: number; frozenAt: Date }[];
 }
 
 const GROUP_LABEL_KEYS: Record<string, string> = {
@@ -53,16 +56,28 @@ function normalizeGroup(group: string | null | undefined): string | null {
   return trimmed || null;
 }
 
-export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
+export function RecipesClient({
+  recipes,
+  leftovers,
+}: {
+  recipes: Recipe[];
+  leftovers: { id: string; name: string; servings: number; frozenAt: Date }[];
+}) {
   const t = useTranslations("recipes");
   const tc = useTranslations("common");
   const format = useFormatter();
   const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
-  const [showAddForm, setShowAddForm] = useState(recipes.length === 0);
+  const [query, setQuery] = useState("");
   const [createState, createAction, createPending] = useActionState(
     createRecipeWithState,
     initialFormState,
   );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recipes;
+    return recipes.filter((r) => r.title.toLowerCase().includes(q));
+  }, [recipes, query]);
 
   function startTimer(id: string, minutes: number) {
     setActiveTimers((prev) => ({ ...prev, [id]: minutes * 60 }));
@@ -97,17 +112,11 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
         </TabsList>
 
         <TabsContent value="recipes" className="space-y-4">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={showAddForm ? "outline" : "default"}
-              onClick={() => setShowAddForm((open) => !open)}
-            >
-              {showAddForm ? t("cancelAdd") : t("addRecipe")}
-            </Button>
-          </div>
-
-          {showAddForm && (
+          <CollapsibleCreate
+            openLabel={t("addRecipe")}
+            cancelLabel={t("cancelAdd")}
+            defaultOpen={recipes.length === 0}
+          >
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t("addRecipe")}</CardTitle>
@@ -154,12 +163,22 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
                 </form>
               </CardContent>
             </Card>
+          </CollapsibleCreate>
+
+          {recipes.length > 0 && (
+            <Input
+              placeholder={t("searchRecipes")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           )}
 
           {recipes.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t("noRecipes")}</p>
+            <EmptyState message={t("noRecipes")} />
+          ) : filtered.length === 0 ? (
+            <EmptyState message={t("noMatch")} />
           ) : (
-            recipes.map((recipe) => {
+            filtered.map((recipe) => {
               const steps = parseSteps(recipe.instructions);
               return (
                 <Card key={recipe.id}>
@@ -171,12 +190,15 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
                           {t("servingsCount", { count: recipe.servings })}
                         </p>
                       </div>
-                      <form action={deleteRecipe}>
+                      <ConfirmForm
+                        action={deleteRecipe}
+                        message={t("confirmDelete")}
+                      >
                         <input type="hidden" name="id" value={recipe.id} />
-                        <Button type="submit" variant="outline" size="sm">
+                        <Button type="submit" variant="destructive" size="sm">
                           {t("deleteRecipe")}
                         </Button>
-                      </form>
+                      </ConfirmForm>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -199,7 +221,7 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
                           return (
                             <Fragment key={i}>
                               {showHeading && (
-                                <li className="mt-2 list-none -ml-5 font-medium text-zinc-800 first:mt-0">
+                                <li className="mt-2 -ml-5 list-none font-medium text-zinc-800 first:mt-0">
                                   {heading}
                                 </li>
                               )}
@@ -252,7 +274,7 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
           )}
         </TabsContent>
 
-        <TabsContent value="leftovers">
+        <TabsContent value="leftovers" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("trackLeftover")}</CardTitle>
@@ -290,13 +312,13 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
             </CardContent>
           </Card>
 
-          {recipes.flatMap((r) => r.leftovers).length === 0 ? (
-            <p className="text-sm text-zinc-500">{t("noLeftovers")}</p>
+          {leftovers.length === 0 ? (
+            <EmptyState message={t("noLeftovers")} />
           ) : (
-            recipes.flatMap((r) =>
-              r.leftovers.map((l) => (
-                <Card key={l.name + l.frozenAt.toString()}>
-                  <CardContent className="p-4">
+            leftovers.map((l) => (
+              <Card key={l.id}>
+                <CardContent className="flex items-start justify-between gap-3 p-4">
+                  <div>
                     <p className="font-medium">{l.name}</p>
                     <p className="text-sm text-zinc-500">
                       {t("servingsFrozen", {
@@ -306,10 +328,19 @@ export function RecipesClient({ recipes }: { recipes: Recipe[] }) {
                         }),
                       })}
                     </p>
-                  </CardContent>
-                </Card>
-              )),
-            )
+                  </div>
+                  <ConfirmForm
+                    action={deleteLeftover}
+                    message={t("confirmDeleteLeftover")}
+                  >
+                    <input type="hidden" name="id" value={l.id} />
+                    <Button type="submit" variant="destructive" size="sm">
+                      {t("deleteLeftover")}
+                    </Button>
+                  </ConfirmForm>
+                </CardContent>
+              </Card>
+            ))
           )}
         </TabsContent>
       </Tabs>

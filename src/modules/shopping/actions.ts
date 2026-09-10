@@ -105,6 +105,33 @@ export async function createStore(formData: FormData) {
   revalidatePath("/shopping");
 }
 
+export async function removeShoppingItem(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const item = await prisma.shoppingItem.findFirst({
+    where: { id, shoppingList: { householdId }, checked: false },
+  });
+  if (!item) throw new Error("Shopping item not found");
+  await prisma.shoppingItem.delete({ where: { id } });
+  revalidatePath("/shopping");
+}
+
+export async function deleteStore(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertStore(householdId, id);
+  const inUse = await prisma.shoppingItem.count({
+    where: { storeId: id, checked: false },
+  });
+  if (inUse > 0) {
+    throw new Error("Cannot delete a store that still has needed items.");
+  }
+  await prisma.store.delete({ where: { id } });
+  revalidatePath("/shopping");
+}
+
 export async function getFilteredItems(listId: string, storeId?: string) {
   const { householdId } = await requireHousehold();
   const list = await prisma.shoppingList.findFirst({

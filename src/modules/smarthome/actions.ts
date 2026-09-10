@@ -65,6 +65,15 @@ export async function createDevice(formData: FormData) {
   revalidatePath("/smart-home");
 }
 
+export async function deleteDevice(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertDevice(householdId, id);
+  await prisma.device.delete({ where: { id } });
+  revalidatePath("/smart-home");
+}
+
 export async function controlHueLight(deviceId: string, on: boolean, brightness?: number) {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const input = z.object({

@@ -4,7 +4,8 @@ import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import { assertLocation, assertProduct } from "@/core/tenancy/assertHouseholdResource";
 import { listInventory } from "@/domain/inventory";
-import { findProductByNameCi } from "@/domain/shopping";
+import { canDeleteProduct, findProductByNameCi } from "@/domain/shopping";
+import { isDomainError } from "@/domain/error";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -118,4 +119,44 @@ export async function getLowStockProducts() {
     include: { stockItems: true },
     orderBy: { name: "asc" },
   });
+}
+
+export async function deleteProduct(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const allowed = await canDeleteProduct(householdId, id);
+  if (isDomainError(allowed)) {
+    throw new Error(allowed.message);
+  }
+  await prisma.product.delete({ where: { id } });
+  revalidatePath("/inventory");
+  revalidatePath("/shopping");
+}
+
+export async function deleteLocation(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertLocation(householdId, id);
+  const inUse = await prisma.stockItem.count({
+    where: { householdId, locationId: id },
+  });
+  if (inUse > 0) {
+    throw new Error("Cannot delete a location that still has stock.");
+  }
+  await prisma.location.delete({ where: { id } });
+  revalidatePath("/inventory");
+}
+
+export async function removeStock(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.stockItem.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Stock item not found");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
 }

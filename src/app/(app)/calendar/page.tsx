@@ -4,7 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCalendarEvents, createCalendarEvent, getEventLogs, logEvent } from "@/modules/scheduling/actions";
+import { CollapsibleCreate } from "@/components/ui/collapsible-create";
+import { ConfirmForm } from "@/components/ui/confirm-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  getCalendarEvents,
+  createCalendarEvent,
+  getEventLogs,
+  logEvent,
+  deleteCalendarEvent,
+} from "@/modules/scheduling/actions";
 import { requireHousehold } from "@/core/auth/session";
 import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
@@ -36,51 +45,67 @@ export default async function CalendarPage() {
         </TabsList>
 
         <TabsContent value="events" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("createEvent")}</CardTitle></CardHeader>
-            <CardContent>
-              <form action={createCalendarEvent} className="grid gap-3 md:grid-cols-2">
-                <div><Label>{tc("title")}</Label><Input name="title" required /></div>
-                <div><Label>{t("start")}</Label><Input name="startAt" type="datetime-local" required /></div>
-                <div><Label>{t("end")}</Label><Input name="endAt" type="datetime-local" /></div>
-                <div><Label>{t("reminderMinutes")}</Label><Input name="reminderMinutes" type="number" defaultValue="60" /></div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" name="atHome" id="atHome" defaultChecked />
-                  <Label htmlFor="atHome">{tc("atHome")}</Label>
-                </div>
-                <div><Label>{t("itemsNeeded")}</Label><Input name="itemsNeeded" placeholder={t("itemsPlaceholder")} /></div>
-                <div className="md:col-span-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
-                <div className="md:col-span-2"><Label>{t("guestsOnePerLine")}</Label><Textarea name="guests" /></div>
-                <Button type="submit">{t("createEventBtn")}</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {events.map((event) => (
-            <Card key={event.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-sm text-zinc-500">
-                      {formatDateTime(event.startAt, bcp47)}
-                      {event.endAt && ` - ${formatDateTime(event.endAt, bcp47)}`}
-                    </p>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
-                      {event.atHome ? <><Home className="h-3 w-3" /> {tc("atHome")}</> : <><MapPin className="h-3 w-3" /> {tc("outside")}</>}
-                    </p>
-                    {event.itemsNeeded.length > 0 && (
-                      <p className="mt-1 text-sm">{tc("items")}: {event.itemsNeeded.join(", ")}</p>
-                    )}
-                    {event.guests.length > 0 && (
-                      <p className="text-sm text-zinc-500">{tc("guests")}: {event.guests.map((g) => g.name).join(", ")}</p>
-                    )}
+          <CollapsibleCreate
+            openLabel={t("createEvent")}
+            cancelLabel={tc("cancelAdd")}
+            defaultOpen={events.length === 0}
+          >
+            <Card>
+              <CardHeader><CardTitle className="text-base">{t("createEvent")}</CardTitle></CardHeader>
+              <CardContent>
+                <form action={createCalendarEvent} className="grid gap-3 md:grid-cols-2">
+                  <div><Label>{tc("title")}</Label><Input name="title" required /></div>
+                  <div><Label>{t("start")}</Label><Input name="startAt" type="datetime-local" required /></div>
+                  <div><Label>{t("end")}</Label><Input name="endAt" type="datetime-local" /></div>
+                  <div><Label>{t("reminderMinutes")}</Label><Input name="reminderMinutes" type="number" defaultValue="60" /></div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" name="atHome" id="atHome" defaultChecked />
+                    <Label htmlFor="atHome">{tc("atHome")}</Label>
                   </div>
-                  <Calendar className="h-5 w-5 text-emerald-600" />
-                </div>
+                  <div><Label>{t("itemsNeeded")}</Label><Input name="itemsNeeded" placeholder={t("itemsPlaceholder")} /></div>
+                  <div className="md:col-span-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
+                  <div className="md:col-span-2"><Label>{t("guestsOnePerLine")}</Label><Textarea name="guests" /></div>
+                  <Button type="submit">{t("createEventBtn")}</Button>
+                </form>
               </CardContent>
             </Card>
-          ))}
+          </CollapsibleCreate>
+
+          {events.length === 0 ? (
+            <EmptyState message={t("noEvents")} />
+          ) : (
+            events.map((event) => (
+              <Card key={event.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{event.title}</p>
+                      <p className="text-sm text-zinc-500">
+                        {formatDateTime(event.startAt, bcp47)}
+                        {event.endAt && ` - ${formatDateTime(event.endAt, bcp47)}`}
+                      </p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+                        {event.atHome ? <><Home className="h-3 w-3" /> {tc("atHome")}</> : <><MapPin className="h-3 w-3" /> {tc("outside")}</>}
+                      </p>
+                      {event.itemsNeeded.length > 0 && (
+                        <p className="mt-1 text-sm">{tc("items")}: {event.itemsNeeded.join(", ")}</p>
+                      )}
+                      {event.guests.length > 0 && (
+                        <p className="text-sm text-zinc-500">{tc("guests")}: {event.guests.map((g) => g.name).join(", ")}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Calendar className="h-5 w-5 text-emerald-600" />
+                      <ConfirmForm action={deleteCalendarEvent} message={t("confirmDeleteEvent")}>
+                        <input type="hidden" name="id" value={event.id} />
+                        <Button type="submit" variant="destructive" size="sm">{tc("delete")}</Button>
+                      </ConfirmForm>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="last-time" className="space-y-4">
@@ -96,15 +121,19 @@ export default async function CalendarPage() {
             </CardContent>
           </Card>
 
-          {eventLogs.map((log) => (
-            <Card key={log.id}>
-              <CardContent className="p-4">
-                <p className="font-medium">{log.title}</p>
-                <p className="text-sm text-zinc-500">{tc("last")}: {formatDateTime(log.occurredAt, bcp47)}</p>
-                {log.description && <p className="text-sm">{log.description}</p>}
-              </CardContent>
-            </Card>
-          ))}
+          {eventLogs.length === 0 ? (
+            <EmptyState message={t("noLogs")} />
+          ) : (
+            eventLogs.map((log) => (
+              <Card key={log.id}>
+                <CardContent className="p-4">
+                  <p className="font-medium">{log.title}</p>
+                  <p className="text-sm text-zinc-500">{tc("last")}: {formatDateTime(log.occurredAt, bcp47)}</p>
+                  {log.description && <p className="text-sm">{log.description}</p>}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
       </Tabs>
     </div>

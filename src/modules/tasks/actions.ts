@@ -2,7 +2,7 @@
 
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
-import { assertProject } from "@/core/tenancy/assertHouseholdResource";
+import { assertChore, assertProject } from "@/core/tenancy/assertHouseholdResource";
 import { isDomainError } from "@/domain/error";
 import {
   addChore,
@@ -175,6 +175,25 @@ export async function addProjectUpdate(formData: FormData) {
   await prisma.projectUpdate.create({
     data: { projectId, userId, comment, photoUrl },
   });
+  revalidatePath("/tasks");
+}
+
+export async function deleteChore(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertChore(householdId, id);
+  await prisma.chore.delete({ where: { id } });
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteProject(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertProject(householdId, id);
+  await prisma.project.delete({ where: { id } });
   revalidatePath("/tasks");
 }
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TodayTile } from "@/components/dashboard/TodayTile";
 import { HomeFeed } from "@/components/dashboard/HomeFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,18 +56,23 @@ export default async function DashboardPage() {
             ) : (
               <ul className="space-y-2">
                 {todos.map((chore) => (
-                  <li key={chore.id} className="flex justify-between rounded-lg border p-3 text-sm">
-                    <div>
-                      <p className="font-medium">{chore.title}</p>
-                      {chore.nextDue && (
-                        <p className="text-zinc-500">
-                          {t("due", { date: formatDate(chore.nextDue, bcp47, { dateStyle: "medium" }) })}
-                        </p>
+                  <li key={chore.id}>
+                    <Link
+                      href="/tasks"
+                      className="flex justify-between rounded-lg border p-3 text-sm transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    >
+                      <div>
+                        <p className="font-medium">{chore.title}</p>
+                        {chore.nextDue && (
+                          <p className="text-zinc-500">
+                            {t("due", { date: formatDate(chore.nextDue, bcp47, { dateStyle: "medium" }) })}
+                          </p>
+                        )}
+                      </div>
+                      {chore.avgDuration && (
+                        <span className="text-xs text-zinc-400">{t("avgDuration", { minutes: chore.avgDuration })}</span>
                       )}
-                    </div>
-                    {chore.avgDuration && (
-                      <span className="text-xs text-zinc-400">{t("avgDuration", { minutes: chore.avgDuration })}</span>
-                    )}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -91,8 +97,13 @@ export default async function DashboardPage() {
             ) : (
               <ul className="space-y-2">
                 {lowStock.map((p) => (
-                  <li key={p.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/20">
-                    {p.name}
+                  <li key={p.id}>
+                    <Link
+                      href="/inventory"
+                      className="block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/20 dark:hover:bg-amber-950/40"
+                    >
+                      {p.name}
+                    </Link>
                   </li>
                 ))}
               </ul>

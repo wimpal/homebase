@@ -13,6 +13,7 @@ import {
   controlDirigeraLight,
   controlHueLight,
   getDirigeraLights,
+  deleteDevice,
 } from "@/modules/smarthome/actions";
 import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
 import { IKEA_CHROMATIC_PRESETS } from "@/domain/smarthome/color";
@@ -21,6 +22,8 @@ import { getWindowRecommendationKey } from "@/lib/smarthome";
 import { cn } from "@/lib/utils";
 import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { ConfirmForm } from "@/components/ui/confirm-form";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Device {
   id: string;
@@ -449,21 +452,44 @@ export function SmartHomeClient({
             </CardContent>
           </Card>
 
-          {lights.map((light) => (
-            <Card key={light.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-amber-500" />
-                  <span>{light.name}</span>
-                  {hueStatus[light.id] && <span className="text-xs text-zinc-500">{hueStatus[light.id]}</span>}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => toggleLight(light.id, true)}>{tc("on")}</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleLight(light.id, false)}>{tc("off")}</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {lights.length === 0 ? (
+            <EmptyState message={t("noHueDevices")} />
+          ) : (
+            lights.map((light) => (
+              <Card key={light.id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-amber-500" />
+                    <span>{light.name}</span>
+                    {hueStatus[light.id] && (
+                      <span className="text-xs text-zinc-500">{hueStatus[light.id]}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => toggleLight(light.id, true)}>
+                      {tc("on")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleLight(light.id, false)}
+                    >
+                      {tc("off")}
+                    </Button>
+                    <ConfirmForm
+                      action={deleteDevice}
+                      message={t("confirmDeleteDevice")}
+                    >
+                      <input type="hidden" name="id" value={light.id} />
+                      <Button type="submit" variant="destructive" size="sm">
+                        {tc("delete")}
+                      </Button>
+                    </ConfirmForm>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="cameras" className="space-y-4">
@@ -479,23 +505,43 @@ export function SmartHomeClient({
             </CardContent>
           </Card>
 
-          {cameras.map((cam) => {
-            const config = cam.config as { streamUrl?: string } | null;
-            return (
-              <Card key={cam.id}>
-                <CardContent className="p-4">
-                  <p className="mb-2 flex items-center gap-2 font-medium">
-                    <Camera className="h-4 w-4" /> {cam.name}
-                  </p>
-                  {config?.streamUrl ? (
-                    <img src={config.streamUrl} alt={cam.name} className="max-h-48 rounded" />
-                  ) : (
-                    <p className="text-sm text-zinc-500">{t("configureStream")}</p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {cameras.length === 0 ? (
+            <EmptyState message={t("noHueDevices")} />
+          ) : (
+            cameras.map((cam) => {
+              const config = cam.config as { streamUrl?: string } | null;
+              return (
+                <Card key={cam.id}>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="flex items-center gap-2 font-medium">
+                        <Camera className="h-4 w-4" /> {cam.name}
+                      </p>
+                      <ConfirmForm
+                        action={deleteDevice}
+                        message={t("confirmDeleteDevice")}
+                      >
+                        <input type="hidden" name="id" value={cam.id} />
+                        <Button type="submit" variant="destructive" size="sm">
+                          {tc("delete")}
+                        </Button>
+                      </ConfirmForm>
+                    </div>
+                    {config?.streamUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={config.streamUrl}
+                        alt={cam.name}
+                        className="max-h-48 rounded"
+                      />
+                    ) : (
+                      <p className="text-sm text-zinc-500">{t("configureStream")}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </TabsContent>
       </Tabs>
     </div>

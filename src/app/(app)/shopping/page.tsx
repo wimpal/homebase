@@ -3,6 +3,7 @@ import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
 import { getCatalog, getShoppingLists, getStores } from "@/modules/shopping/actions";
 import { ShoppingClient } from "./ShoppingClient";
+import { getTranslations } from "next-intl/server";
 
 export default async function ShoppingPage({
   searchParams,
@@ -18,6 +19,7 @@ export default async function ShoppingPage({
     getCatalog(),
   ]);
   const list = lists[0];
+  const t = await getTranslations("shopping");
 
   const items =
     list?.items.filter((i) => !storeFilter || i.storeId === storeFilter) ?? [];
@@ -25,8 +27,11 @@ export default async function ShoppingPage({
   if (!list) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Shopping</h1>
-        <p className="text-sm text-zinc-500">No shopping list found.</p>
+        <div>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-zinc-500">{t("subtitle")}</p>
+        </div>
+        <p className="text-sm text-zinc-500">{t("noList")}</p>
       </div>
     );
   }

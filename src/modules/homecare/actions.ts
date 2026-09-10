@@ -140,3 +140,43 @@ export async function getPetStats(petId: string) {
     age,
   };
 }
+
+export async function deletePlant(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PLANTS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertPlant(householdId, id);
+  await prisma.plant.delete({ where: { id } });
+  revalidatePath("/plants");
+}
+
+export async function deletePet(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertPet(householdId, id);
+  await prisma.pet.delete({ where: { id } });
+  revalidatePath("/pets");
+}
+
+export async function deletePetAppointment(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.petAppointment.deleteMany({
+    where: { id, pet: { householdId } },
+  });
+  if (result.count === 0) throw new Error("Appointment not found");
+  revalidatePath("/pets");
+}
+
+export async function deleteFeedingRoutine(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.PETS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.feedingRoutine.deleteMany({
+    where: { id, pet: { householdId } },
+  });
+  if (result.count === 0) throw new Error("Feeding routine not found");
+  revalidatePath("/pets");
+}

@@ -3,7 +3,9 @@
     "dashboard": "Dashboard",
     "settings": "Settings",
     "signOut": "Sign out",
-    "home": "HomeBase"
+    "home": "HomeBase",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "modules": {
     "inventory": {
@@ -102,7 +104,13 @@
     "approve": "Approve",
     "reject": "Reject",
     "use": "Use",
-    "yearsOld": "{age} years old"
+    "yearsOld": "{age} years old",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this?",
+    "cancelAdd": "Cancel",
+    "search": "Search",
+    "remove": "Remove",
+    "markBought": "Mark bought"
   },
   "settings": {
     "title": "Settings",
@@ -114,7 +122,8 @@
     },
     "modules": {
       "title": "Modules",
-      "description": "Toggle features on or off for your household"
+      "description": "Toggle features on or off for your household",
+      "adminOnly": "Only household admins can change module toggles."
     },
     "push": {
       "title": "Push Notifications",
@@ -131,7 +140,8 @@
       "title": "Visitor Preferences",
       "description": "Track preferences for guests (e.g. tea preferences)",
       "visitorName": "Visitor name",
-      "preferencesJson": "Preferences (JSON)"
+      "preferencesJson": "Preferences (JSON)",
+      "confirmDelete": "Delete this visitor preference?"
     }
   },
   "auth": {
@@ -193,7 +203,10 @@
     "all": "All",
     "nothingNeeded": "Nothing needed right now.",
     "markBought": "Mark bought",
-    "autoAdded": "Auto-added"
+    "autoAdded": "Auto-added",
+    "noList": "No shopping list found. Create one by registering a household or seeding the database.",
+    "confirmRemoveItem": "Remove this item from the list?",
+    "confirmDeleteStore": "Delete this store?"
   },
   "inventory": {
     "title": "Inventory",
@@ -215,7 +228,15 @@
     "scanner": {
       "title": "Scan Barcode",
       "cameraError": "Camera access denied or unavailable"
-    }
+    },
+    "confirmDeleteProduct": "Delete this product?",
+    "confirmDeleteLocation": "Delete this location?",
+    "confirmRemoveStock": "Remove this stock entry?",
+    "removeStock": "Remove stock",
+    "searchProducts": "Search products",
+    "locations": "Locations",
+    "noLocations": "No locations yet.",
+    "noMatch": "No matching products"
   },
   "tasks": {
     "title": "Tasks",
@@ -237,7 +258,11 @@
     "createProject": "Create Project",
     "stepsComplete": "{done}/{total} steps complete",
     "progressUpdate": "Progress update...",
-    "addUpdate": "Add Update"
+    "addUpdate": "Add Update",
+    "confirmDeleteChore": "Delete this chore?",
+    "confirmDeleteProject": "Delete this project?",
+    "noProjects": "No projects yet.",
+    "toggleStep": "Toggle"
   },
   "recipes": {
     "title": "Recipes",
@@ -271,7 +296,12 @@
     "recipe": "Recipe",
     "addLeftover": "Add Leftover",
     "noLeftovers": "No frozen leftovers tracked.",
-    "servingsFrozen": "{servings} servings · Frozen {date}"
+    "servingsFrozen": "{servings} servings · Frozen {date}",
+    "confirmDelete": "Delete this recipe permanently?",
+    "confirmDeleteLeftover": "Delete this leftover?",
+    "deleteLeftover": "Delete leftover",
+    "searchRecipes": "Search recipes",
+    "noMatch": "No matching recipes"
   },
   "smartHome": {
     "title": "Smart Home",
@@ -305,7 +335,9 @@
     "livingRoomPlaceholder": "Living room lamp",
     "addCamera": "Add Camera",
     "frontDoorPlaceholder": "Front door",
-    "configureStream": "Configure stream URL in device settings"
+    "configureStream": "Configure stream URL in device settings",
+    "confirmDeleteDevice": "Delete this device?",
+    "noHueDevices": "No Hue lights or cameras saved yet."
   },
   "calendar": {
     "title": "Calendar",
@@ -323,7 +355,10 @@
     "logEvent": "Log Event",
     "whatHappened": "What happened?",
     "whatHappenedPlaceholder": "Changed air filter",
-    "when": "When"
+    "when": "When",
+    "confirmDeleteEvent": "Delete this event?",
+    "noEvents": "No upcoming events.",
+    "noLogs": "No event logs yet."
   },
   "plants": {
     "title": "Plants",
@@ -334,7 +369,10 @@
     "addPlantBtn": "Add Plant",
     "nextWatering": "Next watering: {date}",
     "wateringNotes": "Watering notes...",
-    "markWatered": "Mark Watered"
+    "markWatered": "Mark Watered",
+    "confirmDelete": "Delete this plant?",
+    "noPlants": "No plants yet.",
+    "quickWater": "Mark watered"
   },
   "pets": {
     "title": "Pets",
@@ -354,7 +392,11 @@
     "feeding": "Feeding",
     "appointments": "Appointments",
     "atTime": "{name} at {time} ({amount})",
-    "atTimeNoAmount": "{name} at {time}"
+    "atTimeNoAmount": "{name} at {time}",
+    "confirmDeletePet": "Delete this pet?",
+    "confirmDeleteAppointment": "Delete this appointment?",
+    "confirmDeleteFeeding": "Delete this feeding routine?",
+    "noPets": "No pets yet."
   },
   "routines": {
     "title": "Routines",
@@ -370,7 +412,10 @@
     "noDependency": "No dependency",
     "after": "After: {title}",
     "addTask": "Add Task",
-    "dependsOn": "Depends on: {titles}"
+    "dependsOn": "Depends on: {titles}",
+    "confirmDeleteRoutine": "Delete this routine?",
+    "confirmDeleteTask": "Delete this task?",
+    "noRoutines": "No routines yet."
   },
   "budget": {
     "title": "Budget",
@@ -387,7 +432,11 @@
     "logExpenseBtn": "Log Expense",
     "spent": "Spent: {amount}",
     "remaining": "Remaining: {amount}",
-    "budgetAmount": "Budget: {amount}"
+    "budgetAmount": "Budget: {amount}",
+    "confirmDeleteBudget": "Delete this budget?",
+    "confirmDeleteExpense": "Delete this expense?",
+    "noBudgets": "No budgets yet.",
+    "noExpenses": "No expenses yet."
   },
   "delivery": {
     "title": "Delivery Tracking",
@@ -405,7 +454,9 @@
     "statusInTransit": "IN TRANSIT",
     "statusOutForDelivery": "OUT FOR DELIVERY",
     "statusDelivered": "DELIVERED",
-    "statusException": "EXCEPTION"
+    "statusException": "EXCEPTION",
+    "confirmDelete": "Delete this package?",
+    "noPackages": "No packages yet."
   },
   "messages": {
     "title": "Messages",
@@ -419,6 +470,8 @@
     "grocery": "Grocery",
     "task": "Task",
     "submitRequest": "Submit Request",
-    "byStatus": "By {name} · {status}"
+    "byStatus": "By {name} · {status}",
+    "noMessages": "No messages yet.",
+    "noRequests": "No requests yet."
   }
 }

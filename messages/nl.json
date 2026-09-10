@@ -3,7 +3,9 @@
     "dashboard": "Dashboard",
     "settings": "Instellingen",
     "signOut": "Uitloggen",
-    "home": "HomeBase"
+    "home": "HomeBase",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten"
   },
   "modules": {
     "inventory": {
@@ -102,7 +104,13 @@
     "approve": "Goedkeuren",
     "reject": "Afwijzen",
     "use": "Gebruiken",
-    "yearsOld": "{age} jaar oud"
+    "yearsOld": "{age} jaar oud",
+    "delete": "Verwijderen",
+    "confirmDelete": "Weet je zeker dat je dit wilt verwijderen?",
+    "cancelAdd": "Annuleren",
+    "search": "Zoeken",
+    "remove": "Verwijderen",
+    "markBought": "Markeer gekocht"
   },
   "settings": {
     "title": "Instellingen",
@@ -114,7 +122,8 @@
     },
     "modules": {
       "title": "Modules",
-      "description": "Functies in- of uitschakelen voor je huishouden"
+      "description": "Functies in- of uitschakelen voor je huishouden",
+      "adminOnly": "Alleen huishoud-admins kunnen modules in- of uitschakelen."
     },
     "push": {
       "title": "Pushmeldingen",
@@ -131,7 +140,8 @@
       "title": "Bezoekersvoorkeuren",
       "description": "Voorkeuren van gasten bijhouden (bijv. thee-voorkeuren)",
       "visitorName": "Naam bezoeker",
-      "preferencesJson": "Voorkeuren (JSON)"
+      "preferencesJson": "Voorkeuren (JSON)",
+      "confirmDelete": "Deze bezoekersvoorkeur verwijderen?"
     }
   },
   "auth": {
@@ -193,7 +203,10 @@
     "all": "Alle",
     "nothingNeeded": "Niets nodig op dit moment.",
     "markBought": "Markeer als gekocht",
-    "autoAdded": "Automatisch toegevoegd"
+    "autoAdded": "Automatisch toegevoegd",
+    "noList": "Geen boodschappenlijst gevonden. Maak er een aan via registratie of seed de database.",
+    "confirmRemoveItem": "Dit item van de lijst verwijderen?",
+    "confirmDeleteStore": "Deze winkel verwijderen?"
   },
   "inventory": {
     "title": "Voorraad",
@@ -215,7 +228,15 @@
     "scanner": {
       "title": "Barcode scannen",
       "cameraError": "Cameratoegang geweigerd of niet beschikbaar"
-    }
+    },
+    "confirmDeleteProduct": "Dit product verwijderen?",
+    "confirmDeleteLocation": "Deze locatie verwijderen?",
+    "confirmRemoveStock": "Deze voorraadregel verwijderen?",
+    "removeStock": "Voorraad verwijderen",
+    "searchProducts": "Producten zoeken",
+    "locations": "Locaties",
+    "noLocations": "Nog geen locaties.",
+    "noMatch": "Geen producten gevonden"
   },
   "tasks": {
     "title": "Taken",
@@ -237,7 +258,11 @@
     "createProject": "Project aanmaken",
     "stepsComplete": "{done}/{total} stappen voltooid",
     "progressUpdate": "Voortgangsupdate...",
-    "addUpdate": "Update toevoegen"
+    "addUpdate": "Update toevoegen",
+    "confirmDeleteChore": "Deze klus verwijderen?",
+    "confirmDeleteProject": "Dit project verwijderen?",
+    "noProjects": "Nog geen projecten.",
+    "toggleStep": "Wissel"
   },
   "recipes": {
     "title": "Recepten",
@@ -271,7 +296,12 @@
     "recipe": "Recept",
     "addLeftover": "Restje toevoegen",
     "noLeftovers": "Geen bevroren restjes bijgehouden.",
-    "servingsFrozen": "{servings} porties · Bevroren {date}"
+    "servingsFrozen": "{servings} porties · Bevroren {date}",
+    "confirmDelete": "Dit recept definitief verwijderen?",
+    "confirmDeleteLeftover": "Deze restjes verwijderen?",
+    "deleteLeftover": "Restjes verwijderen",
+    "searchRecipes": "Recepten zoeken",
+    "noMatch": "Geen recepten gevonden"
   },
   "smartHome": {
     "title": "Smart Home",
@@ -305,7 +335,9 @@
     "livingRoomPlaceholder": "Woonkamerlamp",
     "addCamera": "Camera toevoegen",
     "frontDoorPlaceholder": "Voordeur",
-    "configureStream": "Configureer stream-URL in apparaatinstellingen"
+    "configureStream": "Configureer stream-URL in apparaatinstellingen",
+    "confirmDeleteDevice": "Dit apparaat verwijderen?",
+    "noHueDevices": "Nog geen Hue-lampen of camera's opgeslagen."
   },
   "calendar": {
     "title": "Agenda",
@@ -323,7 +355,10 @@
     "logEvent": "Gebeurtenis loggen",
     "whatHappened": "Wat is er gebeurd?",
     "whatHappenedPlaceholder": "Luchtfilter vervangen",
-    "when": "Wanneer"
+    "when": "Wanneer",
+    "confirmDeleteEvent": "Dit evenement verwijderen?",
+    "noEvents": "Geen aankomende evenementen.",
+    "noLogs": "Nog geen logboeken."
   },
   "plants": {
     "title": "Planten",
@@ -334,7 +369,10 @@
     "addPlantBtn": "Plant toevoegen",
     "nextWatering": "Volgende keer water: {date}",
     "wateringNotes": "Wateringsnotities...",
-    "markWatered": "Markeer als bewaterd"
+    "markWatered": "Markeer als bewaterd",
+    "confirmDelete": "Deze plant verwijderen?",
+    "noPlants": "Nog geen planten.",
+    "quickWater": "Markeer bewaterd"
   },
   "pets": {
     "title": "Huisdieren",
@@ -354,7 +392,11 @@
     "feeding": "Voeding",
     "appointments": "Afspraken",
     "atTime": "{name} om {time} ({amount})",
-    "atTimeNoAmount": "{name} om {time}"
+    "atTimeNoAmount": "{name} om {time}",
+    "confirmDeletePet": "Dit huisdier verwijderen?",
+    "confirmDeleteAppointment": "Deze afspraak verwijderen?",
+    "confirmDeleteFeeding": "Dit voedingsritueel verwijderen?",
+    "noPets": "Nog geen huisdieren."
   },
   "routines": {
     "title": "Routines",
@@ -370,7 +412,10 @@
     "noDependency": "Geen afhankelijkheid",
     "after": "Na: {title}",
     "addTask": "Taak toevoegen",
-    "dependsOn": "Afhankelijk van: {titles}"
+    "dependsOn": "Afhankelijk van: {titles}",
+    "confirmDeleteRoutine": "Deze routine verwijderen?",
+    "confirmDeleteTask": "Deze taak verwijderen?",
+    "noRoutines": "Nog geen routines."
   },
   "budget": {
     "title": "Budget",
@@ -387,7 +432,11 @@
     "logExpenseBtn": "Uitgave loggen",
     "spent": "Uitgegeven: {amount}",
     "remaining": "Resterend: {amount}",
-    "budgetAmount": "Budget: {amount}"
+    "budgetAmount": "Budget: {amount}",
+    "confirmDeleteBudget": "Dit budget verwijderen?",
+    "confirmDeleteExpense": "Deze uitgave verwijderen?",
+    "noBudgets": "Nog geen budgetten.",
+    "noExpenses": "Nog geen uitgaven."
   },
   "delivery": {
     "title": "Pakketten volgen",
@@ -405,7 +454,9 @@
     "statusInTransit": "ONDERWEG",
     "statusOutForDelivery": "BEZORGING BEZIG",
     "statusDelivered": "BEZORGD",
-    "statusException": "PROBLEEM"
+    "statusException": "PROBLEEM",
+    "confirmDelete": "Dit pakket verwijderen?",
+    "noPackages": "Nog geen pakketten."
   },
   "messages": {
     "title": "Berichten",
@@ -419,6 +470,8 @@
     "grocery": "Boodschappen",
     "task": "Taak",
     "submitRequest": "Verzoek indienen",
-    "byStatus": "Door {name} · {status}"
+    "byStatus": "Door {name} · {status}",
+    "noMessages": "Nog geen berichten.",
+    "noRequests": "Nog geen verzoeken."
   }
 }

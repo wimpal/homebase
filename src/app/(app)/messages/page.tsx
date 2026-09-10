@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   getMessages,
   sendMessage,
@@ -53,20 +54,24 @@ export default async function MessagesPage() {
             </CardContent>
           </Card>
 
-          <div className="space-y-2">
-            {messages.map((msg) => (
-              <Card key={msg.id}>
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-medium">{msg.user.name}</span>
-                    <span className="text-xs text-zinc-400">{formatDateTime(msg.createdAt, bcp47)}</span>
-                  </div>
-                  <p className="mt-1 text-sm">{msg.content}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {messages.length === 0 ? (
+            <EmptyState message={t("noMessages")} />
+          ) : (
+            <div className="space-y-2">
+              {messages.map((msg) => (
+                <Card key={msg.id}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-medium">{msg.user.name}</span>
+                      <span className="text-xs text-zinc-400">{formatDateTime(msg.createdAt, bcp47)}</span>
+                    </div>
+                    <p className="mt-1 text-sm">{msg.content}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
@@ -88,34 +93,38 @@ export default async function MessagesPage() {
             </CardContent>
           </Card>
 
-          {requests.map((req) => (
-            <Card key={req.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="flex items-center gap-2 font-medium">
-                    {req.type === "GROCERY" ? <ShoppingCart className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
-                    {req.title}
-                  </p>
-                  <p className="text-sm text-zinc-500">{t("byStatus", { name: req.user.name ?? "", status: req.status })}</p>
-                  {req.description && <p className="text-sm">{req.description}</p>}
-                </div>
-                {isAdmin && req.status === "PENDING" && (
-                  <div className="flex gap-1">
-                    <form action={updateRequestStatus}>
-                      <input type="hidden" name="id" value={req.id} />
-                      <input type="hidden" name="status" value="APPROVED" />
-                      <Button type="submit" size="sm">{tc("approve")}</Button>
-                    </form>
-                    <form action={updateRequestStatus}>
-                      <input type="hidden" name="id" value={req.id} />
-                      <input type="hidden" name="status" value="REJECTED" />
-                      <Button type="submit" size="sm" variant="outline">{tc("reject")}</Button>
-                    </form>
+          {requests.length === 0 ? (
+            <EmptyState message={t("noRequests")} />
+          ) : (
+            requests.map((req) => (
+              <Card key={req.id}>
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="flex items-center gap-2 font-medium">
+                      {req.type === "GROCERY" ? <ShoppingCart className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                      {req.title}
+                    </p>
+                    <p className="text-sm text-zinc-500">{t("byStatus", { name: req.user.name ?? "", status: req.status })}</p>
+                    {req.description && <p className="text-sm">{req.description}</p>}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {isAdmin && req.status === "PENDING" && (
+                    <div className="flex gap-1">
+                      <form action={updateRequestStatus}>
+                        <input type="hidden" name="id" value={req.id} />
+                        <input type="hidden" name="status" value="APPROVED" />
+                        <Button type="submit" size="sm">{tc("approve")}</Button>
+                      </form>
+                      <form action={updateRequestStatus}>
+                        <input type="hidden" name="id" value={req.id} />
+                        <input type="hidden" name="status" value="REJECTED" />
+                        <Button type="submit" size="sm" variant="outline">{tc("reject")}</Button>
+                      </form>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -2,7 +2,10 @@
 
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
-import { assertRoutine, assertRoutineTask } from "@/core/tenancy/assertHouseholdResource";
+import {
+  assertRoutine,
+  assertRoutineTask,
+} from "@/core/tenancy/assertHouseholdResource";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -224,4 +227,33 @@ export async function getUserGamification() {
     include: { badge: true },
   });
   return { points, badges };
+}
+
+export async function deleteCalendarEvent(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.calendarEvent.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Calendar event not found");
+  revalidatePath("/calendar");
+}
+
+export async function deleteRoutine(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.ROUTINES);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertRoutine(householdId, id);
+  await prisma.routine.delete({ where: { id } });
+  revalidatePath("/routines");
+}
+
+export async function deleteRoutineTask(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.ROUTINES);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertRoutineTask(householdId, id);
+  await prisma.routineTask.delete({ where: { id } });
+  revalidatePath("/routines");
 }

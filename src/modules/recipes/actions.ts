@@ -95,8 +95,17 @@ export async function deleteRecipe(formData: FormData) {
   const id = formData.get("id") as string;
   if (!id) return;
   await assertRecipe(householdId, id);
+  await prisma.leftover.deleteMany({ where: { householdId, recipeId: id } });
   await prisma.recipe.delete({ where: { id } });
   revalidatePath("/recipes");
+}
+
+export async function getLeftovers() {
+  const { householdId } = await requireHousehold();
+  return prisma.leftover.findMany({
+    where: { householdId },
+    orderBy: { frozenAt: "desc" },
+  });
 }
 
 export async function addLeftover(formData: FormData) {
@@ -117,11 +126,32 @@ export async function addLeftover(formData: FormData) {
   revalidatePath("/recipes");
 }
 
+export async function deleteLeftover(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.leftover.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Leftover not found");
+  revalidatePath("/recipes");
+}
+
 export async function getBudgets() {
   const { householdId } = await requireHousehold();
   return prisma.budget.findMany({
     where: { householdId },
     include: { expenses: true },
+  });
+}
+
+export async function getExpenses() {
+  const { householdId } = await requireHousehold();
+  return prisma.expense.findMany({
+    where: { householdId },
+    include: { budget: true },
+    orderBy: { date: "desc" },
+    take: 50,
   });
 }
 
@@ -153,5 +183,25 @@ export async function addExpense(formData: FormData) {
       date: formData.get("date") ? new Date(formData.get("date") as string) : new Date(),
     },
   });
+  revalidatePath("/budget");
+}
+
+export async function deleteBudget(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.BUDGET);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await assertBudget(householdId, id);
+  await prisma.budget.delete({ where: { id } });
+  revalidatePath("/budget");
+}
+
+export async function deleteExpense(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.BUDGET);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.expense.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Expense not found");
   revalidatePath("/budget");
 }

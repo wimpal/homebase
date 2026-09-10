@@ -133,3 +133,25 @@ export async function saveVisitorPreference(formData: FormData) {
   });
   revalidatePath("/settings");
 }
+
+export async function deleteDelivery(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.DELIVERY);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.deliveryPackage.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Delivery not found");
+  revalidatePath("/delivery");
+}
+
+export async function deleteVisitorPreference(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.MESSAGING);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const result = await prisma.visitorPreference.deleteMany({
+    where: { id, householdId },
+  });
+  if (result.count === 0) throw new Error("Visitor preference not found");
+  revalidatePath("/settings");
+}
