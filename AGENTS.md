@@ -80,7 +80,7 @@ Notable in this repo:
 
 ## What this project is
 
-HomeBase helps households track inventory, chores, plants/pets, shopping, calendar events, routines, recipes, budget, deliveries, messaging, and smart-home devices. It is:
+HomeBase helps households track inventory, chores, plants/pets, shopping, calendar events, routines, recipes, budget, deliveries, messaging, and smart-home devices. **This deployment is mostly IKEA** (Dirigera / Trådfri) **plus one Philips Hue light** in a room — see [Smart home (this household)](#smart-home-this-household) below. It is:
 
 - **Self-hosted** (Docker Compose: app + Postgres + Redis + worker)
 - **Multi-user** per household (ADMIN / MEMBER / GUEST roles)
@@ -329,7 +329,7 @@ Copy `.env.example` → `.env`. Critical vars:
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push (server) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Push subscription (client) |
 | `UPLOAD_DIR` | File uploads |
-| `HUE_BRIDGE_IP` / `HUE_USERNAME` | Philips Hue (optional) |
+| `HUE_BRIDGE_IP` / `HUE_USERNAME` | Philips Hue — **one light** in operator household; bridge on LAN (NAS must reach bridge) |
 | `REDIS_URL` | Reserved for future BullMQ |
 
 Never commit `.env`. `.env.example` is committed.
@@ -368,8 +368,39 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 | Budget | `(app)/budget/` | `modules/recipes/` | `getBudgetRemaining` in `lib/budget.ts` |
 | Delivery | `(app)/delivery/` | `modules/social/` | Pre-delivery alerts in scheduler |
 | Messages | `(app)/messages/` | `modules/social/` | Requests need ADMIN to approve |
-| Smart Home | `(app)/smart-home/` | `modules/smarthome/` | Hue + cameras; utils in `lib/smarthome.ts` |
+| Smart Home | `(app)/smart-home/` | `modules/smarthome/` | IKEA (bulk) + Hue (one room); `controlHueLight` today; utils in `lib/smarthome.ts` |
 | Settings | `(app)/settings/` | modules/settings, social | Module toggles |
+
+---
+
+## Smart home (this household)
+
+**Operator stack:**
+
+- **Mostly IKEA** — Dirigera hub; Zigbee bulbs (plus blinds/outlets/sensors in the home
+  that are **not** all exposed in product code yet).
+- **One Philips Hue light** in one room — Hue bridge on LAN; `HUE_BRIDGE_IP` / `HUE_USERNAME`
+  apply to that light only.
+
+**Code today (verify in Homebase repo / contracts):**
+
+- **IKEA / Dirigera:** domain in `src/domain/smarthome/`; MCP `homebase.lights.list` /
+  `set_state` / `party_mode`; Smart Home UI “IKEA Lights” tab. Env: `DIRIGERA_IP` +
+  `DIRIGERA_TOKEN`. Operator doc: `docs/dirigera-setup.md`.
+- **Hue:** `controlHueLight` + UI tab; MCP merge is **T-063** (not done until that task).
+- **Automations:** **not implemented** — planned as candidate **M4c** (time-based rules
+  first; Dirigera sensors later). Design:
+  `project-control-heim/board/FUTURE_FEATURES.md`. Do **not** put Dirigera lighting
+  automations in Home Assistant. Do **not** confuse with chore **Routines**.
+
+**Integration preference:**
+
+1. **Dirigera** — local HTTPS API on the hub (this household’s path)
+2. **Hue bridge** — for the single Hue lamp only
+3. **Home Assistant** — optional later for **voice satellites / Wyoming (M6b)** or
+   non-Dirigera gear — **not** the SoT for IKEA light automations
+
+**Mimir:** Talks to Homebase MCP only — never to Dirigera or HA for lights.
 
 ---
 
@@ -393,7 +424,9 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 
 9. **iOS Web Push** — Requires installed PWA. Home feed is the reliable fallback.
 
-10. **Hue integration** — Requires local network access to bridge; config stored per `Device` record.
+10. **Smart home** — **IKEA-first** household plus **one Hue light**. Keep Hue paths when
+    adding IKEA — two backends, one `Device` model. NAS app container needs LAN access to
+    Hue bridge and IKEA hub; per-device `config` holds `lightId` (Hue) or hub-specific ids (IKEA).
 
 ---
 

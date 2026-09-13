@@ -4,6 +4,27 @@ Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a 
 
 MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`. Hue is kept in the Smart Home UI but is **out of MCP scope**.
 
+## Automations (M4c Phase A1 — domain landed)
+
+User-configurable **Automations** are time-based light rules in **Homebase** (not
+chore **Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera
+light automations.
+
+**Status today (T-064):** Prisma `LightAutomation` + domain CRUD +
+`applyAutomationAction` → `setDirigeraLightState`. No UI yet (**T-065**). Schedules
+do not fire until the worker evaluator lands (**T-066**). Sensors are Phase B
+(**T-067** / **T-068**).
+
+**Local domain smoke** (opt-in; toggles the pinned test lamp — never deploy smoke):
+
+```bash
+# Requires DIRIGERA_* + DIRIGERA_TEST_DEVICE_ID + MCP_HOUSEHOLD_ID (or AUTOMATION_SMOKE_HOUSEHOLD_ID)
+npm run automations:smoke
+```
+
+`lastFiredSlot` on the rule row is reserved for T-066 once-per-window claims;
+manual/script apply does not set it.
+
 ## One-time pairing (on home LAN)
 
 ```bash

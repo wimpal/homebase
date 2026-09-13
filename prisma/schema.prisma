@@ -155,6 +155,7 @@ model Household {
   recipes          Recipe[]
   leftovers        Leftover[]
   devices          Device[]
+  lightAutomations LightAutomation[]
   sensorReadings   SensorReading[]
   messages         Message[]
   requests         Request[]
@@ -710,6 +711,47 @@ model Device {
   enabled     Boolean    @default(true)
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+/// Time-based IKEA light Automation (M4c). Not a chore Routine.
+model LightAutomation {
+  id              String   @id @default(cuid())
+  householdId     String
+  name            String
+  enabled         Boolean  @default(true)
+
+  /// Wall-clock "HH:MM" (24h); evaluated in `timezone` (T-066).
+  timeLocal       String
+  /// ISO weekdays: 1=Mon … 7=Sun.
+  daysOfWeek      Int[]
+  timezone        String   @default("Europe/Amsterdam")
+
+  on              Boolean
+  brightness      Int?
+  colorTempKelvin Int?
+
+  lastRunAt       DateTime?
+  lastRunResult   String?
+  /// Local slot key claimed by T-066 before apply, e.g. "2026-09-13T21:00".
+  lastFiredSlot   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  household Household               @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  targets   LightAutomationTarget[]
+
+  @@index([householdId, enabled])
+}
+
+model LightAutomationTarget {
+  id               String @id @default(cuid())
+  automationId     String
+  dirigeraDeviceId String
+
+  automation LightAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, dirigeraDeviceId])
 }
 
 model SensorReading {
