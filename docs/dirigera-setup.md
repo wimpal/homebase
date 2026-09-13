@@ -10,10 +10,10 @@ User-configurable **Automations** are time-based light rules in **Homebase** (no
 chore **Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera
 light automations.
 
-**Status today (T-064):** Prisma `LightAutomation` + domain CRUD +
-`applyAutomationAction` → `setDirigeraLightState`. No UI yet (**T-065**). Schedules
-do not fire until the worker evaluator lands (**T-066**). Sensors are Phase B
-(**T-067** / **T-068**).
+**Status today (T-064 + T-065 UI):** Prisma `LightAutomation` + domain CRUD +
+`applyAutomationAction` → `setDirigeraLightState`. Smart Home → **Automations** tab
+for create/edit/enable/disable/delete and Run now. Schedules do not fire until the
+worker evaluator lands (**T-066**). Sensors are Phase B (**T-067** / **T-068**).
 
 **Local domain smoke** (opt-in; toggles the pinned test lamp — never deploy smoke):
 
@@ -23,7 +23,7 @@ npm run automations:smoke
 ```
 
 `lastFiredSlot` on the rule row is reserved for T-066 once-per-window claims;
-manual/script apply does not set it.
+manual/script/UI Run now does not set it.
 
 ## One-time pairing (on home LAN)
 

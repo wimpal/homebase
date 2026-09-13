@@ -24,6 +24,8 @@ import { Thermometer, Wind, Lightbulb, Camera } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AutomationsPanel } from "./AutomationsPanel";
+import type { AutomationListItem } from "@/modules/smarthome/actions";
 
 interface Device {
   id: string;
@@ -45,10 +47,12 @@ export function SmartHomeClient({
   devices,
   readings,
   dirigera,
+  automations,
 }: {
   devices: Device[];
   readings: Reading[];
   dirigera: DirigeraLightsResult;
+  automations: AutomationListItem[];
 }) {
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
@@ -216,6 +220,7 @@ export function SmartHomeClient({
         <TabsList>
           <TabsTrigger value="sensors">{t("sensors")}</TabsTrigger>
           <TabsTrigger value="ikea-lights">{t("ikeaLights")}</TabsTrigger>
+          <TabsTrigger value="automations">{t("automations")}</TabsTrigger>
           <TabsTrigger value="lights">{t("hueLights")}</TabsTrigger>
           <TabsTrigger value="cameras">{t("cameras")}</TabsTrigger>
         </TabsList>
@@ -437,6 +442,10 @@ export function SmartHomeClient({
               })}
             </>
           )}
+        </TabsContent>
+
+        <TabsContent value="automations" className="space-y-4">
+          <AutomationsPanel automations={automations} dirigera={dirigera} />
         </TabsContent>
 
         <TabsContent value="lights" className="space-y-4">
