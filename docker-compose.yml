@@ -66,6 +66,8 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@homebase.local}
+      DIRIGERA_IP: ${DIRIGERA_IP:-}
+      DIRIGERA_TOKEN: ${DIRIGERA_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

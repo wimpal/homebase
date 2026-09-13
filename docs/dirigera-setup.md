@@ -4,16 +4,22 @@ Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a 
 
 MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`. Hue is kept in the Smart Home UI but is **out of MCP scope**.
 
-## Automations (M4c Phase A1 — domain landed)
+## Automations (M4c Phase A — UI + worker)
 
 User-configurable **Automations** are time-based light rules in **Homebase** (not
 chore **Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera
 light automations.
 
-**Status today (T-064 + T-065 UI):** Prisma `LightAutomation` + domain CRUD +
-`applyAutomationAction` → `setDirigeraLightState`. Smart Home → **Automations** tab
-for create/edit/enable/disable/delete and Run now. Schedules do not fire until the
-worker evaluator lands (**T-066**). Sensors are Phase B (**T-067** / **T-068**).
+**Status (T-064–T-066):** Prisma + domain + Smart Home **Automations** tab +
+worker evaluator. The compose **`worker`** service runs `evaluateLightAutomations`
+every minute (`Europe/Amsterdam`), claims `lastFiredSlot`, then
+`applyAutomationAction` → Dirigera. **No catch-up:** if the worker was down for
+that minute, the window is skipped (deploy/restart safe — no mass-toggle).
+Sensors are Phase B (**T-067** / **T-068**).
+
+**Worker must run for schedules.** Ensure NAS compose `worker` has `DIRIGERA_IP`
+and `DIRIGERA_TOKEN` (same as `app`). UI **Run now** still applies immediately
+without waiting for the clock.
 
 **Local domain smoke** (opt-in; toggles the pinned test lamp — never deploy smoke):
 
@@ -22,8 +28,7 @@ worker evaluator lands (**T-066**). Sensors are Phase B (**T-067** / **T-068**).
 npm run automations:smoke
 ```
 
-`lastFiredSlot` on the rule row is reserved for T-066 once-per-window claims;
-manual/script/UI Run now does not set it.
+Manual/UI Run now does **not** set `lastFiredSlot` (only the worker claim does).
 
 ## One-time pairing (on home LAN)
 

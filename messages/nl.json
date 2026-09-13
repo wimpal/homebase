@@ -318,7 +318,7 @@
     "sensors": "Sensoren",
     "ikeaLights": "IKEA-lampen",
     "automations": "Automatiseringen",
-    "automationsSubtitle": "Tijdschema's voor IKEA-lampen — geen klus-Routines. Schema's gaan af wanneer de worker draait (volgt nog).",
+    "automationsSubtitle": "Tijdschema's voor IKEA-lampen — geen klus-Routines. Schema's gaan af wanneer de Homebase-worker draait.",
     "createAutomation": "Automatisering toevoegen",
     "automationNamePlaceholder": "Avondlampen",
     "time": "Tijd",

@@ -2,6 +2,7 @@ import { ModuleId } from "@prisma/client";
 import cron from "node-cron";
 import { prisma } from "@/core/db";
 import { createNotification } from "@/core/notifications/service";
+import { evaluateLightAutomations } from "@/domain/automations";
 import { markProductNeeded } from "@/domain/shopping";
 import { NotificationType } from "@prisma/client";
 import { addDays, differenceInDays, isBefore, subMinutes } from "date-fns";
@@ -13,7 +14,26 @@ export function startScheduler() {
   cron.schedule("*/5 * * * *", checkChoreDeadlines);
   cron.schedule("*/5 * * * *", checkCalendarReminders);
   cron.schedule("*/5 * * * *", checkDeliveryAlerts);
+  cron.schedule("* * * * *", () => {
+    void checkLightAutomations();
+  });
   console.log("[scheduler] Background jobs started");
+}
+
+async function checkLightAutomations() {
+  try {
+    const summary = await evaluateLightAutomations();
+    if (summary.matched > 0 || summary.claimed > 0) {
+      console.log(
+        `[scheduler] automations: matched=${summary.matched} claimed=${summary.claimed} applied=${summary.applied} failed=${summary.failed}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      "[scheduler] automations failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 async function checkLowStock() {

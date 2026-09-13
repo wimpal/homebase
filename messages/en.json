@@ -318,7 +318,7 @@
     "sensors": "Sensors",
     "ikeaLights": "IKEA Lights",
     "automations": "Automations",
-    "automationsSubtitle": "Time-based IKEA light schedules — not chore Routines. Schedules fire when the worker is running (coming next).",
+    "automationsSubtitle": "Time-based IKEA light schedules — not chore Routines. Schedules fire when the Homebase worker is running.",
     "createAutomation": "Add automation",
     "automationNamePlaceholder": "Evening lights",
     "time": "Time",
