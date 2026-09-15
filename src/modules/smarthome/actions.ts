@@ -183,6 +183,7 @@ export type AutomationListItem = {
   sensorEdgePolarity: "rising" | "falling" | null;
   on: boolean;
   toggle: boolean;
+  toggleSession: "idle" | "occupied" | "leaving";
   brightness: number | null;
   colorTempKelvin: number | null;
   lastRunAt: string | null;
@@ -207,6 +208,7 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     sensorEdgePolarity: row.sensorEdgePolarity,
     on: row.on,
     toggle: row.toggle,
+    toggleSession: row.toggleSession,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
     lastRunAt: row.lastRunAt ? row.lastRunAt.toISOString() : null,

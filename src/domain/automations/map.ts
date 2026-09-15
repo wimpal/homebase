@@ -1,5 +1,5 @@
 import type { LightAutomation, LightAutomationTarget } from "@prisma/client";
-import type { LightAutomationDto } from "./types";
+import { normalizeToggleSession, type LightAutomationDto } from "./types";
 
 type Row = LightAutomation & { targets: LightAutomationTarget[] };
 
@@ -23,6 +23,7 @@ export function mapAutomation(row: Row): LightAutomationDto {
           : "rising",
     on: row.on,
     toggle: row.toggle,
+    toggleSession: normalizeToggleSession(row.toggleSession),
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
     lastRunAt: row.lastRunAt,

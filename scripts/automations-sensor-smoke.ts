@@ -1,5 +1,5 @@
 /**
- * Smoke test for SENSOR_EDGE automations (T-068 + toggle enter/leave).
+ * Smoke test for SENSOR_EDGE leave-session Toggle (T-070).
  * Opt-in write test — never run from deploy smoke.
  *
  * Requires: DIRIGERA_IP, DIRIGERA_TOKEN, DIRIGERA_TEST_DEVICE_ID,
@@ -12,13 +12,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
   clearSensorDebounceState,
   createAutomation,
   deleteAutomation,
+  getAutomation,
   handleSensorEdge,
-  handleSensorRisingEdge,
   setAutomationEnabled,
 } from "../src/domain/automations";
 import { isDomainError } from "../src/domain/error";
@@ -125,7 +124,7 @@ async function main() {
 
   try {
     const created = await createAutomation(householdId, {
-      name: `toggle smoke ${new Date().toISOString()}`,
+      name: `leave-session smoke ${new Date().toISOString()}`,
       triggerKind: "SENSOR_EDGE",
       sensorDirigeraDeviceId: sensor.id,
       sensorEdgeAttribute: sensor.edgeAttribute,
@@ -140,89 +139,132 @@ async function main() {
       return;
     }
     automationId = created.id;
-    console.log(`OK: created toggle SENSOR_EDGE automation ${automationId}`);
+    console.log(`OK: created leave-session Toggle ${automationId}`);
 
-    const t0 = Date.now();
-    const first = await handleSensorRisingEdge({
+    let t = Date.now();
+
+    // 1) Enter open → on + occupied
+    const enter = await handleSensorEdge({
       sensorId: sensor.id,
       attribute: sensor.edgeAttribute,
-      receivedAt: new Date(t0),
+      polarity: "rising",
+      receivedAt: new Date(t),
     });
-    console.log(
-      `OK: first open matched=${first.rulesMatched} claimed=${first.claimed} applied=${first.applied}`,
-    );
-    if (first.applied < 1) {
-      console.error("FAIL: expected apply on first open (off→on)");
+    if (enter.applied < 1) {
+      console.error("FAIL: enter open expected apply");
       failed = true;
       return;
     }
-    const afterOpen = await readIsOn(testDeviceId);
-    if (afterOpen !== true) {
-      console.error(`FAIL: expected light on after first open, got ${afterOpen}`);
-      failed = true;
-      return;
-    }
-    console.log("OK: open → on");
-
-    // Falling edge must not match a rising-only toggle rule.
-    await sleep(SENSOR_DEBOUNCE_MS + 50);
-    const close = await handleSensorEdge({
-      sensorId: sensor.id,
-      attribute: sensor.edgeAttribute,
-      polarity: "falling",
-      receivedAt: new Date(t0 + SENSOR_DEBOUNCE_MS + 100),
-    });
-    if (close.rulesMatched !== 0) {
-      console.error("FAIL: falling edge matched rising toggle rule");
-      failed = true;
-      return;
-    }
-    const afterClose = await readIsOn(testDeviceId);
-    if (afterClose !== true) {
-      console.error(`FAIL: light changed on close, isOn=${afterClose}`);
-      failed = true;
-      return;
-    }
-    console.log("OK: close → unchanged (no rule)");
-
-    // Second open after cooldown → off
-    const afterCooldown = t0 + SENSOR_COOLDOWN_MS + 500;
-    clearSensorDebounceState();
-    const second = await handleSensorRisingEdge({
-      sensorId: sensor.id,
-      attribute: sensor.edgeAttribute,
-      receivedAt: new Date(afterCooldown),
-    });
-    console.log(
-      `OK: second open claimed=${second.claimed} applied=${second.applied}`,
-    );
-    if (second.applied < 1) {
-      console.error("FAIL: expected apply on second open (on→off)");
-      failed = true;
-      return;
-    }
-    const afterLeave = await readIsOn(testDeviceId);
-    if (afterLeave !== false) {
+    let row = await getAutomation(householdId, automationId);
+    if (isDomainError(row) || row.toggleSession !== "occupied") {
       console.error(
-        `FAIL: expected light off after second open, got ${afterLeave}`,
+        `FAIL: expected occupied, got ${isDomainError(row) ? row.message : row.toggleSession}`,
       );
       failed = true;
       return;
     }
-    console.log("OK: open again → off");
-
-    await setAutomationEnabled(householdId, automationId, false);
-    const disabled = await handleSensorRisingEdge({
-      sensorId: sensor.id,
-      attribute: sensor.edgeAttribute,
-      receivedAt: new Date(afterCooldown + SENSOR_COOLDOWN_MS + 500),
-    });
-    if (disabled.rulesMatched !== 0) {
-      console.error("FAIL: disabled rule still matched");
+    if ((await readIsOn(testDeviceId)) !== true) {
+      console.error("FAIL: light should be on after enter");
       failed = true;
       return;
     }
-    console.log("OK: disabled rule does not match");
+    console.log("OK: enter Open → on + occupied");
+
+    // 2) Sit close → unchanged
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    t += SENSOR_DEBOUNCE_MS + 100;
+    clearSensorDebounceState();
+    const sit = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "falling",
+      receivedAt: new Date(t),
+    });
+    if (sit.applied !== 0) {
+      console.error("FAIL: sit close must not write lights");
+      failed = true;
+      return;
+    }
+    row = await getAutomation(householdId, automationId);
+    if (isDomainError(row) || row.toggleSession !== "occupied") {
+      console.error("FAIL: session should stay occupied after sit close");
+      failed = true;
+      return;
+    }
+    if ((await readIsOn(testDeviceId)) !== true) {
+      console.error("FAIL: light should stay on after sit close");
+      failed = true;
+      return;
+    }
+    console.log("OK: sit Close → stay on + occupied");
+
+    // 3) Leave open → leaving, light stays
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    t += SENSOR_DEBOUNCE_MS + 100;
+    clearSensorDebounceState();
+    const leaveOpen = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "rising",
+      receivedAt: new Date(t),
+    });
+    if (leaveOpen.applied !== 0) {
+      console.error("FAIL: leave open must not write lights");
+      failed = true;
+      return;
+    }
+    row = await getAutomation(householdId, automationId);
+    if (isDomainError(row) || row.toggleSession !== "leaving") {
+      console.error(
+        `FAIL: expected leaving, got ${isDomainError(row) ? row.message : row.toggleSession}`,
+      );
+      failed = true;
+      return;
+    }
+    if ((await readIsOn(testDeviceId)) !== true) {
+      console.error("FAIL: light should stay on while leaving");
+      failed = true;
+      return;
+    }
+    console.log("OK: leave Open → leaving, light on");
+
+    // 4) Leave close soon after enter — must NOT be blocked by enter cooldown
+    t += SENSOR_DEBOUNCE_MS + 100;
+    clearSensorDebounceState();
+    const leaveClose = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "falling",
+      receivedAt: new Date(t),
+    });
+    if (leaveClose.applied < 1) {
+      console.error("FAIL: leave close expected apply off (no enter-cooldown block)");
+      failed = true;
+      return;
+    }
+    row = await getAutomation(householdId, automationId);
+    if (isDomainError(row) || row.toggleSession !== "idle") {
+      console.error(
+        `FAIL: expected idle, got ${isDomainError(row) ? row.message : row.toggleSession}`,
+      );
+      failed = true;
+      return;
+    }
+    if ((await readIsOn(testDeviceId)) !== false) {
+      console.error("FAIL: light should be off after leave close");
+      failed = true;
+      return;
+    }
+    console.log("OK: leave Close → off + idle");
+
+    await setAutomationEnabled(householdId, automationId, false);
+    row = await getAutomation(householdId, automationId);
+    if (!isDomainError(row) && row.toggleSession !== "idle") {
+      console.error("FAIL: disable should reset session to idle");
+      failed = true;
+      return;
+    }
+    console.log("OK: disable resets session");
   } finally {
     if (automationId) {
       const deleted = await deleteAutomation(householdId, automationId);
@@ -235,7 +277,7 @@ async function main() {
   }
 
   if (failed) process.exit(1);
-  console.log("All sensor toggle smoke checks passed");
+  console.log("All leave-session Toggle smoke checks passed");
 }
 
 main().catch((err) => {

@@ -742,8 +742,10 @@ model LightAutomation {
   sensorEdgePolarity     String?  @default("rising")
 
   on              Boolean
-  /// When true (SENSOR_EDGE + rising only): flip each target's isOn; ignore `on`.
+  /// When true (SENSOR_EDGE): leave-session occupancy (not edge-flip).
   toggle          Boolean  @default(false)
+  /// Leave-session state for toggle rules: null/idle | occupied | leaving.
+  toggleSession   String?
   brightness      Int?
   colorTempKelvin Int?
 

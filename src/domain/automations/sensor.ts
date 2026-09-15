@@ -9,7 +9,9 @@ import { applyAutomationAction } from "./apply";
 import {
   SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
+  normalizeToggleSession,
   type SensorEdgePolarity,
+  type ToggleSession,
 } from "./types";
 import { truncateLastRunResult } from "./validate";
 
@@ -87,20 +89,6 @@ function collectEligibleTargets(
   return out;
 }
 
-/** Toggle: every target with a known boolean isOn (on or off). */
-function collectToggleEligibleTargets(
-  targetIds: string[],
-  onById: Map<string, boolean | null>,
-): string[] {
-  const out: string[] = [];
-  for (const id of targetIds) {
-    const isOn = onById.get(id);
-    if (typeof isOn !== "boolean") continue;
-    out.push(id);
-  }
-  return out;
-}
-
 export type HandleSensorEdgeResult = {
   rulesMatched: number;
   claimed: number;
@@ -112,9 +100,220 @@ export type HandleSensorEdgeResult = {
 /** @deprecated alias */
 export type HandleSensorRisingEdgeResult = HandleSensorEdgeResult;
 
+async function setToggleSession(
+  householdId: string,
+  id: string,
+  session: ToggleSession | null,
+  lastRunResult?: string,
+  /** Only update if current session matches (CAS). */
+  expectSession?: ToggleSession | null,
+): Promise<boolean> {
+  const where: {
+    id: string;
+    householdId: string;
+    toggleSession?: string | null;
+  } = { id, householdId };
+  if (expectSession !== undefined) {
+    where.toggleSession =
+      expectSession === "idle" || expectSession === null
+        ? null
+        : expectSession;
+    // Also allow legacy idle stored as empty — Prisma null only for idle.
+    if (expectSession === "idle" || expectSession === null) {
+      // Match null only (normalizeToggleSession treats null as idle).
+      where.toggleSession = null;
+    }
+  }
+  const updated = await prisma.lightAutomation.updateMany({
+    where,
+    data: {
+      toggleSession: session === "idle" ? null : session,
+      ...(lastRunResult
+        ? { lastRunResult: truncateLastRunResult(lastRunResult) }
+        : {}),
+    },
+  });
+  return updated.count === 1;
+}
+
+/**
+ * Claim leave-off without rule cooldown — enter write must not block a leave
+ * close a few seconds later. CAS clears toggleSession=leaving as the lock.
+ */
+async function claimLeaveOff(
+  householdId: string,
+  id: string,
+): Promise<boolean> {
+  const updated = await prisma.lightAutomation.updateMany({
+    where: {
+      id,
+      householdId,
+      enabled: true,
+      triggerKind: LightAutomationTriggerKind.SENSOR_EDGE,
+      toggle: true,
+      toggleSession: "leaving",
+    },
+    data: {
+      toggleSession: null,
+      lastRunResult: truncateLastRunResult("claimed:leave_off"),
+    },
+  });
+  return updated.count === 1;
+}
+
+/**
+ * Leave-session Toggle:
+ * idle+rising → on, occupied
+ * occupied+falling → ignore (sit)
+ * occupied+rising → leaving (light stays)
+ * leaving+falling → off, idle
+ * leaving+rising → stay leaving
+ * idle+falling → ignore
+ *
+ * Cooldown only on enter-on writes. Leave-off uses session CAS (no cooldown).
+ */
+async function handleToggleLeaveSession(input: {
+  householdId: string;
+  ruleId: string;
+  targetIds: string[];
+  session: ToggleSession;
+  polarity: SensorEdgePolarity;
+  receivedAt: Date;
+  result: HandleSensorEdgeResult;
+}): Promise<void> {
+  const { householdId, ruleId, targetIds, polarity, receivedAt, result } =
+    input;
+  const session = input.session;
+
+  if (session === "idle" && polarity === "falling") {
+    result.skipped += 1;
+    return;
+  }
+
+  if (session === "idle" && polarity === "rising") {
+    const onStates = await listDirigeraLightOnStates();
+    if (isDomainError(onStates)) {
+      result.failed += 1;
+      return;
+    }
+    const eligible = collectEligibleTargets(targetIds, onStates, true);
+
+    const claimed = await claimSensorCooldown(householdId, ruleId, receivedAt);
+    if (!claimed) return;
+    result.claimed += 1;
+
+    if (eligible.length === 0) {
+      result.skipped += 1;
+      await setToggleSession(
+        householdId,
+        ruleId,
+        "occupied",
+        "session:occupied_already_on",
+      );
+      return;
+    }
+
+    const applied = await applyAutomationAction(householdId, ruleId, {
+      onlyDeviceIds: eligible,
+      updateLastRunAt: false,
+      forceOn: true,
+    });
+    if (isDomainError(applied) || applied.failed === applied.attempted) {
+      result.failed += 1;
+      return;
+    }
+    result.applied += 1;
+    await setToggleSession(householdId, ruleId, "occupied");
+    return;
+  }
+
+  if (session === "occupied" && polarity === "falling") {
+    result.skipped += 1;
+    // CAS: only if still occupied (do not overwrite leaving).
+    await setToggleSession(
+      householdId,
+      ruleId,
+      "occupied",
+      "ignored:occupied_close",
+      "occupied",
+    );
+    return;
+  }
+
+  if (session === "occupied" && polarity === "rising") {
+    result.skipped += 1;
+    const ok = await setToggleSession(
+      householdId,
+      ruleId,
+      "leaving",
+      "session:leaving",
+      "occupied",
+    );
+    if (!ok) result.skipped += 1;
+    return;
+  }
+
+  if (session === "leaving" && polarity === "rising") {
+    result.skipped += 1;
+    await setToggleSession(
+      householdId,
+      ruleId,
+      "leaving",
+      "ignored:leaving_open",
+      "leaving",
+    );
+    return;
+  }
+
+  if (session === "leaving" && polarity === "falling") {
+    const onStates = await listDirigeraLightOnStates();
+    if (isDomainError(onStates)) {
+      result.failed += 1;
+      return;
+    }
+    const eligible = collectEligibleTargets(targetIds, onStates, false);
+
+    const claimed = await claimLeaveOff(householdId, ruleId);
+    if (!claimed) return;
+    result.claimed += 1;
+
+    if (eligible.length === 0) {
+      result.skipped += 1;
+      await setToggleSession(
+        householdId,
+        ruleId,
+        null,
+        "session:idle_already_off",
+      );
+      return;
+    }
+
+    const applied = await applyAutomationAction(householdId, ruleId, {
+      onlyDeviceIds: eligible,
+      updateLastRunAt: false,
+      forceOn: false,
+    });
+    if (isDomainError(applied) || applied.failed === applied.attempted) {
+      result.failed += 1;
+      // Restore leaving so a later close can retry (claim already cleared session).
+      await setToggleSession(
+        householdId,
+        ruleId,
+        "leaving",
+        "failed:leave_off_restore",
+      );
+      return;
+    }
+    result.applied += 1;
+    await setToggleSession(householdId, ruleId, null, "ok:toggle_off");
+    return;
+  }
+}
+
 /**
  * Handle a sensor edge (local receipt time). Hub-down → no claim.
- * Eligible-light check happens before cooldown claim.
+ * Eligible-light check happens before cooldown claim (on/off rules).
+ * Toggle leave-session matches both polarities for the sensor.
  */
 export async function handleSensorEdge(input: {
   sensorId: string;
@@ -166,10 +365,11 @@ export async function handleSensorEdge(input: {
         sensorDirigeraDeviceId: input.sensorId,
         sensorEdgeAttribute: input.attribute,
         OR: [
-          { sensorEdgePolarity: input.polarity },
-          // Legacy rows / null → rising only
+          { toggle: true },
+          { toggle: false, sensorEdgePolarity: input.polarity },
+          // Legacy non-toggle null polarity → rising only
           ...(input.polarity === "rising"
-            ? [{ sensorEdgePolarity: null as string | null }]
+            ? [{ toggle: false, sensorEdgePolarity: null as string | null }]
             : []),
         ],
       },
@@ -177,20 +377,29 @@ export async function handleSensorEdge(input: {
         id: true,
         on: true,
         toggle: true,
+        toggleSession: true,
         targets: { select: { dirigeraDeviceId: true } },
       },
     });
 
     for (const rule of rules) {
-      // Toggle is rising-only (validate enforces on write; skip malformed rows).
-      if (rule.toggle && input.polarity !== "rising") {
+      result.rulesMatched += 1;
+      const targetIds = rule.targets.map((t) => t.dirigeraDeviceId);
+
+      if (rule.toggle) {
+        await handleToggleLeaveSession({
+          householdId: household.id,
+          ruleId: rule.id,
+          targetIds,
+          session: normalizeToggleSession(rule.toggleSession),
+          polarity: input.polarity,
+          receivedAt: input.receivedAt,
+          result,
+        });
         continue;
       }
 
-      result.rulesMatched += 1;
-      const targetIds = rule.targets.map((t) => t.dirigeraDeviceId);
       const wantOn = rule.on;
-      const isToggle = rule.toggle === true;
 
       const onStates = await listDirigeraLightOnStates();
       if (isDomainError(onStates)) {
@@ -198,20 +407,14 @@ export async function handleSensorEdge(input: {
         continue;
       }
 
-      const eligible = isToggle
-        ? collectToggleEligibleTargets(targetIds, onStates)
-        : collectEligibleTargets(targetIds, onStates, wantOn);
+      const eligible = collectEligibleTargets(targetIds, onStates, wantOn);
       if (eligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
             lastRunResult: truncateLastRunResult(
-              isToggle
-                ? "skipped:unknown_isOn"
-                : wantOn
-                  ? "skipped:already_on"
-                  : "skipped:already_off",
+              wantOn ? "skipped:already_on" : "skipped:already_off",
             ),
           },
         });
@@ -240,21 +443,14 @@ export async function handleSensorEdge(input: {
         continue;
       }
 
-      // Re-check eligibility against the post-claim set (subset of pre-claim).
-      const stillEligible = isToggle
-        ? collectToggleEligibleTargets(eligible, onStates2)
-        : collectEligibleTargets(eligible, onStates2, wantOn);
+      const stillEligible = collectEligibleTargets(eligible, onStates2, wantOn);
       if (stillEligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
             lastRunResult: truncateLastRunResult(
-              isToggle
-                ? "skipped:unknown_isOn"
-                : wantOn
-                  ? "skipped:already_on"
-                  : "skipped:already_off",
+              wantOn ? "skipped:already_on" : "skipped:already_off",
             ),
           },
         });

@@ -12,6 +12,10 @@ export type SensorEdgeAttribute = (typeof SENSOR_EDGE_ATTRIBUTES)[number];
 export const SENSOR_EDGE_POLARITIES = ["rising", "falling"] as const;
 export type SensorEdgePolarity = (typeof SENSOR_EDGE_POLARITIES)[number];
 
+/** Leave-session states for SENSOR_EDGE Toggle rules. */
+export const TOGGLE_SESSIONS = ["idle", "occupied", "leaving"] as const;
+export type ToggleSession = (typeof TOGGLE_SESSIONS)[number];
+
 export type LightAutomationTriggerKind = "SCHEDULE" | "SENSOR_EDGE";
 
 export interface LightAutomationTargetDto {
@@ -32,8 +36,9 @@ export interface LightAutomationDto {
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
   on: boolean;
-  /** SENSOR_EDGE + rising only: flip each known isOn; ignore `on` at apply. */
+  /** SENSOR_EDGE leave-session: enter Open→on, leave Open+Close→off. */
   toggle: boolean;
+  toggleSession: ToggleSession;
   brightness: number | null;
   colorTempKelvin: number | null;
   lastRunAt: Date | null;
@@ -57,10 +62,10 @@ export interface AutomationWriteInput {
   sensorDirigeraDeviceId?: string | null;
   /** Required for SENSOR_EDGE: isOpen | isDetected. */
   sensorEdgeAttribute?: string | null;
-  /** Required for SENSOR_EDGE: rising | falling. */
+  /** Required for SENSOR_EDGE on/off rules: rising | falling. Unused when toggle. */
   sensorEdgePolarity?: string | null;
   on: boolean;
-  /** SENSOR_EDGE + rising only. When true, `on` is ignored at apply. */
+  /** SENSOR_EDGE leave-session. When true, `on` is ignored at apply. */
   toggle?: boolean;
   brightness?: number | null;
   colorTempKelvin?: number | null;
@@ -85,4 +90,16 @@ export interface ApplyAutomationOptions {
    * Default true.
    */
   updateLastRunAt?: boolean;
+  /**
+   * For leave-session toggle writes: force desired on/off instead of flipping.
+   * Ignored when the rule is not toggle.
+   */
+  forceOn?: boolean;
+}
+
+export function normalizeToggleSession(
+  value: string | null | undefined,
+): ToggleSession {
+  if (value === "occupied" || value === "leaving") return value;
+  return "idle";
 }

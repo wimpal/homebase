@@ -78,6 +78,8 @@ export async function updateAutomation(
         sensorEdgePolarity: validated.sensorEdgePolarity,
         on: validated.on,
         toggle: validated.toggle,
+        // Always clear session on edit (sensor/action changes must not keep stale state).
+        toggleSession: null,
         brightness: validated.brightness,
         colorTempKelvin: validated.colorTempKelvin,
       },
@@ -111,7 +113,9 @@ export async function setAutomationEnabled(
 ): Promise<DomainResult<LightAutomationDto>> {
   const updated = await prisma.lightAutomation.updateMany({
     where: { id, householdId },
-    data: { enabled },
+    data: enabled
+      ? { enabled: true }
+      : { enabled: false, toggleSession: null },
   });
   if (updated.count === 0) {
     return DomainError.notFound(`No automation with id ${id}.`);

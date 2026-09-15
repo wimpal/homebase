@@ -35,6 +35,8 @@ export {
   SENSOR_DEBOUNCE_MS,
   SENSOR_EDGE_ATTRIBUTES,
   SENSOR_EDGE_POLARITIES,
+  TOGGLE_SESSIONS,
+  normalizeToggleSession,
 } from "./types";
 export type {
   ApplyAutomationOptions,
@@ -45,4 +47,5 @@ export type {
   LightAutomationTriggerKind,
   SensorEdgeAttribute,
   SensorEdgePolarity,
+  ToggleSession,
 } from "./types";

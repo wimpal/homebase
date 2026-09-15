@@ -241,34 +241,35 @@ function AutomationFormFields({
               </select>
             )}
           </div>
-          <div>
-            <Label htmlFor={`${idPrefix}-polarity`}>{t("sensorEdge")}</Label>
-            <select
-              id={`${idPrefix}-polarity`}
-              name="sensorEdgePolarity"
-              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
-              value={polarity}
-              onChange={(e) => {
-                const next =
-                  e.target.value === "falling" ? "falling" : "rising";
-                setPolarity(next);
-                if (next === "falling" && action === "toggle") {
-                  setAction("on");
+          {action === "toggle" ? (
+            <input type="hidden" name="sensorEdgePolarity" value="rising" />
+          ) : (
+            <div>
+              <Label htmlFor={`${idPrefix}-polarity`}>{t("sensorEdge")}</Label>
+              <select
+                id={`${idPrefix}-polarity`}
+                name="sensorEdgePolarity"
+                className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                value={polarity}
+                onChange={(e) =>
+                  setPolarity(
+                    e.target.value === "falling" ? "falling" : "rising",
+                  )
                 }
-              }}
-            >
-              <option value="rising">
-                {selectedSensor?.deviceType === "motionSensor"
-                  ? t("edgeDetects")
-                  : t("edgeOpens")}
-              </option>
-              <option value="falling">
-                {selectedSensor?.deviceType === "motionSensor"
-                  ? t("edgeClears")
-                  : t("edgeCloses")}
-              </option>
-            </select>
-          </div>
+              >
+                <option value="rising">
+                  {selectedSensor?.deviceType === "motionSensor"
+                    ? t("edgeDetects")
+                    : t("edgeOpens")}
+                </option>
+                <option value="falling">
+                  {selectedSensor?.deviceType === "motionSensor"
+                    ? t("edgeClears")
+                    : t("edgeCloses")}
+                </option>
+              </select>
+            </div>
+          )}
           <div>
             <Label htmlFor={`${idPrefix}-action`}>{t("action")}</Label>
             <select
@@ -285,13 +286,11 @@ function AutomationFormFields({
             >
               <option value="on">{t("turnOn")}</option>
               <option value="off">{t("turnOff")}</option>
-              {polarity === "rising" ? (
-                <option value="toggle">{t("toggle")}</option>
-              ) : null}
+              <option value="toggle">{t("toggle")}</option>
             </select>
           </div>
           <p className="md:col-span-2 text-xs text-zinc-500">
-            {t("sensorRuleHint")}
+            {action === "toggle" ? t("toggleLeaveHint") : t("sensorRuleHint")}
           </p>
           {action === "on" || action === "toggle" ? (
             <>
@@ -414,13 +413,13 @@ export function AutomationsPanel({
             ? t("edgeDetects")
             : t("edgeOpens");
       const action = rule.toggle
-        ? t("toggle")
+        ? t("toggleLeaveSummary")
         : rule.on
           ? t("turnOn")
           : t("turnOff");
       return t("sensorRuleSummary", {
         sensor,
-        edge,
+        edge: rule.toggle ? t("toggleLeaveEdge") : edge,
         action,
         targets: targets || t("noTargets"),
       });

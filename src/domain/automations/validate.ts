@@ -177,11 +177,8 @@ export async function validateAutomationWrite(
       );
     }
 
-    if (toggle && polarityRaw !== "rising") {
-      return DomainError.invalidInput(
-        "toggle requires sensorEdgePolarity \"rising\" (Opens/Detects).",
-      );
-    }
+    // Toggle leave-session owns both edges; store rising as unused placeholder.
+    const storedPolarity = toggle ? ("rising" as const) : polarityRaw;
 
     const sensors = await listDirigeraEdgeSensors();
     if (isDomainError(sensors)) {
@@ -208,7 +205,7 @@ export async function validateAutomationWrite(
       timezone,
       sensorDirigeraDeviceId: sensorId,
       sensorEdgeAttribute: attrRaw,
-      sensorEdgePolarity: polarityRaw,
+      sensorEdgePolarity: storedPolarity,
       on,
       toggle,
       brightness: allowLevel ? brightness : null,

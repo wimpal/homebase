@@ -1,9 +1,6 @@
 import { prisma } from "@/core/db";
-import { DomainError, isDomainError, type DomainResult } from "@/domain/error";
-import {
-  listDirigeraLightOnStates,
-  setDirigeraLightState,
-} from "@/domain/smarthome";
+import { DomainError, type DomainResult } from "@/domain/error";
+import { setDirigeraLightState } from "@/domain/smarthome";
 import type { ApplyAutomationOptions, ApplyAutomationResult } from "./types";
 import { truncateLastRunResult } from "./validate";
 
@@ -13,11 +10,11 @@ import { truncateLastRunResult } from "./validate";
  * Does not set `lastFiredSlot` — that claim is reserved for the T-066 worker
  * (once-per-window). Manual/script applies may re-run freely when enabled.
  *
- * Sensor path (T-068): claim cooldown before calling; pass onlyDeviceIds for
- * eligible lights; set updateLastRunAt: false so the claim timestamp sticks.
+ * Sensor path: claim cooldown before calling; pass onlyDeviceIds for eligible
+ * lights; set updateLastRunAt: false so the claim timestamp sticks.
  *
- * Toggle (toilet enter/leave): re-reads isOn and flips each target; brightness
- * / kelvin apply only when turning a light on.
+ * Toggle leave-session: pass `forceOn` for explicit on/off (no flip).
+ * Run now on a toggle rule without forceOn turns lights on (enter path).
  */
 export async function applyAutomationAction(
   householdId: string,
@@ -73,22 +70,7 @@ export async function applyAutomationAction(
     let optionsForWrite = stateOptions;
 
     if (row.toggle) {
-      // Re-read immediately before each write to shrink Run-now / edge races.
-      const onStates = await listDirigeraLightOnStates();
-      if (isDomainError(onStates)) {
-        failed += 1;
-        if (!firstError) firstError = onStates.message;
-        continue;
-      }
-      const isOn = onStates.get(target.dirigeraDeviceId);
-      if (typeof isOn !== "boolean") {
-        failed += 1;
-        if (!firstError) {
-          firstError = `unknown isOn for ${target.dirigeraDeviceId}`;
-        }
-        continue;
-      }
-      desiredOn = !isOn;
+      desiredOn = options.forceOn !== undefined ? options.forceOn : true;
       optionsForWrite = desiredOn ? stateOptions : {};
     }
 
@@ -112,7 +94,11 @@ export async function applyAutomationAction(
   if (attempted === 0) {
     lastRunResult = "skipped:no_targets";
   } else if (failed === 0) {
-    lastRunResult = row.toggle ? "ok:toggle" : "ok";
+    lastRunResult = row.toggle
+      ? options.forceOn === false
+        ? "ok:toggle_off"
+        : "ok:toggle_on"
+      : "ok";
   } else if (succeeded === 0) {
     lastRunResult = truncateLastRunResult(`failed: ${firstError}`);
   } else {
