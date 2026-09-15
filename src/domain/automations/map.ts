@@ -15,6 +15,12 @@ export function mapAutomation(row: Row): LightAutomationDto {
     timezone: row.timezone,
     sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
     sensorEdgeAttribute: row.sensorEdgeAttribute,
+    sensorEdgePolarity:
+      row.triggerKind !== "SENSOR_EDGE"
+        ? null
+        : row.sensorEdgePolarity === "falling"
+          ? "falling"
+          : "rising",
     on: row.on,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,

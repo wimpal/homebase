@@ -19,16 +19,22 @@ export type {
 export {
   claimSensorCooldown,
   clearSensorDebounceState,
+  handleSensorEdge,
   handleSensorRisingEdge,
   shouldDebounceRisingEdge,
+  shouldDebounceSensorEdge,
 } from "./sensor";
-export type { HandleSensorRisingEdgeResult } from "./sensor";
+export type {
+  HandleSensorEdgeResult,
+  HandleSensorRisingEdgeResult,
+} from "./sensor";
 export {
   AUTOMATION_TIMEZONE_V1,
   LAST_RUN_RESULT_MAX,
   SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
   SENSOR_EDGE_ATTRIBUTES,
+  SENSOR_EDGE_POLARITIES,
 } from "./types";
 export type {
   ApplyAutomationOptions,
@@ -38,4 +44,5 @@ export type {
   LightAutomationTargetDto,
   LightAutomationTriggerKind,
   SensorEdgeAttribute,
+  SensorEdgePolarity,
 } from "./types";

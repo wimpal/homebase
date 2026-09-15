@@ -9,11 +9,12 @@ import { applyAutomationAction } from "./apply";
 import {
   SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
+  type SensorEdgePolarity,
 } from "./types";
 import { truncateLastRunResult } from "./validate";
 
-/** In-process debounce: sensor device id → last rising-edge receipt ms. */
-const lastRisingEdgeAt = new Map<string, number>();
+/** In-process debounce: `${sensorId}:${polarity}` → last edge receipt ms. */
+const lastEdgeAt = new Map<string, number>();
 
 /**
  * Atomically claim sensor cooldown via lastRunAt.
@@ -43,36 +44,50 @@ export async function claimSensorCooldown(
 }
 
 export function clearSensorDebounceState(): void {
-  lastRisingEdgeAt.clear();
+  lastEdgeAt.clear();
 }
 
+export function shouldDebounceSensorEdge(
+  sensorId: string,
+  polarity: SensorEdgePolarity,
+  receivedAtMs: number,
+  debounceMs: number = SENSOR_DEBOUNCE_MS,
+): boolean {
+  const key = `${sensorId}:${polarity}`;
+  const prev = lastEdgeAt.get(key);
+  if (prev != null && receivedAtMs - prev < debounceMs) {
+    return true;
+  }
+  lastEdgeAt.set(key, receivedAtMs);
+  return false;
+}
+
+/** @deprecated use shouldDebounceSensorEdge */
 export function shouldDebounceRisingEdge(
   sensorId: string,
   receivedAtMs: number,
   debounceMs: number = SENSOR_DEBOUNCE_MS,
 ): boolean {
-  const prev = lastRisingEdgeAt.get(sensorId);
-  if (prev != null && receivedAtMs - prev < debounceMs) {
-    return true;
-  }
-  lastRisingEdgeAt.set(sensorId, receivedAtMs);
-  return false;
+  return shouldDebounceSensorEdge(sensorId, "rising", receivedAtMs, debounceMs);
 }
 
-function collectOffTargets(
+function collectEligibleTargets(
   targetIds: string[],
   onById: Map<string, boolean | null>,
+  wantOn: boolean,
 ): string[] {
-  const off: string[] = [];
+  const out: string[] = [];
   for (const id of targetIds) {
     const isOn = onById.get(id);
-    // Unknown / missing isOn → skip (not treat as off).
-    if (isOn === false) off.push(id);
+    // Unknown / missing isOn → skip.
+    if (typeof isOn !== "boolean") continue;
+    if (wantOn && isOn === false) out.push(id);
+    if (!wantOn && isOn === true) out.push(id);
   }
-  return off;
+  return out;
 }
 
-export type HandleSensorRisingEdgeResult = {
+export type HandleSensorEdgeResult = {
   rulesMatched: number;
   claimed: number;
   applied: number;
@@ -80,17 +95,20 @@ export type HandleSensorRisingEdgeResult = {
   failed: number;
 };
 
+/** @deprecated alias */
+export type HandleSensorRisingEdgeResult = HandleSensorEdgeResult;
+
 /**
- * Handle a rising edge on a Dirigera edge sensor (local receipt time).
- * Hub-down → no claim. Boot/seed must not call this.
- * Off-check happens before cooldown claim so already-on does not burn cooldown.
+ * Handle a sensor edge (local receipt time). Hub-down → no claim.
+ * Eligible-light check happens before cooldown claim.
  */
-export async function handleSensorRisingEdge(input: {
+export async function handleSensorEdge(input: {
   sensorId: string;
   attribute: string;
+  polarity: SensorEdgePolarity;
   receivedAt: Date;
-}): Promise<HandleSensorRisingEdgeResult> {
-  const result: HandleSensorRisingEdgeResult = {
+}): Promise<HandleSensorEdgeResult> {
+  const result: HandleSensorEdgeResult = {
     rulesMatched: 0,
     claimed: 0,
     applied: 0,
@@ -104,7 +122,11 @@ export async function handleSensorRisingEdge(input: {
   }
 
   if (
-    shouldDebounceRisingEdge(input.sensorId, input.receivedAt.getTime())
+    shouldDebounceSensorEdge(
+      input.sensorId,
+      input.polarity,
+      input.receivedAt.getTime(),
+    )
   ) {
     return result;
   }
@@ -129,9 +151,17 @@ export async function handleSensorRisingEdge(input: {
         triggerKind: LightAutomationTriggerKind.SENSOR_EDGE,
         sensorDirigeraDeviceId: input.sensorId,
         sensorEdgeAttribute: input.attribute,
+        OR: [
+          { sensorEdgePolarity: input.polarity },
+          // Legacy rows / null → rising only
+          ...(input.polarity === "rising"
+            ? [{ sensorEdgePolarity: null as string | null }]
+            : []),
+        ],
       },
       select: {
         id: true,
+        on: true,
         targets: { select: { dirigeraDeviceId: true } },
       },
     });
@@ -139,6 +169,7 @@ export async function handleSensorRisingEdge(input: {
     for (const rule of rules) {
       result.rulesMatched += 1;
       const targetIds = rule.targets.map((t) => t.dirigeraDeviceId);
+      const wantOn = rule.on;
 
       const onStates = await listDirigeraLightOnStates();
       if (isDomainError(onStates)) {
@@ -146,13 +177,15 @@ export async function handleSensorRisingEdge(input: {
         continue;
       }
 
-      const offTargets = collectOffTargets(targetIds, onStates);
-      if (offTargets.length === 0) {
+      const eligible = collectEligibleTargets(targetIds, onStates, wantOn);
+      if (eligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
-            lastRunResult: truncateLastRunResult("skipped:already_on"),
+            lastRunResult: truncateLastRunResult(
+              wantOn ? "skipped:already_on" : "skipped:already_off",
+            ),
           },
         });
         continue;
@@ -166,7 +199,6 @@ export async function handleSensorRisingEdge(input: {
       if (!claimed) continue;
       result.claimed += 1;
 
-      // Re-check immediately before write.
       const onStates2 = await listDirigeraLightOnStates();
       if (isDomainError(onStates2)) {
         result.failed += 1;
@@ -181,20 +213,22 @@ export async function handleSensorRisingEdge(input: {
         continue;
       }
 
-      const stillOff = collectOffTargets(offTargets, onStates2);
-      if (stillOff.length === 0) {
+      const stillEligible = collectEligibleTargets(eligible, onStates2, wantOn);
+      if (stillEligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
-            lastRunResult: truncateLastRunResult("skipped:already_on"),
+            lastRunResult: truncateLastRunResult(
+              wantOn ? "skipped:already_on" : "skipped:already_off",
+            ),
           },
         });
         continue;
       }
 
       const applied = await applyAutomationAction(household.id, rule.id, {
-        onlyDeviceIds: stillOff,
+        onlyDeviceIds: stillEligible,
         updateLastRunAt: false,
       });
       if (isDomainError(applied) || applied.failed === applied.attempted) {
@@ -206,4 +240,13 @@ export async function handleSensorRisingEdge(input: {
   }
 
   return result;
+}
+
+/** Rising-edge convenience wrapper (T-068 smoke / callers). */
+export async function handleSensorRisingEdge(input: {
+  sensorId: string;
+  attribute: string;
+  receivedAt: Date;
+}): Promise<HandleSensorEdgeResult> {
+  return handleSensorEdge({ ...input, polarity: "rising" });
 }

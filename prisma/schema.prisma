@@ -736,8 +736,10 @@ model LightAutomation {
 
   /// Dirigera sensor device id (SENSOR_EDGE only).
   sensorDirigeraDeviceId String?
-  /// Rising-edge attribute: "isOpen" | "isDetected" (SENSOR_EDGE only).
+  /// Edge attribute: "isOpen" | "isDetected" (SENSOR_EDGE only).
   sensorEdgeAttribute    String?
+  /// "rising" (opens/detects) or "falling" (closes/clears). Default rising.
+  sensorEdgePolarity     String?  @default("rising")
 
   on              Boolean
   brightness      Int?

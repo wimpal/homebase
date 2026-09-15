@@ -83,6 +83,9 @@ function AutomationFormFields({
     defaults?.triggerKind ?? "SCHEDULE",
   );
   const [on, setOn] = useState(defaults?.on ?? true);
+  const [polarity, setPolarity] = useState<"rising" | "falling">(
+    defaults?.sensorEdgePolarity === "falling" ? "falling" : "rising",
+  );
   const [sensorId, setSensorId] = useState(
     defaults?.sensorDirigeraDeviceId ?? sensors[0]?.id ?? "",
   );
@@ -207,7 +210,6 @@ function AutomationFormFields({
         </>
       ) : (
         <>
-          <input type="hidden" name="on" value="true" />
           <input type="hidden" name="sensorEdgeAttribute" value={edgeAttr} />
           <div className="md:col-span-2">
             <Label htmlFor={`${idPrefix}-sensor`}>{t("sensor")}</Label>
@@ -225,38 +227,79 @@ function AutomationFormFields({
                 {sensors.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.room ? `${s.name} (${s.room})` : s.name}
-                    {s.deviceType === "openCloseSensor"
-                      ? ` — ${t("edgeOpens")}`
-                      : ` — ${t("edgeDetects")}`}
                   </option>
                 ))}
               </select>
             )}
-            <p className="mt-1 text-xs text-zinc-500">{t("sensorRuleHint")}</p>
           </div>
           <div>
-            <Label htmlFor={`${idPrefix}-brightness`}>{t("brightness")}</Label>
-            <Input
-              id={`${idPrefix}-brightness`}
-              name="brightness"
-              type="number"
-              min={0}
-              max={100}
-              placeholder="0–100"
-              defaultValue={defaults?.brightness ?? undefined}
-            />
+            <Label htmlFor={`${idPrefix}-polarity`}>{t("sensorEdge")}</Label>
+            <select
+              id={`${idPrefix}-polarity`}
+              name="sensorEdgePolarity"
+              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+              value={polarity}
+              onChange={(e) =>
+                setPolarity(e.target.value === "falling" ? "falling" : "rising")
+              }
+            >
+              <option value="rising">
+                {selectedSensor?.deviceType === "motionSensor"
+                  ? t("edgeDetects")
+                  : t("edgeOpens")}
+              </option>
+              <option value="falling">
+                {selectedSensor?.deviceType === "motionSensor"
+                  ? t("edgeClears")
+                  : t("edgeCloses")}
+              </option>
+            </select>
           </div>
           <div>
-            <Label htmlFor={`${idPrefix}-warmth`}>{t("warmth")}</Label>
-            <Input
-              id={`${idPrefix}-warmth`}
-              name="colorTempKelvin"
-              type="number"
-              min={1}
-              placeholder="e.g. 2700"
-              defaultValue={defaults?.colorTempKelvin ?? undefined}
-            />
+            <Label htmlFor={`${idPrefix}-on`}>{t("action")}</Label>
+            <select
+              id={`${idPrefix}-on`}
+              name="on"
+              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+              value={on ? "true" : "false"}
+              onChange={(e) => setOn(e.target.value === "true")}
+            >
+              <option value="true">{t("turnOn")}</option>
+              <option value="false">{t("turnOff")}</option>
+            </select>
           </div>
+          <p className="md:col-span-2 text-xs text-zinc-500">
+            {t("sensorRuleHint")}
+          </p>
+          {on ? (
+            <>
+              <div>
+                <Label htmlFor={`${idPrefix}-brightness`}>
+                  {t("brightness")}
+                </Label>
+                <Input
+                  id={`${idPrefix}-brightness`}
+                  name="brightness"
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="0–100"
+                  defaultValue={defaults?.brightness ?? undefined}
+                />
+              </div>
+              <div>
+                <Label htmlFor={`${idPrefix}-warmth`}>{t("warmth")}</Label>
+                <Input
+                  id={`${idPrefix}-warmth`}
+                  name="colorTempKelvin"
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 2700"
+                  defaultValue={defaults?.colorTempKelvin ?? undefined}
+                />
+              </div>
+            </>
+          ) : null}
         </>
       )}
 
@@ -339,13 +382,20 @@ export function AutomationsPanel({
         sensorById,
         t("unavailable"),
       );
+      const isMotion = rule.sensorEdgeAttribute === "isDetected";
       const edge =
-        rule.sensorEdgeAttribute === "isDetected"
-          ? t("edgeDetects")
-          : t("edgeOpens");
+        rule.sensorEdgePolarity === "falling"
+          ? isMotion
+            ? t("edgeClears")
+            : t("edgeCloses")
+          : isMotion
+            ? t("edgeDetects")
+            : t("edgeOpens");
+      const action = rule.on ? t("turnOn") : t("turnOff");
       return t("sensorRuleSummary", {
         sensor,
         edge,
+        action,
         targets: targets || t("noTargets"),
       });
     }

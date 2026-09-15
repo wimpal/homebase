@@ -2,12 +2,15 @@ export const AUTOMATION_TIMEZONE_V1 = "Europe/Amsterdam";
 
 export const LAST_RUN_RESULT_MAX = 500;
 
-/** Fixed T-067 defaults — not UI-configurable in T-068. */
+/** Fixed T-067 defaults — not UI knobs. */
 export const SENSOR_DEBOUNCE_MS = 2000;
 export const SENSOR_COOLDOWN_MS = 90_000;
 
 export const SENSOR_EDGE_ATTRIBUTES = ["isOpen", "isDetected"] as const;
 export type SensorEdgeAttribute = (typeof SENSOR_EDGE_ATTRIBUTES)[number];
+
+export const SENSOR_EDGE_POLARITIES = ["rising", "falling"] as const;
+export type SensorEdgePolarity = (typeof SENSOR_EDGE_POLARITIES)[number];
 
 export type LightAutomationTriggerKind = "SCHEDULE" | "SENSOR_EDGE";
 
@@ -27,6 +30,7 @@ export interface LightAutomationDto {
   timezone: string;
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
+  sensorEdgePolarity: SensorEdgePolarity | null;
   on: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
@@ -51,6 +55,8 @@ export interface AutomationWriteInput {
   sensorDirigeraDeviceId?: string | null;
   /** Required for SENSOR_EDGE: isOpen | isDetected. */
   sensorEdgeAttribute?: string | null;
+  /** Required for SENSOR_EDGE: rising | falling. */
+  sensorEdgePolarity?: string | null;
   on: boolean;
   brightness?: number | null;
   colorTempKelvin?: number | null;

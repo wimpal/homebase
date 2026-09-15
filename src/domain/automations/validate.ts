@@ -7,9 +7,11 @@ import {
   AUTOMATION_TIMEZONE_V1,
   LAST_RUN_RESULT_MAX,
   SENSOR_EDGE_ATTRIBUTES,
+  SENSOR_EDGE_POLARITIES,
   type AutomationWriteInput,
   type LightAutomationTriggerKind,
   type SensorEdgeAttribute,
+  type SensorEdgePolarity,
 } from "./types";
 
 const TIME_LOCAL_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -24,6 +26,7 @@ export type ValidatedAutomationWrite = {
   timezone: string;
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
+  sensorEdgePolarity: SensorEdgePolarity | null;
   on: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
@@ -32,6 +35,10 @@ export type ValidatedAutomationWrite = {
 
 function isSensorEdgeAttribute(value: string): value is SensorEdgeAttribute {
   return (SENSOR_EDGE_ATTRIBUTES as readonly string[]).includes(value);
+}
+
+function isSensorEdgePolarity(value: string): value is SensorEdgePolarity {
+  return (SENSOR_EDGE_POLARITIES as readonly string[]).includes(value);
 }
 
 /**
@@ -133,10 +140,8 @@ export async function validateAutomationWrite(
   }
 
   if (triggerKind === "SENSOR_EDGE") {
-    if (input.on !== true) {
-      return DomainError.invalidInput(
-        "SENSOR_EDGE automations must turn lights on (on: true).",
-      );
+    if (typeof input.on !== "boolean") {
+      return DomainError.invalidInput("on must be a boolean.");
     }
 
     const sensorId = input.sensorDirigeraDeviceId?.trim() ?? "";
@@ -150,6 +155,13 @@ export async function validateAutomationWrite(
     if (!isSensorEdgeAttribute(attrRaw)) {
       return DomainError.invalidInput(
         'sensorEdgeAttribute must be "isOpen" or "isDetected".',
+      );
+    }
+
+    const polarityRaw = (input.sensorEdgePolarity?.trim() || "rising").toLowerCase();
+    if (!isSensorEdgePolarity(polarityRaw)) {
+      return DomainError.invalidInput(
+        'sensorEdgePolarity must be "rising" or "falling".',
       );
     }
 
@@ -178,9 +190,10 @@ export async function validateAutomationWrite(
       timezone,
       sensorDirigeraDeviceId: sensorId,
       sensorEdgeAttribute: attrRaw,
-      on: true,
-      brightness,
-      colorTempKelvin,
+      sensorEdgePolarity: polarityRaw,
+      on: input.on,
+      brightness: input.on ? brightness : null,
+      colorTempKelvin: input.on ? colorTempKelvin : null,
       targetDeviceIds: uniqueTargets,
     };
   }
@@ -219,6 +232,7 @@ export async function validateAutomationWrite(
     timezone,
     sensorDirigeraDeviceId: null,
     sensorEdgeAttribute: null,
+    sensorEdgePolarity: null,
     on: input.on,
     brightness,
     colorTempKelvin,

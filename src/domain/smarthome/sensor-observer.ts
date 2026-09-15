@@ -6,7 +6,7 @@ import type { DirigeraClient, Event } from "dirigera";
 import { isDomainError } from "@/domain/error";
 import {
   clearSensorDebounceState,
-  handleSensorRisingEdge,
+  handleSensorEdge,
 } from "@/domain/automations/sensor";
 import {
   getDirigeraClient,
@@ -95,12 +95,16 @@ function handleEvent(listenGeneration: number, updateEvent: Event): void {
   const prev = state.edgeValues.get(sensorId);
   state.edgeValues.set(sensorId, next);
 
-  if (prev !== false || next !== true) return;
+  let polarity: "rising" | "falling" | null = null;
+  if (prev === false && next === true) polarity = "rising";
+  else if (prev === true && next === false) polarity = "falling";
+  if (!polarity) return;
 
   const receivedAt = new Date();
-  void handleSensorRisingEdge({
+  void handleSensorEdge({
     sensorId,
     attribute: attr,
+    polarity,
     receivedAt,
   })
     .then((summary) => {
@@ -110,7 +114,7 @@ function handleEvent(listenGeneration: number, updateEvent: Event): void {
         summary.applied > 0
       ) {
         console.log(
-          `[sensor-observer] edge sensor=${sensorId.slice(0, 8)}… ` +
+          `[sensor-observer] ${polarity} sensor=${sensorId.slice(0, 8)}… ` +
             `matched=${summary.rulesMatched} claimed=${summary.claimed} ` +
             `applied=${summary.applied} skipped=${summary.skipped} failed=${summary.failed}`,
         );
@@ -118,7 +122,7 @@ function handleEvent(listenGeneration: number, updateEvent: Event): void {
     })
     .catch((err) => {
       console.error(
-        "[sensor-observer] handleSensorRisingEdge failed:",
+        "[sensor-observer] handleSensorEdge failed:",
         err instanceof Error ? err.message : err,
       );
     });

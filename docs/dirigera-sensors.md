@@ -71,8 +71,9 @@ time** for debounce/cooldown clocks, and treat hub `time` as diagnostic only.
 2. **Seed** current state on connect/reconnect with one `devices.list()` (or get).
 3. **Do not** use polling to recover missed edges (same “no catch-up” spirit as
    Phase A schedule minutes).
-4. Fire on **rising edges** only (`isDetected` / `isOpen` false→true), not while held.
-   For “Toilet deur”, story #2 maps cleanly to `isOpen: false → true`.
+4. Fire on **rising** (`false→true`: opens / detects) or **falling** (`true→false`:
+   closes / clears), per rule `sensorEdgePolarity`.
+5. Action may be turn on or turn off; only eligible lights are written (off→on or on→off).
 
 **Level / slow sensors (environment, illuminance, etc.):**
 
@@ -105,9 +106,9 @@ Numbers are starting sketches; make them configurable in T-068 if built.
 
 ## Gate recommendation
 
-**T-068 implemented (2026-09-15).** Open/close “Toilet deur” + WS rising edges
-drive SENSOR_EDGE automations in the worker. Create rules in Smart Home →
-Automations (trigger: Sensor). Domain smoke: `npm run automations:sensor-smoke`.
+**T-068 done (2026-09-15).** Operator confirmed on NAS: Toilet deur open → light on.
+Create/edit rules in Smart Home → Automations (trigger: Sensor).
+Smoke: `npm run automations:sensor-smoke`.
 
 ## Non-goals
 

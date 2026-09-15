@@ -180,6 +180,7 @@ export type AutomationListItem = {
   daysOfWeek: number[];
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
+  sensorEdgePolarity: "rising" | "falling" | null;
   on: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
@@ -202,6 +203,7 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     daysOfWeek: row.daysOfWeek,
     sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
     sensorEdgeAttribute: row.sensorEdgeAttribute,
+    sensorEdgePolarity: row.sensorEdgePolarity,
     on: row.on,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
@@ -233,10 +235,7 @@ function parseAutomationWriteInput(formData: FormData) {
     .filter(Boolean);
 
   const onRaw = String(formData.get("on") ?? "");
-  const on =
-    triggerKind === "SENSOR_EDGE"
-      ? true
-      : onRaw === "true" || onRaw === "on" || onRaw === "1";
+  const on = onRaw === "true" || onRaw === "on" || onRaw === "1";
 
   const brightnessRaw = String(formData.get("brightness") ?? "").trim();
   const colorTempRaw = String(formData.get("colorTempKelvin") ?? "").trim();
@@ -247,6 +246,11 @@ function parseAutomationWriteInput(formData: FormData) {
   const sensorEdgeAttribute = String(
     formData.get("sensorEdgeAttribute") ?? "",
   ).trim();
+  const polarityRaw = String(formData.get("sensorEdgePolarity") ?? "rising")
+    .trim()
+    .toLowerCase();
+  const sensorEdgePolarity =
+    polarityRaw === "falling" ? ("falling" as const) : ("rising" as const);
 
   if (triggerKind === "SENSOR_EDGE") {
     return {
@@ -256,7 +260,8 @@ function parseAutomationWriteInput(formData: FormData) {
       daysOfWeek: [] as number[],
       sensorDirigeraDeviceId,
       sensorEdgeAttribute: sensorEdgeAttribute || null,
-      on: true,
+      sensorEdgePolarity,
+      on,
       brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
       colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
       targetDeviceIds,
@@ -270,6 +275,7 @@ function parseAutomationWriteInput(formData: FormData) {
     daysOfWeek,
     sensorDirigeraDeviceId: null,
     sensorEdgeAttribute: null,
+    sensorEdgePolarity: null,
     on,
     brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
     colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
