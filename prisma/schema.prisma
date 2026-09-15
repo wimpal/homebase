@@ -65,6 +65,12 @@ enum DeviceType {
   OTHER
 }
 
+/// Time-based vs Dirigera sensor-edge Automations (M4c).
+enum LightAutomationTriggerKind {
+  SCHEDULE
+  SENSOR_EDGE
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -713,18 +719,25 @@ model Device {
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 
-/// Time-based IKEA light Automation (M4c). Not a chore Routine.
+/// IKEA light Automation (M4c): schedule and/or sensor-edge. Not a chore Routine.
 model LightAutomation {
   id              String   @id @default(cuid())
   householdId     String
   name            String
   enabled         Boolean  @default(true)
 
-  /// Wall-clock "HH:MM" (24h); evaluated in `timezone` (T-066).
-  timeLocal       String
-  /// ISO weekdays: 1=Mon … 7=Sun.
+  triggerKind LightAutomationTriggerKind @default(SCHEDULE)
+
+  /// Wall-clock "HH:MM" (24h); evaluated in `timezone` (T-066). Null for SENSOR_EDGE.
+  timeLocal       String?
+  /// ISO weekdays: 1=Mon … 7=Sun. Empty for SENSOR_EDGE.
   daysOfWeek      Int[]
   timezone        String   @default("Europe/Amsterdam")
+
+  /// Dirigera sensor device id (SENSOR_EDGE only).
+  sensorDirigeraDeviceId String?
+  /// Rising-edge attribute: "isOpen" | "isDetected" (SENSOR_EDGE only).
+  sensorEdgeAttribute    String?
 
   on              Boolean
   brightness      Int?
@@ -742,6 +755,7 @@ model LightAutomation {
   targets   LightAutomationTarget[]
 
   @@index([householdId, enabled])
+  @@index([sensorDirigeraDeviceId, enabled])
 }
 
 model LightAutomationTarget {

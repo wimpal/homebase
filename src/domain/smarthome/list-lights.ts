@@ -85,3 +85,32 @@ export async function listDirigeraLights(): Promise<DirigeraLight[] | DomainErro
     return DomainError.unavailable(DIRIGERA_HUB_UNREACHABLE);
   }
 }
+
+/**
+ * Raw on/off for sensor automations. Missing `isOn` → null (not false).
+ */
+export async function listDirigeraLightOnStates(): Promise<
+  Map<string, boolean | null> | DomainError
+> {
+  if (!isDirigeraConfigured()) {
+    return DomainError.unavailable(DIRIGERA_NOT_CONFIGURED);
+  }
+
+  try {
+    const client = await getDirigeraClient();
+    if (!client) {
+      return DomainError.unavailable(DIRIGERA_NOT_CONFIGURED);
+    }
+
+    const devices = await client.devices.list();
+    const map = new Map<string, boolean | null>();
+    for (const device of devices) {
+      if (!isLightDevice(device)) continue;
+      const isOn = (device.attributes as { isOn?: boolean }).isOn;
+      map.set(device.id, typeof isOn === "boolean" ? isOn : null);
+    }
+    return map;
+  } catch {
+    return DomainError.unavailable(DIRIGERA_HUB_UNREACHABLE);
+  }
+}

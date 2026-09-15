@@ -1,9 +1,15 @@
 import { DomainError, isDomainError } from "@/domain/error";
-import { listDirigeraLights } from "@/domain/smarthome";
+import {
+  listDirigeraEdgeSensors,
+  listDirigeraLights,
+} from "@/domain/smarthome";
 import {
   AUTOMATION_TIMEZONE_V1,
   LAST_RUN_RESULT_MAX,
+  SENSOR_EDGE_ATTRIBUTES,
   type AutomationWriteInput,
+  type LightAutomationTriggerKind,
+  type SensorEdgeAttribute,
 } from "./types";
 
 const TIME_LOCAL_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -12,17 +18,24 @@ const NAME_MAX = 100;
 export type ValidatedAutomationWrite = {
   name: string;
   enabled: boolean;
-  timeLocal: string;
+  triggerKind: LightAutomationTriggerKind;
+  timeLocal: string | null;
   daysOfWeek: number[];
   timezone: string;
+  sensorDirigeraDeviceId: string | null;
+  sensorEdgeAttribute: string | null;
   on: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
   targetDeviceIds: string[];
 };
 
+function isSensorEdgeAttribute(value: string): value is SensorEdgeAttribute {
+  return (SENSOR_EDGE_ATTRIBUTES as readonly string[]).includes(value);
+}
+
 /**
- * Validate create/update payload. Resolves Dirigera targets against the live hub.
+ * Validate create/update payload. Resolves Dirigera targets (and sensors) against the live hub.
  */
 export async function validateAutomationWrite(
   input: AutomationWriteInput,
@@ -37,29 +50,8 @@ export async function validateAutomationWrite(
     );
   }
 
-  const timeLocal = input.timeLocal?.trim() ?? "";
-  if (!TIME_LOCAL_RE.test(timeLocal)) {
-    return DomainError.invalidInput(
-      "timeLocal must be HH:MM in 24-hour form (e.g. 21:00).",
-    );
-  }
-
-  if (!Array.isArray(input.daysOfWeek) || input.daysOfWeek.length === 0) {
-    return DomainError.invalidInput(
-      "daysOfWeek must include at least one ISO weekday (1=Mon … 7=Sun).",
-    );
-  }
-
-  const daySet = new Set<number>();
-  for (const day of input.daysOfWeek) {
-    if (!Number.isInteger(day) || day < 1 || day > 7) {
-      return DomainError.invalidInput(
-        "daysOfWeek values must be integers 1 (Mon) through 7 (Sun).",
-      );
-    }
-    daySet.add(day);
-  }
-  const daysOfWeek = [...daySet].sort((a, b) => a - b);
+  const triggerKind: LightAutomationTriggerKind =
+    input.triggerKind === "SENSOR_EDGE" ? "SENSOR_EDGE" : "SCHEDULE";
 
   const timezone = (input.timezone ?? AUTOMATION_TIMEZONE_V1).trim();
   if (timezone !== AUTOMATION_TIMEZONE_V1) {
@@ -131,21 +123,102 @@ export async function validateAutomationWrite(
   if (isDomainError(lights)) {
     return lights;
   }
-  const knownIds = new Set(lights.map((l) => l.id));
+  const knownLightIds = new Set(lights.map((l) => l.id));
   for (const id of uniqueTargets) {
-    if (!knownIds.has(id)) {
+    if (!knownLightIds.has(id)) {
       return DomainError.invalidInput(
         `Unknown or stale Dirigera device id: ${id}`,
       );
     }
   }
 
+  if (triggerKind === "SENSOR_EDGE") {
+    if (input.on !== true) {
+      return DomainError.invalidInput(
+        "SENSOR_EDGE automations must turn lights on (on: true).",
+      );
+    }
+
+    const sensorId = input.sensorDirigeraDeviceId?.trim() ?? "";
+    if (!sensorId) {
+      return DomainError.invalidInput(
+        "sensorDirigeraDeviceId is required for SENSOR_EDGE automations.",
+      );
+    }
+
+    const attrRaw = input.sensorEdgeAttribute?.trim() ?? "";
+    if (!isSensorEdgeAttribute(attrRaw)) {
+      return DomainError.invalidInput(
+        'sensorEdgeAttribute must be "isOpen" or "isDetected".',
+      );
+    }
+
+    const sensors = await listDirigeraEdgeSensors();
+    if (isDomainError(sensors)) {
+      return sensors;
+    }
+    const sensor = sensors.find((s) => s.id === sensorId);
+    if (!sensor) {
+      return DomainError.invalidInput(
+        `Unknown or stale Dirigera sensor id: ${sensorId}`,
+      );
+    }
+    if (sensor.edgeAttribute !== attrRaw) {
+      return DomainError.invalidInput(
+        `sensorEdgeAttribute must be "${sensor.edgeAttribute}" for this sensor type.`,
+      );
+    }
+
+    return {
+      name,
+      enabled: input.enabled ?? true,
+      triggerKind,
+      timeLocal: null,
+      daysOfWeek: [],
+      timezone,
+      sensorDirigeraDeviceId: sensorId,
+      sensorEdgeAttribute: attrRaw,
+      on: true,
+      brightness,
+      colorTempKelvin,
+      targetDeviceIds: uniqueTargets,
+    };
+  }
+
+  // SCHEDULE
+  const timeLocal = input.timeLocal?.trim() ?? "";
+  if (!TIME_LOCAL_RE.test(timeLocal)) {
+    return DomainError.invalidInput(
+      "timeLocal must be HH:MM in 24-hour form (e.g. 21:00).",
+    );
+  }
+
+  if (!Array.isArray(input.daysOfWeek) || input.daysOfWeek.length === 0) {
+    return DomainError.invalidInput(
+      "daysOfWeek must include at least one ISO weekday (1=Mon … 7=Sun).",
+    );
+  }
+
+  const daySet = new Set<number>();
+  for (const day of input.daysOfWeek) {
+    if (!Number.isInteger(day) || day < 1 || day > 7) {
+      return DomainError.invalidInput(
+        "daysOfWeek values must be integers 1 (Mon) through 7 (Sun).",
+      );
+    }
+    daySet.add(day);
+  }
+  const daysOfWeek = [...daySet].sort((a, b) => a - b);
+
   return {
     name,
     enabled: input.enabled ?? true,
+    triggerKind: "SCHEDULE",
     timeLocal,
     daysOfWeek,
     timezone,
+    sensorDirigeraDeviceId: null,
+    sensorEdgeAttribute: null,
     on: input.on,
     brightness,
     colorTempKelvin,

@@ -19,7 +19,16 @@ export {
   DIRIGERA_NOT_CONFIGURED,
   DIRIGERA_UNKNOWN_DEVICE,
 } from "./errors";
-export { isLightDevice, listDirigeraLights } from "./list-lights";
+export { isLightDevice, listDirigeraLights, listDirigeraLightOnStates } from "./list-lights";
+export {
+  isEdgeSensorDevice,
+  listDirigeraEdgeSensors,
+} from "./list-edge-sensors";
+export type {
+  DirigeraEdgeSensor,
+  DirigeraEdgeSensorDeviceType,
+} from "./list-edge-sensors";
+export { startSensorObserver } from "./sensor-observer";
 export { runDirigeraPartyMode } from "./party-mode";
 export { setDirigeraLightState } from "./set-light-state";
 export type {

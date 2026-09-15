@@ -9,16 +9,19 @@ import {
   applyAutomationAction,
   createAutomation,
   deleteAutomation,
+  getAutomation,
   listAutomations,
   setAutomationEnabled,
   updateAutomation,
 } from "@/domain/automations";
 import {
   isDirigeraConfigured,
+  listDirigeraEdgeSensors,
   listDirigeraLights,
   setDirigeraLightState,
+  type DirigeraEdgeSensor,
+  type DirigeraLight,
 } from "@/domain/smarthome";
-import type { DirigeraLight } from "@/domain/smarthome";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -167,13 +170,16 @@ export async function controlDirigeraLight(
   return result;
 }
 
-/** Serializable automation row for the Smart Home UI (T-065). */
+/** Serializable automation row for the Smart Home UI (T-065 / T-068). */
 export type AutomationListItem = {
   id: string;
   name: string;
   enabled: boolean;
-  timeLocal: string;
+  triggerKind: "SCHEDULE" | "SENSOR_EDGE";
+  timeLocal: string | null;
   daysOfWeek: number[];
+  sensorDirigeraDeviceId: string | null;
+  sensorEdgeAttribute: string | null;
   on: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
@@ -182,13 +188,20 @@ export type AutomationListItem = {
   targets: { id: string; dirigeraDeviceId: string }[];
 };
 
+export type DirigeraEdgeSensorsResult =
+  | { configured: false; sensors: [] }
+  | { configured: true; sensors: DirigeraEdgeSensor[]; error?: string };
+
 function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
   return {
     id: row.id,
     name: row.name,
     enabled: row.enabled,
+    triggerKind: row.triggerKind,
     timeLocal: row.timeLocal,
     daysOfWeek: row.daysOfWeek,
+    sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
+    sensorEdgeAttribute: row.sensorEdgeAttribute,
     on: row.on,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
@@ -202,6 +215,10 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
 }
 
 function parseAutomationWriteInput(formData: FormData) {
+  const triggerRaw = String(formData.get("triggerKind") ?? "SCHEDULE").trim();
+  const triggerKind =
+    triggerRaw === "SENSOR_EDGE" ? ("SENSOR_EDGE" as const) : ("SCHEDULE" as const);
+
   const timeRaw = String(formData.get("timeLocal") ?? "").trim();
   const timeLocal = timeRaw.length >= 5 ? timeRaw.slice(0, 5) : timeRaw;
 
@@ -216,15 +233,43 @@ function parseAutomationWriteInput(formData: FormData) {
     .filter(Boolean);
 
   const onRaw = String(formData.get("on") ?? "");
-  const on = onRaw === "true" || onRaw === "on" || onRaw === "1";
+  const on =
+    triggerKind === "SENSOR_EDGE"
+      ? true
+      : onRaw === "true" || onRaw === "on" || onRaw === "1";
 
   const brightnessRaw = String(formData.get("brightness") ?? "").trim();
   const colorTempRaw = String(formData.get("colorTempKelvin") ?? "").trim();
 
+  const sensorDirigeraDeviceId = String(
+    formData.get("sensorDirigeraDeviceId") ?? "",
+  ).trim();
+  const sensorEdgeAttribute = String(
+    formData.get("sensorEdgeAttribute") ?? "",
+  ).trim();
+
+  if (triggerKind === "SENSOR_EDGE") {
+    return {
+      name: String(formData.get("name") ?? ""),
+      triggerKind,
+      timeLocal: null,
+      daysOfWeek: [] as number[],
+      sensorDirigeraDeviceId,
+      sensorEdgeAttribute: sensorEdgeAttribute || null,
+      on: true,
+      brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
+      colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
+      targetDeviceIds,
+    };
+  }
+
   return {
     name: String(formData.get("name") ?? ""),
+    triggerKind,
     timeLocal,
     daysOfWeek,
+    sensorDirigeraDeviceId: null,
+    sensorEdgeAttribute: null,
     on,
     brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
     colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
@@ -239,6 +284,18 @@ export async function getAutomations(): Promise<AutomationListItem[]> {
     throw new Error(result.message);
   }
   return result.map(toAutomationListItem);
+}
+
+export async function getDirigeraEdgeSensors(): Promise<DirigeraEdgeSensorsResult> {
+  await requireHousehold();
+  if (!isDirigeraConfigured()) {
+    return { configured: false, sensors: [] };
+  }
+  const result = await listDirigeraEdgeSensors();
+  if (isDomainError(result)) {
+    return { configured: true, sensors: [], error: result.message };
+  }
+  return { configured: true, sensors: result };
 }
 
 export async function createAutomationAction(formData: FormData) {
@@ -285,7 +342,15 @@ export async function deleteAutomationAction(formData: FormData) {
 
 export async function applyAutomationActionUi(id: string) {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
-  const result = await applyAutomationAction(householdId, id);
+  const row = await getAutomation(householdId, id);
+  if (isDomainError(row)) {
+    return { success: false as const, error: row.message };
+  }
+
+  // Run now must not consume SENSOR_EDGE cooldown (lastRunAt).
+  const result = await applyAutomationAction(householdId, id, {
+    updateLastRunAt: row.triggerKind !== "SENSOR_EDGE",
+  });
   if (isDomainError(result)) {
     return { success: false as const, error: result.message };
   }

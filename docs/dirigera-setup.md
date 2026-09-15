@@ -4,31 +4,35 @@ Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a 
 
 MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`. Hue is kept in the Smart Home UI but is **out of MCP scope**.
 
-## Automations (M4c Phase A — UI + worker)
+## Automations (M4c Phase A + B)
 
-User-configurable **Automations** are time-based light rules in **Homebase** (not
-chore **Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera
-light automations.
+User-configurable **Automations** are light rules in **Homebase** (not chore
+**Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera light
+automations.
 
-**Status (T-064–T-066):** Prisma + domain + Smart Home **Automations** tab +
-worker evaluator. The compose **`worker`** service runs `evaluateLightAutomations`
-every minute (`Europe/Amsterdam`), claims `lastFiredSlot`, then
-`applyAutomationAction` → Dirigera. **No catch-up:** if the worker was down for
-that minute, the window is skipped (deploy/restart safe — no mass-toggle).
-Sensors are Phase B (**T-067** / **T-068**).
+**Phase A (T-064–T-066):** time schedules + Smart Home Automations tab + worker
+minute evaluator (`Europe/Amsterdam`, `lastFiredSlot`, no catch-up).
 
-**Worker must run for schedules.** Ensure NAS compose `worker` has `DIRIGERA_IP`
-and `DIRIGERA_TOKEN` (same as `app`). UI **Run now** still applies immediately
-without waiting for the clock.
+**Phase B (T-067 / T-068):** Dirigera **sensor-edge** rules (door/motion). Design:
+[dirigera-sensors.md](./dirigera-sensors.md). Worker holds one WebSocket listener
+(seeded, no boot replay); rising edge → debounce 2s / cooldown 90s → turn target
+lights on **only if currently off**.
 
-**Local domain smoke** (opt-in; toggles the pinned test lamp — never deploy smoke):
+**Worker must run** for schedules **and** sensor rules. Ensure NAS compose
+`worker` has `DIRIGERA_IP` and `DIRIGERA_TOKEN` (same as `app`). UI **Run now**
+still applies immediately without waiting for the clock or an edge.
+
+**Local domain smoke** (opt-in; toggles lamps — never deploy smoke):
 
 ```bash
-# Requires DIRIGERA_* + DIRIGERA_TEST_DEVICE_ID + MCP_HOUSEHOLD_ID (or AUTOMATION_SMOKE_HOUSEHOLD_ID)
+# Schedule path
 npm run automations:smoke
+# Sensor path (needs DIRIGERA_TEST_DEVICE_ID + edge sensor on hub)
+npm run automations:sensor-smoke
 ```
 
-Manual/UI Run now does **not** set `lastFiredSlot` (only the worker claim does).
+Manual/UI Run now does **not** set `lastFiredSlot` / sensor cooldown claim (worker
+claims only).
 
 ## One-time pairing (on home LAN)
 

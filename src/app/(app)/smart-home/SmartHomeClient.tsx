@@ -25,7 +25,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "rec
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AutomationsPanel } from "./AutomationsPanel";
-import type { AutomationListItem } from "@/modules/smarthome/actions";
+import type { AutomationListItem, DirigeraEdgeSensorsResult } from "@/modules/smarthome/actions";
 
 interface Device {
   id: string;
@@ -48,11 +48,13 @@ export function SmartHomeClient({
   readings,
   dirigera,
   automations,
+  edgeSensors,
 }: {
   devices: Device[];
   readings: Reading[];
   dirigera: DirigeraLightsResult;
   automations: AutomationListItem[];
+  edgeSensors: DirigeraEdgeSensorsResult;
 }) {
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
@@ -445,7 +447,11 @@ export function SmartHomeClient({
         </TabsContent>
 
         <TabsContent value="automations" className="space-y-4">
-          <AutomationsPanel automations={automations} dirigera={dirigera} />
+          <AutomationsPanel
+            automations={automations}
+            dirigera={dirigera}
+            edgeSensors={edgeSensors}
+          />
         </TabsContent>
 
         <TabsContent value="lights" className="space-y-4">

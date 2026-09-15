@@ -1,6 +1,7 @@
 import {
   getAutomations,
   getDevices,
+  getDirigeraEdgeSensors,
   getDirigeraLights,
   getSensorReadings,
 } from "@/modules/smarthome/actions";
@@ -12,18 +13,21 @@ import { ModuleId } from "@prisma/client";
 export default async function SmartHomePage() {
   const { householdId } = await requireHousehold();
   await requireModule(householdId, ModuleId.SMART_HOME);
-  const [devices, readings, dirigera, automations] = await Promise.all([
-    getDevices(),
-    getSensorReadings(),
-    getDirigeraLights(),
-    getAutomations(),
-  ]);
+  const [devices, readings, dirigera, automations, edgeSensors] =
+    await Promise.all([
+      getDevices(),
+      getSensorReadings(),
+      getDirigeraLights(),
+      getAutomations(),
+      getDirigeraEdgeSensors(),
+    ]);
   return (
     <SmartHomeClient
       devices={devices}
       readings={readings}
       dirigera={dirigera}
       automations={automations}
+      edgeSensors={edgeSensors}
     />
   );
 }

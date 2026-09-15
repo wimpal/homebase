@@ -16,10 +16,26 @@ export type {
   EvaluateLightAutomationsResult,
   LocalScheduleParts,
 } from "./schedule";
-export { AUTOMATION_TIMEZONE_V1, LAST_RUN_RESULT_MAX } from "./types";
+export {
+  claimSensorCooldown,
+  clearSensorDebounceState,
+  handleSensorRisingEdge,
+  shouldDebounceRisingEdge,
+} from "./sensor";
+export type { HandleSensorRisingEdgeResult } from "./sensor";
+export {
+  AUTOMATION_TIMEZONE_V1,
+  LAST_RUN_RESULT_MAX,
+  SENSOR_COOLDOWN_MS,
+  SENSOR_DEBOUNCE_MS,
+  SENSOR_EDGE_ATTRIBUTES,
+} from "./types";
 export type {
+  ApplyAutomationOptions,
   ApplyAutomationResult,
   AutomationWriteInput,
   LightAutomationDto,
   LightAutomationTargetDto,
+  LightAutomationTriggerKind,
+  SensorEdgeAttribute,
 } from "./types";

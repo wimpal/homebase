@@ -11,8 +11,10 @@ import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { DirigeraLight } from "@/domain/smarthome/types";
+import type { DirigeraEdgeSensor } from "@/domain/smarthome";
 import type {
   AutomationListItem,
+  DirigeraEdgeSensorsResult,
   DirigeraLightsResult,
 } from "@/modules/smarthome/actions";
 import {
@@ -49,22 +51,51 @@ function lightLabel(
   return light.room ? `${light.name} (${light.room})` : light.name;
 }
 
+function sensorLabel(
+  deviceId: string | null,
+  byId: Map<string, DirigeraEdgeSensor>,
+  unavailable: string,
+): string {
+  if (!deviceId) return unavailable;
+  const sensor = byId.get(deviceId);
+  if (!sensor) {
+    const short =
+      deviceId.length > 12 ? `${deviceId.slice(0, 8)}…` : deviceId;
+    return `${short} (${unavailable})`;
+  }
+  return sensor.room ? `${sensor.name} (${sensor.room})` : sensor.name;
+}
+
 function AutomationFormFields({
   lights,
+  sensors,
   defaults,
   idPrefix,
 }: {
   lights: DirigeraLight[];
+  sensors: DirigeraEdgeSensor[];
   defaults?: AutomationListItem;
   idPrefix: string;
 }) {
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
+  const [triggerKind, setTriggerKind] = useState<"SCHEDULE" | "SENSOR_EDGE">(
+    defaults?.triggerKind ?? "SCHEDULE",
+  );
   const [on, setOn] = useState(defaults?.on ?? true);
+  const [sensorId, setSensorId] = useState(
+    defaults?.sensorDirigeraDeviceId ?? sensors[0]?.id ?? "",
+  );
   const defaultDays = new Set(defaults?.daysOfWeek ?? [1, 2, 3, 4, 5, 6, 7]);
   const defaultTargets = new Set(
     defaults?.targets.map((x) => x.dirigeraDeviceId) ?? [],
   );
+
+  const selectedSensor = sensors.find((s) => s.id === sensorId);
+  const edgeAttr =
+    selectedSensor?.edgeAttribute ??
+    defaults?.sensorEdgeAttribute ??
+    "isOpen";
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
@@ -76,34 +107,133 @@ function AutomationFormFields({
           required
           maxLength={100}
           defaultValue={defaults?.name}
-          placeholder={t("automationNamePlaceholder")}
+          placeholder={
+            triggerKind === "SENSOR_EDGE"
+              ? t("automationSensorNamePlaceholder")
+              : t("automationNamePlaceholder")
+          }
         />
       </div>
-      <div>
-        <Label htmlFor={`${idPrefix}-time`}>{t("time")}</Label>
-        <Input
-          id={`${idPrefix}-time`}
-          name="timeLocal"
-          type="time"
-          required
-          defaultValue={defaults?.timeLocal ?? "21:00"}
-        />
-      </div>
-      <div>
-        <Label htmlFor={`${idPrefix}-on`}>{t("action")}</Label>
+
+      <div className="md:col-span-2">
+        <Label htmlFor={`${idPrefix}-trigger`}>{t("triggerKind")}</Label>
         <select
-          id={`${idPrefix}-on`}
-          name="on"
+          id={`${idPrefix}-trigger`}
+          name="triggerKind"
           className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
-          value={on ? "true" : "false"}
-          onChange={(e) => setOn(e.target.value === "true")}
+          value={triggerKind}
+          onChange={(e) =>
+            setTriggerKind(
+              e.target.value === "SENSOR_EDGE" ? "SENSOR_EDGE" : "SCHEDULE",
+            )
+          }
         >
-          <option value="true">{t("turnOn")}</option>
-          <option value="false">{t("turnOff")}</option>
+          <option value="SCHEDULE">{t("triggerSchedule")}</option>
+          <option value="SENSOR_EDGE">{t("triggerSensor")}</option>
         </select>
       </div>
-      {on ? (
+
+      {triggerKind === "SCHEDULE" ? (
         <>
+          <div>
+            <Label htmlFor={`${idPrefix}-time`}>{t("time")}</Label>
+            <Input
+              id={`${idPrefix}-time`}
+              name="timeLocal"
+              type="time"
+              required
+              defaultValue={defaults?.timeLocal ?? "21:00"}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`${idPrefix}-on`}>{t("action")}</Label>
+            <select
+              id={`${idPrefix}-on`}
+              name="on"
+              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+              value={on ? "true" : "false"}
+              onChange={(e) => setOn(e.target.value === "true")}
+            >
+              <option value="true">{t("turnOn")}</option>
+              <option value="false">{t("turnOff")}</option>
+            </select>
+          </div>
+          {on ? (
+            <>
+              <div>
+                <Label htmlFor={`${idPrefix}-brightness`}>
+                  {t("brightness")}
+                </Label>
+                <Input
+                  id={`${idPrefix}-brightness`}
+                  name="brightness"
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="0–100"
+                  defaultValue={defaults?.brightness ?? undefined}
+                />
+              </div>
+              <div>
+                <Label htmlFor={`${idPrefix}-warmth`}>{t("warmth")}</Label>
+                <Input
+                  id={`${idPrefix}-warmth`}
+                  name="colorTempKelvin"
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 2700"
+                  defaultValue={defaults?.colorTempKelvin ?? undefined}
+                />
+              </div>
+            </>
+          ) : null}
+          <div className="md:col-span-2">
+            <Label>{t("days")}</Label>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {DAY_VALUES.map((day, i) => (
+                <label key={day} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="daysOfWeek"
+                    value={day}
+                    defaultChecked={defaultDays.has(day)}
+                    className="h-4 w-4 rounded border-zinc-300"
+                  />
+                  {t(DAY_KEYS[i])}
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <input type="hidden" name="on" value="true" />
+          <input type="hidden" name="sensorEdgeAttribute" value={edgeAttr} />
+          <div className="md:col-span-2">
+            <Label htmlFor={`${idPrefix}-sensor`}>{t("sensor")}</Label>
+            {sensors.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500">{t("noEdgeSensors")}</p>
+            ) : (
+              <select
+                id={`${idPrefix}-sensor`}
+                name="sensorDirigeraDeviceId"
+                required
+                className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                value={sensorId}
+                onChange={(e) => setSensorId(e.target.value)}
+              >
+                {sensors.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.room ? `${s.name} (${s.room})` : s.name}
+                    {s.deviceType === "openCloseSensor"
+                      ? ` — ${t("edgeOpens")}`
+                      : ` — ${t("edgeDetects")}`}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="mt-1 text-xs text-zinc-500">{t("sensorRuleHint")}</p>
+          </div>
           <div>
             <Label htmlFor={`${idPrefix}-brightness`}>{t("brightness")}</Label>
             <Input
@@ -128,24 +258,8 @@ function AutomationFormFields({
             />
           </div>
         </>
-      ) : null}
-      <div className="md:col-span-2">
-        <Label>{t("days")}</Label>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {DAY_VALUES.map((day, i) => (
-            <label key={day} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="daysOfWeek"
-                value={day}
-                defaultChecked={defaultDays.has(day)}
-                className="h-4 w-4 rounded border-zinc-300"
-              />
-              {t(DAY_KEYS[i])}
-            </label>
-          ))}
-        </div>
-      </div>
+      )}
+
       <div className="md:col-span-2">
         <Label>{t("targets")}</Label>
         {lights.length === 0 ? (
@@ -182,9 +296,11 @@ function AutomationFormFields({
 export function AutomationsPanel({
   automations,
   dirigera,
+  edgeSensors,
 }: {
   automations: AutomationListItem[];
   dirigera: DirigeraLightsResult;
+  edgeSensors: DirigeraEdgeSensorsResult;
 }) {
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
@@ -196,26 +312,46 @@ export function AutomationsPanel({
   const [, startTransition] = useTransition();
 
   const lights = dirigera.configured && !dirigera.error ? dirigera.lights : [];
+  const sensors =
+    edgeSensors.configured && !edgeSensors.error ? edgeSensors.sensors : [];
   const lightById = useMemo(
     () => new Map(lights.map((l) => [l.id, l])),
     [lights],
+  );
+  const sensorById = useMemo(
+    () => new Map(sensors.map((s) => [s.id, s])),
+    [sensors],
   );
 
   function daySummary(days: number[]): string {
     if (days.length === 7) return t("everyDay");
     const sorted = [...days].sort((a, b) => a - b);
-    return sorted
-      .map((d) => t(DAY_KEYS[d - 1]))
-      .join(", ");
+    return sorted.map((d) => t(DAY_KEYS[d - 1])).join(", ");
   }
 
   function summaryLine(rule: AutomationListItem): string {
     const targets = rule.targets
       .map((x) => lightLabel(x.dirigeraDeviceId, lightById, t("unavailable")))
       .join(", ");
+    if (rule.triggerKind === "SENSOR_EDGE") {
+      const sensor = sensorLabel(
+        rule.sensorDirigeraDeviceId,
+        sensorById,
+        t("unavailable"),
+      );
+      const edge =
+        rule.sensorEdgeAttribute === "isDetected"
+          ? t("edgeDetects")
+          : t("edgeOpens");
+      return t("sensorRuleSummary", {
+        sensor,
+        edge,
+        targets: targets || t("noTargets"),
+      });
+    }
     const action = rule.on ? t("turnOn") : t("turnOff");
     return t("ruleSummary", {
-      time: rule.timeLocal,
+      time: rule.timeLocal ?? "—",
       days: daySummary(rule.daysOfWeek),
       action,
       targets: targets || t("noTargets"),
@@ -247,9 +383,7 @@ export function AutomationsPanel({
           setError(result.error);
         } else {
           setRunMessage(
-            result.failed > 0
-              ? result.lastRunResult
-              : t("runNowOk"),
+            result.failed > 0 ? result.lastRunResult : t("runNowOk"),
           );
         }
       } catch (e) {
@@ -292,6 +426,14 @@ export function AutomationsPanel({
         </Card>
       ) : null}
 
+      {edgeSensors.configured && edgeSensors.error ? (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200">
+            {edgeSensors.error}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {error ? (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
           <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200">
@@ -317,7 +459,11 @@ export function AutomationsPanel({
           </CardHeader>
           <CardContent>
             <form action={createAutomationAction} className="space-y-4">
-              <AutomationFormFields lights={lights} idPrefix="create" />
+              <AutomationFormFields
+                lights={lights}
+                sensors={sensors}
+                idPrefix="create"
+              />
               <Button type="submit" disabled={lights.length === 0}>
                 {tc("add")}
               </Button>
@@ -342,7 +488,10 @@ export function AutomationsPanel({
           : t("neverRun");
 
         return (
-          <Card key={rule.id} className={!rule.enabled ? "opacity-70" : undefined}>
+          <Card
+            key={rule.id}
+            className={!rule.enabled ? "opacity-70" : undefined}
+          >
             <CardContent className="space-y-3 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -350,9 +499,7 @@ export function AutomationsPanel({
                   <p className="text-sm text-zinc-500">{summaryLine(rule)}</p>
                   <p className="mt-1 text-xs text-zinc-400">
                     {t("lastRun")}: {lastRunLabel}
-                    {rule.lastRunResult
-                      ? ` — ${rule.lastRunResult}`
-                      : null}
+                    {rule.lastRunResult ? ` — ${rule.lastRunResult}` : null}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -381,9 +528,7 @@ export function AutomationsPanel({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      setEditingId(editing ? null : rule.id)
-                    }
+                    onClick={() => setEditingId(editing ? null : rule.id)}
                   >
                     {editing ? tc("cancel") : tc("edit")}
                   </Button>
@@ -410,6 +555,7 @@ export function AutomationsPanel({
                   <input type="hidden" name="id" value={rule.id} />
                   <AutomationFormFields
                     lights={lights}
+                    sensors={sensors}
                     defaults={rule}
                     idPrefix={`edit-${rule.id}`}
                   />

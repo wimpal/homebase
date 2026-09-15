@@ -119,7 +119,11 @@ export async function evaluateLightAutomations(
     if (moduleSetting && !moduleSetting.enabled) continue;
 
     const rules = await prisma.lightAutomation.findMany({
-      where: { householdId: household.id, enabled: true },
+      where: {
+        householdId: household.id,
+        enabled: true,
+        triggerKind: "SCHEDULE",
+      },
       select: {
         id: true,
         timeLocal: true,
@@ -129,6 +133,7 @@ export async function evaluateLightAutomations(
     });
 
     for (const rule of rules) {
+      if (!rule.timeLocal) continue;
       const timeZone = rule.timezone || AUTOMATION_TIMEZONE_V1;
       const local = getLocalScheduleParts(now, timeZone);
       if (rule.timeLocal !== local.timeLocal) continue;
