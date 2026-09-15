@@ -15,7 +15,7 @@ minute evaluator (`Europe/Amsterdam`, `lastFiredSlot`, no catch-up).
 
 **Phase B (T-067 / T-068):** Dirigera **sensor-edge** rules (door/motion). Design:
 [dirigera-sensors.md](./dirigera-sensors.md). Worker holds one WebSocket listener
-(seeded, no boot replay); rising edge → debounce 2s / cooldown 90s → turn target
+(seeded, no boot replay); rising/falling edge → debounce 2s / cooldown 10s → turn target
 lights on **only if currently off**.
 
 **Worker must run** for schedules **and** sensor rules. Ensure NAS compose

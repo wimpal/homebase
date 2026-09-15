@@ -327,7 +327,7 @@
     "triggerSensor": "Sensor (deur / beweging)",
     "sensor": "Sensor",
     "noEdgeSensors": "Geen deur/raam- of bewegingssensoren gevonden op de Dirigera-hub.",
-    "sensorRuleHint": "Gaat af bij open/dicht (of beweging detecteren/vrijgeven). Wijzigt alleen lampen die dat nodig hebben. 2s debounce, 90s cooldown.",
+    "sensorRuleHint": "Gaat af bij open/dicht (of beweging detecteren/vrijgeven). Wijzigt alleen lampen die dat nodig hebben. 2s debounce, 10s cooldown.",
     "edgeOpens": "Opent",
     "edgeCloses": "Sluit",
     "edgeDetects": "Detecteert beweging",

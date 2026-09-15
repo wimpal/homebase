@@ -327,7 +327,7 @@
     "triggerSensor": "Sensor (door / motion)",
     "sensor": "Sensor",
     "noEdgeSensors": "No door/window or motion sensors found on the Dirigera hub.",
-    "sensorRuleHint": "Fires on open/close (or motion detect/clear). Only changes lights that need it (off→on or on→off). 2s debounce, 90s cooldown.",
+    "sensorRuleHint": "Fires on open/close (or motion detect/clear). Only changes lights that need it (off→on or on→off). 2s debounce, 10s cooldown.",
     "edgeOpens": "Opens",
     "edgeCloses": "Closes",
     "edgeDetects": "Detects motion",

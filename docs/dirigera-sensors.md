@@ -98,7 +98,7 @@ time** for debounce/cooldown clocks, and treat hub `time` as diagnostic only.
 |---|---|---|
 | Rising-edge only | required | per sensor device id |
 | Debounce | **2s** | collapse duplicate rising edges per sensor device id |
-| Cooldown | **90s** | per automation **rule** after an apply attempt |
+| Cooldown | **10s** | per automation **rule** after an apply attempt (was 90s sketch; too long for door cycles) |
 | Failed Dirigera apply | still consume cooldown | avoid thrash (Phase A slot-claim spirit) |
 | Missed while down | **no retroactive fire** | — |
 
@@ -117,4 +117,4 @@ Smoke: `npm run automations:sensor-smoke`.
 - Blinds / outlets / remotes productization.
 - Mapping Dirigera sensors onto Prisma `SensorReading`.
 - MCP tools for sensors / “run named rule”.
-- UI-tunable debounce/cooldown (fixed 2s / 90s).
+- UI-tunable debounce/cooldown (fixed 2s / 10s).

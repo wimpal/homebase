@@ -2,9 +2,9 @@ export const AUTOMATION_TIMEZONE_V1 = "Europe/Amsterdam";
 
 export const LAST_RUN_RESULT_MAX = 500;
 
-/** Fixed T-067 defaults — not UI knobs. */
+/** Fixed defaults — not UI knobs. 10s cooldown: door open/close cycles must re-fire soon. */
 export const SENSOR_DEBOUNCE_MS = 2000;
-export const SENSOR_COOLDOWN_MS = 90_000;
+export const SENSOR_COOLDOWN_MS = 10_000;
 
 export const SENSOR_EDGE_ATTRIBUTES = ["isOpen", "isDetected"] as const;
 export type SensorEdgeAttribute = (typeof SENSOR_EDGE_ATTRIBUTES)[number];
