@@ -87,6 +87,20 @@ function collectEligibleTargets(
   return out;
 }
 
+/** Toggle: every target with a known boolean isOn (on or off). */
+function collectToggleEligibleTargets(
+  targetIds: string[],
+  onById: Map<string, boolean | null>,
+): string[] {
+  const out: string[] = [];
+  for (const id of targetIds) {
+    const isOn = onById.get(id);
+    if (typeof isOn !== "boolean") continue;
+    out.push(id);
+  }
+  return out;
+}
+
 export type HandleSensorEdgeResult = {
   rulesMatched: number;
   claimed: number;
@@ -162,14 +176,21 @@ export async function handleSensorEdge(input: {
       select: {
         id: true,
         on: true,
+        toggle: true,
         targets: { select: { dirigeraDeviceId: true } },
       },
     });
 
     for (const rule of rules) {
+      // Toggle is rising-only (validate enforces on write; skip malformed rows).
+      if (rule.toggle && input.polarity !== "rising") {
+        continue;
+      }
+
       result.rulesMatched += 1;
       const targetIds = rule.targets.map((t) => t.dirigeraDeviceId);
       const wantOn = rule.on;
+      const isToggle = rule.toggle === true;
 
       const onStates = await listDirigeraLightOnStates();
       if (isDomainError(onStates)) {
@@ -177,14 +198,20 @@ export async function handleSensorEdge(input: {
         continue;
       }
 
-      const eligible = collectEligibleTargets(targetIds, onStates, wantOn);
+      const eligible = isToggle
+        ? collectToggleEligibleTargets(targetIds, onStates)
+        : collectEligibleTargets(targetIds, onStates, wantOn);
       if (eligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
             lastRunResult: truncateLastRunResult(
-              wantOn ? "skipped:already_on" : "skipped:already_off",
+              isToggle
+                ? "skipped:unknown_isOn"
+                : wantOn
+                  ? "skipped:already_on"
+                  : "skipped:already_off",
             ),
           },
         });
@@ -213,14 +240,21 @@ export async function handleSensorEdge(input: {
         continue;
       }
 
-      const stillEligible = collectEligibleTargets(eligible, onStates2, wantOn);
+      // Re-check eligibility against the post-claim set (subset of pre-claim).
+      const stillEligible = isToggle
+        ? collectToggleEligibleTargets(eligible, onStates2)
+        : collectEligibleTargets(eligible, onStates2, wantOn);
       if (stillEligible.length === 0) {
         result.skipped += 1;
         await prisma.lightAutomation.updateMany({
           where: { id: rule.id, householdId: household.id },
           data: {
             lastRunResult: truncateLastRunResult(
-              wantOn ? "skipped:already_on" : "skipped:already_off",
+              isToggle
+                ? "skipped:unknown_isOn"
+                : wantOn
+                  ? "skipped:already_on"
+                  : "skipped:already_off",
             ),
           },
         });

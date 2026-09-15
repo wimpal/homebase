@@ -1,6 +1,9 @@
 import { prisma } from "@/core/db";
-import { DomainError, type DomainResult } from "@/domain/error";
-import { setDirigeraLightState } from "@/domain/smarthome";
+import { DomainError, isDomainError, type DomainResult } from "@/domain/error";
+import {
+  listDirigeraLightOnStates,
+  setDirigeraLightState,
+} from "@/domain/smarthome";
 import type { ApplyAutomationOptions, ApplyAutomationResult } from "./types";
 import { truncateLastRunResult } from "./validate";
 
@@ -11,7 +14,10 @@ import { truncateLastRunResult } from "./validate";
  * (once-per-window). Manual/script applies may re-run freely when enabled.
  *
  * Sensor path (T-068): claim cooldown before calling; pass onlyDeviceIds for
- * lights that are off; set updateLastRunAt: false so the claim timestamp sticks.
+ * eligible lights; set updateLastRunAt: false so the claim timestamp sticks.
+ *
+ * Toggle (toilet enter/leave): re-reads isOn and flips each target; brightness
+ * / kelvin apply only when turning a light on.
  */
 export async function applyAutomationAction(
   householdId: string,
@@ -63,10 +69,33 @@ export async function applyAutomationAction(
       return DomainError.conflict("Automation is disabled");
     }
 
+    let desiredOn = row.on;
+    let optionsForWrite = stateOptions;
+
+    if (row.toggle) {
+      // Re-read immediately before each write to shrink Run-now / edge races.
+      const onStates = await listDirigeraLightOnStates();
+      if (isDomainError(onStates)) {
+        failed += 1;
+        if (!firstError) firstError = onStates.message;
+        continue;
+      }
+      const isOn = onStates.get(target.dirigeraDeviceId);
+      if (typeof isOn !== "boolean") {
+        failed += 1;
+        if (!firstError) {
+          firstError = `unknown isOn for ${target.dirigeraDeviceId}`;
+        }
+        continue;
+      }
+      desiredOn = !isOn;
+      optionsForWrite = desiredOn ? stateOptions : {};
+    }
+
     const result = await setDirigeraLightState(
       target.dirigeraDeviceId,
-      row.on,
-      stateOptions,
+      desiredOn,
+      optionsForWrite,
     );
     if (result.success) {
       succeeded += 1;
@@ -83,7 +112,7 @@ export async function applyAutomationAction(
   if (attempted === 0) {
     lastRunResult = "skipped:no_targets";
   } else if (failed === 0) {
-    lastRunResult = "ok";
+    lastRunResult = row.toggle ? "ok:toggle" : "ok";
   } else if (succeeded === 0) {
     lastRunResult = truncateLastRunResult(`failed: ${firstError}`);
   } else {

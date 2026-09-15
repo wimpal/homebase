@@ -26,6 +26,7 @@ export async function createAutomation(
       sensorEdgeAttribute: validated.sensorEdgeAttribute,
       sensorEdgePolarity: validated.sensorEdgePolarity,
       on: validated.on,
+      toggle: validated.toggle,
       brightness: validated.brightness,
       colorTempKelvin: validated.colorTempKelvin,
       targets: {
@@ -76,6 +77,7 @@ export async function updateAutomation(
         sensorEdgeAttribute: validated.sensorEdgeAttribute,
         sensorEdgePolarity: validated.sensorEdgePolarity,
         on: validated.on,
+        toggle: validated.toggle,
         brightness: validated.brightness,
         colorTempKelvin: validated.colorTempKelvin,
       },

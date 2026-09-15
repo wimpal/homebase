@@ -28,6 +28,7 @@ export type ValidatedAutomationWrite = {
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
   on: boolean;
+  toggle: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
   targetDeviceIds: string[];
@@ -67,15 +68,28 @@ export async function validateAutomationWrite(
     );
   }
 
-  if (typeof input.on !== "boolean") {
+  const toggle = input.toggle === true;
+
+  if (toggle && triggerKind !== "SENSOR_EDGE") {
+    return DomainError.invalidInput(
+      "toggle is only allowed for SENSOR_EDGE automations.",
+    );
+  }
+
+  // Toggle persists on=true as a NOT NULL dummy; apply ignores it.
+  const on = toggle ? true : input.on;
+  if (typeof on !== "boolean") {
     return DomainError.invalidInput("on must be a boolean.");
   }
 
+  // Brightness/kelvin allowed when turning on, or when toggle (applied only on ON flips).
+  const allowLevel = on || toggle;
+
   let brightness: number | null = null;
   if (input.brightness !== undefined && input.brightness !== null) {
-    if (!input.on) {
+    if (!allowLevel) {
       return DomainError.invalidInput(
-        "brightness can only be set when on is true.",
+        "brightness can only be set when on is true (or toggle).",
       );
     }
     if (
@@ -90,9 +104,9 @@ export async function validateAutomationWrite(
 
   let colorTempKelvin: number | null = null;
   if (input.colorTempKelvin !== undefined && input.colorTempKelvin !== null) {
-    if (!input.on) {
+    if (!allowLevel) {
       return DomainError.invalidInput(
-        "colorTempKelvin can only be set when on is true.",
+        "colorTempKelvin can only be set when on is true (or toggle).",
       );
     }
     if (
@@ -140,10 +154,6 @@ export async function validateAutomationWrite(
   }
 
   if (triggerKind === "SENSOR_EDGE") {
-    if (typeof input.on !== "boolean") {
-      return DomainError.invalidInput("on must be a boolean.");
-    }
-
     const sensorId = input.sensorDirigeraDeviceId?.trim() ?? "";
     if (!sensorId) {
       return DomainError.invalidInput(
@@ -158,10 +168,18 @@ export async function validateAutomationWrite(
       );
     }
 
-    const polarityRaw = (input.sensorEdgePolarity?.trim() || "rising").toLowerCase();
+    const polarityRaw = (
+      input.sensorEdgePolarity?.trim() || "rising"
+    ).toLowerCase();
     if (!isSensorEdgePolarity(polarityRaw)) {
       return DomainError.invalidInput(
         'sensorEdgePolarity must be "rising" or "falling".',
+      );
+    }
+
+    if (toggle && polarityRaw !== "rising") {
+      return DomainError.invalidInput(
+        "toggle requires sensorEdgePolarity \"rising\" (Opens/Detects).",
       );
     }
 
@@ -191,9 +209,10 @@ export async function validateAutomationWrite(
       sensorDirigeraDeviceId: sensorId,
       sensorEdgeAttribute: attrRaw,
       sensorEdgePolarity: polarityRaw,
-      on: input.on,
-      brightness: input.on ? brightness : null,
-      colorTempKelvin: input.on ? colorTempKelvin : null,
+      on,
+      toggle,
+      brightness: allowLevel ? brightness : null,
+      colorTempKelvin: allowLevel ? colorTempKelvin : null,
       targetDeviceIds: uniqueTargets,
     };
   }
@@ -233,9 +252,10 @@ export async function validateAutomationWrite(
     sensorDirigeraDeviceId: null,
     sensorEdgeAttribute: null,
     sensorEdgePolarity: null,
-    on: input.on,
-    brightness,
-    colorTempKelvin,
+    on,
+    toggle: false,
+    brightness: on ? brightness : null,
+    colorTempKelvin: on ? colorTempKelvin : null,
     targetDeviceIds: uniqueTargets,
   };
 }

@@ -1,5 +1,5 @@
 /**
- * Smoke test for SENSOR_EDGE automations (T-068).
+ * Smoke test for SENSOR_EDGE automations (T-068 + toggle enter/leave).
  * Opt-in write test — never run from deploy smoke.
  *
  * Requires: DIRIGERA_IP, DIRIGERA_TOKEN, DIRIGERA_TEST_DEVICE_ID,
@@ -12,15 +12,19 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  SENSOR_COOLDOWN_MS,
+  SENSOR_DEBOUNCE_MS,
+  clearSensorDebounceState,
   createAutomation,
   deleteAutomation,
+  handleSensorEdge,
   handleSensorRisingEdge,
   setAutomationEnabled,
 } from "../src/domain/automations";
 import { isDomainError } from "../src/domain/error";
 import {
   listDirigeraEdgeSensors,
-  listDirigeraLights,
+  listDirigeraLightOnStates,
   setDirigeraLightState,
   verifyDirigeraConnectivity,
 } from "../src/domain/smarthome";
@@ -48,6 +52,17 @@ function loadDotEnv() {
   } catch {
     // optional
   }
+}
+
+async function readIsOn(deviceId: string): Promise<boolean | null> {
+  const states = await listDirigeraLightOnStates();
+  if (isDomainError(states)) return null;
+  const v = states.get(deviceId);
+  return typeof v === "boolean" ? v : null;
+}
+
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
 }
 
 async function main() {
@@ -97,7 +112,6 @@ async function main() {
   }
   console.log(`OK: using sensor ${sensor.name} (${sensor.edgeAttribute})`);
 
-  // Ensure test light is off so rising edge should apply.
   const off = await setDirigeraLightState(testDeviceId, false);
   if (!off.success) {
     console.error(`FAIL: could not turn test light off — ${off.error}`);
@@ -107,66 +121,103 @@ async function main() {
 
   let automationId: string | undefined;
   let failed = false;
+  clearSensorDebounceState();
+
   try {
     const created = await createAutomation(householdId, {
-      name: `T-068 smoke ${new Date().toISOString()}`,
+      name: `toggle smoke ${new Date().toISOString()}`,
       triggerKind: "SENSOR_EDGE",
       sensorDirigeraDeviceId: sensor.id,
       sensorEdgeAttribute: sensor.edgeAttribute,
+      sensorEdgePolarity: "rising",
       on: true,
+      toggle: true,
       targetDeviceIds: [testDeviceId],
     });
     if (isDomainError(created)) {
-      console.error(`FAIL: create — ${created.message}`);
+      console.error(`FAIL: create toggle — ${created.message}`);
       failed = true;
       return;
     }
     automationId = created.id;
-    console.log(`OK: created SENSOR_EDGE automation ${automationId}`);
+    console.log(`OK: created toggle SENSOR_EDGE automation ${automationId}`);
 
+    const t0 = Date.now();
     const first = await handleSensorRisingEdge({
       sensorId: sensor.id,
       attribute: sensor.edgeAttribute,
-      receivedAt: new Date(),
+      receivedAt: new Date(t0),
     });
     console.log(
-      `OK: first edge matched=${first.rulesMatched} claimed=${first.claimed} applied=${first.applied} skipped=${first.skipped} failed=${first.failed}`,
+      `OK: first open matched=${first.rulesMatched} claimed=${first.claimed} applied=${first.applied}`,
     );
-    if (first.applied < 1 && first.skipped < 1) {
-      console.error("FAIL: expected apply or skip after claim");
+    if (first.applied < 1) {
+      console.error("FAIL: expected apply on first open (off→on)");
       failed = true;
       return;
     }
-
-    const lights = await listDirigeraLights();
-    if (!isDomainError(lights)) {
-      const lamp = lights.find((l) => l.id === testDeviceId);
-      console.log(
-        `OK: test light isOn=${lamp?.isOn} (expect true if applied)`,
-      );
+    const afterOpen = await readIsOn(testDeviceId);
+    if (afterOpen !== true) {
+      console.error(`FAIL: expected light on after first open, got ${afterOpen}`);
+      failed = true;
+      return;
     }
+    console.log("OK: open → on");
 
+    // Falling edge must not match a rising-only toggle rule.
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    const close = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "falling",
+      receivedAt: new Date(t0 + SENSOR_DEBOUNCE_MS + 100),
+    });
+    if (close.rulesMatched !== 0) {
+      console.error("FAIL: falling edge matched rising toggle rule");
+      failed = true;
+      return;
+    }
+    const afterClose = await readIsOn(testDeviceId);
+    if (afterClose !== true) {
+      console.error(`FAIL: light changed on close, isOn=${afterClose}`);
+      failed = true;
+      return;
+    }
+    console.log("OK: close → unchanged (no rule)");
+
+    // Second open after cooldown → off
+    const afterCooldown = t0 + SENSOR_COOLDOWN_MS + 500;
+    clearSensorDebounceState();
     const second = await handleSensorRisingEdge({
       sensorId: sensor.id,
       attribute: sensor.edgeAttribute,
-      receivedAt: new Date(),
+      receivedAt: new Date(afterCooldown),
     });
     console.log(
-      `OK: second edge (cooldown) claimed=${second.claimed} (expect 0)`,
+      `OK: second open claimed=${second.claimed} applied=${second.applied}`,
     );
-    if (second.claimed !== 0) {
-      console.error("FAIL: cooldown did not block second claim");
+    if (second.applied < 1) {
+      console.error("FAIL: expected apply on second open (on→off)");
       failed = true;
       return;
     }
+    const afterLeave = await readIsOn(testDeviceId);
+    if (afterLeave !== false) {
+      console.error(
+        `FAIL: expected light off after second open, got ${afterLeave}`,
+      );
+      failed = true;
+      return;
+    }
+    console.log("OK: open again → off");
 
     await setAutomationEnabled(householdId, automationId, false);
-    const third = await handleSensorRisingEdge({
+    const disabled = await handleSensorRisingEdge({
       sensorId: sensor.id,
       attribute: sensor.edgeAttribute,
-      receivedAt: new Date(Date.now() + 120_000),
+      receivedAt: new Date(afterCooldown + SENSOR_COOLDOWN_MS + 500),
     });
-    if (third.rulesMatched !== 0) {
+    if (disabled.rulesMatched !== 0) {
       console.error("FAIL: disabled rule still matched");
       failed = true;
       return;
@@ -184,7 +235,7 @@ async function main() {
   }
 
   if (failed) process.exit(1);
-  console.log("All T-068 sensor automation smoke checks passed");
+  console.log("All sensor toggle smoke checks passed");
 }
 
 main().catch((err) => {

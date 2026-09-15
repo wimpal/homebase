@@ -182,6 +182,7 @@ export type AutomationListItem = {
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: "rising" | "falling" | null;
   on: boolean;
+  toggle: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
   lastRunAt: string | null;
@@ -205,6 +206,7 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     sensorEdgeAttribute: row.sensorEdgeAttribute,
     sensorEdgePolarity: row.sensorEdgePolarity,
     on: row.on,
+    toggle: row.toggle,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
     lastRunAt: row.lastRunAt ? row.lastRunAt.toISOString() : null,
@@ -234,8 +236,16 @@ function parseAutomationWriteInput(formData: FormData) {
     .map((v) => String(v).trim())
     .filter(Boolean);
 
-  const onRaw = String(formData.get("on") ?? "");
-  const on = onRaw === "true" || onRaw === "on" || onRaw === "1";
+  // Prefer `action` (on|off|toggle); fall back to legacy `on` true/false.
+  const actionRaw = String(formData.get("action") ?? formData.get("on") ?? "")
+    .trim()
+    .toLowerCase();
+  const toggle = actionRaw === "toggle";
+  const on =
+    toggle ||
+    actionRaw === "true" ||
+    actionRaw === "on" ||
+    actionRaw === "1";
 
   const brightnessRaw = String(formData.get("brightness") ?? "").trim();
   const colorTempRaw = String(formData.get("colorTempKelvin") ?? "").trim();
@@ -262,6 +272,7 @@ function parseAutomationWriteInput(formData: FormData) {
       sensorEdgeAttribute: sensorEdgeAttribute || null,
       sensorEdgePolarity,
       on,
+      toggle,
       brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
       colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
       targetDeviceIds,
@@ -277,6 +288,7 @@ function parseAutomationWriteInput(formData: FormData) {
     sensorEdgeAttribute: null,
     sensorEdgePolarity: null,
     on,
+    toggle: false,
     brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
     colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
     targetDeviceIds,

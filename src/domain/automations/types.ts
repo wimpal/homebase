@@ -32,6 +32,8 @@ export interface LightAutomationDto {
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
   on: boolean;
+  /** SENSOR_EDGE + rising only: flip each known isOn; ignore `on` at apply. */
+  toggle: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
   lastRunAt: Date | null;
@@ -58,6 +60,8 @@ export interface AutomationWriteInput {
   /** Required for SENSOR_EDGE: rising | falling. */
   sensorEdgePolarity?: string | null;
   on: boolean;
+  /** SENSOR_EDGE + rising only. When true, `on` is ignored at apply. */
+  toggle?: boolean;
   brightness?: number | null;
   colorTempKelvin?: number | null;
   /** Dirigera device ids to target (at least one). */

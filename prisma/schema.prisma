@@ -742,6 +742,8 @@ model LightAutomation {
   sensorEdgePolarity     String?  @default("rising")
 
   on              Boolean
+  /// When true (SENSOR_EDGE + rising only): flip each target's isOn; ignore `on`.
+  toggle          Boolean  @default(false)
   brightness      Int?
   colorTempKelvin Int?
 

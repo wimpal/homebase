@@ -73,7 +73,21 @@ time** for debounce/cooldown clocks, and treat hub `time` as diagnostic only.
    Phase A schedule minutes).
 4. Fire on **rising** (`false→true`: opens / detects) or **falling** (`true→false`:
    closes / clears), per rule `sensorEdgePolarity`.
-5. Action may be turn on or turn off; only eligible lights are written (off→on or on→off).
+5. Action may be turn on, turn off, or **toggle** (rising only). Turn on/off only
+   write eligible lights (off→on or on→off). Toggle flips each target with a known
+   `isOn`.
+
+### Toilet enter/leave pattern
+
+One SENSOR_EDGE rule — **not** two Opens rules:
+
+| When | Action | Targets |
+|---|---|---|
+| Opens (rising `isOpen`) | **Toggle** | toilet light |
+
+Do **not** add a Closes rule. Sequence: open→on, close→noop, open→off (edge
+alternation; not true occupancy). Missed WS events or manual light changes can
+desync — accepted for v1.
 
 **Level / slow sensors (environment, illuminance, etc.):**
 

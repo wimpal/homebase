@@ -22,6 +22,7 @@ export function mapAutomation(row: Row): LightAutomationDto {
           ? "falling"
           : "rising",
     on: row.on,
+    toggle: row.toggle,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
     lastRunAt: row.lastRunAt,
