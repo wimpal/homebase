@@ -50,7 +50,7 @@
     },
     "smart_home": {
       "name": "Smart Home",
-      "description": "Sensors, Hue lights, and cameras"
+      "description": "Sensors, IKEA lights, and cameras"
     },
     "messaging": {
       "name": "Messages",
@@ -338,6 +338,10 @@
     "sensorEdge": "When sensor",
     "sensorRuleSummary": "When {sensor} {edge} · {action}: {targets}",
     "time": "Time",
+    "activeFrom": "Active from",
+    "activeUntil": "Active until",
+    "activeHoursHint": "Leave both empty for all day. Outside this window the rule will not start (leave-session still finishes so lights turn off).",
+    "activeHoursSummary": "active {from}–{until}",
     "days": "Days",
     "targets": "Lights",
     "action": "Action",
@@ -362,7 +366,6 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "noAutomations": "No automations yet. Add a schedule or a sensor rule (e.g. door opens → light on).",
-    "hueLights": "Hue Lights",
     "cameras": "Cameras",
     "logReading": "Log Reading",
     "tempPlaceholder": "Temp °C",
@@ -378,13 +381,11 @@
     "warmth": "Warmth (K)",
     "colour": "Colour",
     "apply": "Apply",
-    "addHueLight": "Add Hue Light",
-    "livingRoomPlaceholder": "Living room lamp",
     "addCamera": "Add Camera",
     "frontDoorPlaceholder": "Front door",
     "configureStream": "Configure stream URL in device settings",
     "confirmDeleteDevice": "Delete this device?",
-    "noHueDevices": "No Hue lights or cameras saved yet."
+    "noCameras": "No cameras saved yet."
   },
   "calendar": {
     "title": "Calendar",

@@ -16,6 +16,7 @@ export type {
   EvaluateLightAutomationsResult,
   LocalScheduleParts,
 } from "./schedule";
+export { isWithinActiveWindow } from "./active-window";
 export {
   claimSensorCooldown,
   clearSensorDebounceState,

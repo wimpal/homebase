@@ -2,7 +2,7 @@
 
 Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a bearer token from one-time pairing. **Mimir never talks to the hub** — only the Homebase app container does.
 
-MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`. Hue is kept in the Smart Home UI but is **out of MCP scope**.
+MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`.
 
 ## Automations (M4c Phase A + B)
 
@@ -89,7 +89,6 @@ Household **Settings → modules → Smart Home** gates the **Smart Home UI** on
 ## What is controllable
 
 - **IKEA / Dirigera lights only** via MCP.
-- Philips Hue stays in the UI if configured; not on the MCP surface.
 - Live query from the hub — no Prisma `Device` rows required.
 - Some lamps may report `reachable: false` (Zigbee mesh). `set_state` does not write in that case; it returns `Device unreachable (Zigbee mesh)`.
 

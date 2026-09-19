@@ -50,7 +50,7 @@
     },
     "smart_home": {
       "name": "Smart Home",
-      "description": "Sensoren, Hue-lampen en camera's"
+      "description": "Sensoren, IKEA-lampen en camera's"
     },
     "messaging": {
       "name": "Berichten",
@@ -338,6 +338,10 @@
     "sensorEdge": "Als sensor",
     "sensorRuleSummary": "Als {sensor} {edge} · {action}: {targets}",
     "time": "Tijd",
+    "activeFrom": "Actief vanaf",
+    "activeUntil": "Actief tot",
+    "activeHoursHint": "Laat beide leeg voor de hele dag. Buiten dit venster start de regel niet (verlaat-sessie maakt nog wel af zodat lampen uitgaan).",
+    "activeHoursSummary": "actief {from}–{until}",
     "days": "Dagen",
     "targets": "Lampen",
     "action": "Actie",
@@ -362,7 +366,6 @@
     "enabled": "Ingeschakeld",
     "disabled": "Uitgeschakeld",
     "noAutomations": "Nog geen automatiseringen. Voeg een schema of sensorregel toe (bijv. deur open → lamp aan).",
-    "hueLights": "Hue-lampen",
     "cameras": "Camera's",
     "logReading": "Waarde loggen",
     "tempPlaceholder": "Temp °C",
@@ -378,13 +381,11 @@
     "warmth": "Warmte (K)",
     "colour": "Kleur",
     "apply": "Toepassen",
-    "addHueLight": "Hue-lamp toevoegen",
-    "livingRoomPlaceholder": "Woonkamerlamp",
     "addCamera": "Camera toevoegen",
     "frontDoorPlaceholder": "Voordeur",
     "configureStream": "Configureer stream-URL in apparaatinstellingen",
     "confirmDeleteDevice": "Dit apparaat verwijderen?",
-    "noHueDevices": "Nog geen Hue-lampen of camera's opgeslagen."
+    "noCameras": "Nog geen camera's opgeslagen."
   },
   "calendar": {
     "title": "Agenda",

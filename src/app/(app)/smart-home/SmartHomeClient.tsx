@@ -11,7 +11,6 @@ import {
   createDevice,
   addSensorReading,
   controlDirigeraLight,
-  controlHueLight,
   getDirigeraLights,
   deleteDevice,
 } from "@/modules/smarthome/actions";
@@ -59,7 +58,6 @@ export function SmartHomeClient({
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
   const format = useFormatter();
-  const [hueStatus, setHueStatus] = useState<Record<string, string>>({});
   const [ikeaLights, setIkeaLights] = useState<DirigeraLight[]>(dirigera.lights);
   const [ikeaPending, setIkeaPending] = useState<Record<string, boolean>>({});
   const [ikeaError, setIkeaError] = useState<string | null>(null);
@@ -98,14 +96,6 @@ export function SmartHomeClient({
     humidity: r.humidity,
     aqi: r.airQuality,
   }));
-
-  async function toggleLight(deviceId: string, on: boolean) {
-    const result = await controlHueLight(deviceId, on);
-    setHueStatus((prev) => ({
-      ...prev,
-      [deviceId]: result.success ? (on ? tc("on") : tc("off")) : result.error || tc("failed"),
-    }));
-  }
 
   async function refreshIkeaLights() {
     const fresh = await getDirigeraLights();
@@ -201,7 +191,6 @@ export function SmartHomeClient({
     return { min: 2200, max: 4000 };
   }
 
-  const lights = devices.filter((d) => d.type === "LIGHT");
   const cameras = devices.filter((d) => d.type === "CAMERA");
 
   return (
@@ -223,7 +212,6 @@ export function SmartHomeClient({
           <TabsTrigger value="sensors">{t("sensors")}</TabsTrigger>
           <TabsTrigger value="ikea-lights">{t("ikeaLights")}</TabsTrigger>
           <TabsTrigger value="automations">{t("automations")}</TabsTrigger>
-          <TabsTrigger value="lights">{t("hueLights")}</TabsTrigger>
           <TabsTrigger value="cameras">{t("cameras")}</TabsTrigger>
         </TabsList>
 
@@ -454,59 +442,6 @@ export function SmartHomeClient({
           />
         </TabsContent>
 
-        <TabsContent value="lights" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("addHueLight")}</CardTitle></CardHeader>
-            <CardContent>
-              <form action={createDevice} className="flex gap-2">
-                <input type="hidden" name="type" value="LIGHT" />
-                <Input name="name" placeholder={t("livingRoomPlaceholder")} required />
-                <Input name="config" placeholder='{"lightId": 1}' />
-                <Button type="submit">{tc("add")}</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {lights.length === 0 ? (
-            <EmptyState message={t("noHueDevices")} />
-          ) : (
-            lights.map((light) => (
-              <Card key={light.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-amber-500" />
-                    <span>{light.name}</span>
-                    {hueStatus[light.id] && (
-                      <span className="text-xs text-zinc-500">{hueStatus[light.id]}</span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => toggleLight(light.id, true)}>
-                      {tc("on")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleLight(light.id, false)}
-                    >
-                      {tc("off")}
-                    </Button>
-                    <ConfirmForm
-                      action={deleteDevice}
-                      message={t("confirmDeleteDevice")}
-                    >
-                      <input type="hidden" name="id" value={light.id} />
-                      <Button type="submit" variant="destructive" size="sm">
-                        {tc("delete")}
-                      </Button>
-                    </ConfirmForm>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-
         <TabsContent value="cameras" className="space-y-4">
           <Card>
             <CardHeader><CardTitle className="text-base">{t("addCamera")}</CardTitle></CardHeader>
@@ -521,7 +456,7 @@ export function SmartHomeClient({
           </Card>
 
           {cameras.length === 0 ? (
-            <EmptyState message={t("noHueDevices")} />
+            <EmptyState message={t("noCameras")} />
           ) : (
             cameras.map((cam) => {
               const config = cam.config as { streamUrl?: string } | null;

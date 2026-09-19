@@ -734,6 +734,10 @@ model LightAutomation {
   daysOfWeek      Int[]
   timezone        String   @default("Europe/Amsterdam")
 
+  /// Optional active window "HH:MM" (local). Both null = all day.
+  activeFromLocal  String?
+  activeUntilLocal String?
+
   /// Dirigera sensor device id (SENSOR_EDGE only).
   sensorDirigeraDeviceId String?
   /// Edge attribute: "isOpen" | "isDetected" (SENSOR_EDGE only).

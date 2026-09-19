@@ -141,7 +141,7 @@ function hsDistance(
 ): number {
   const dh = circularHueDelta(h1, h2) / 180;
   const ds = s1 - s2;
-  // Hue-dominant: dark_peach / saturated_red / peach sit within a few degrees;
+  // Colour-dominant: dark_peach / saturated_red / peach sit within a few degrees;
   // RGB nearest-neighbour and sat-weighted HS both mis-assign after hub drift.
   return dh * dh * 25 + ds * ds * 0.15;
 }

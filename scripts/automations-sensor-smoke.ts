@@ -17,9 +17,11 @@ import {
   createAutomation,
   deleteAutomation,
   getAutomation,
+  getLocalScheduleParts,
   handleSensorEdge,
   setAutomationEnabled,
 } from "../src/domain/automations";
+import { AUTOMATION_TIMEZONE_V1 } from "../src/domain/automations/types";
 import { isDomainError } from "../src/domain/error";
 import {
   listDirigeraEdgeSensors,
@@ -27,6 +29,16 @@ import {
   setDirigeraLightState,
   verifyDirigeraConnectivity,
 } from "../src/domain/smarthome";
+
+/** Find a UTC instant whose local HH:MM in `tz` matches (within ±14h of now). */
+function utcInstantForLocal(hhmm: string, tz: string = AUTOMATION_TIMEZONE_V1): Date {
+  const start = Date.now() - 14 * 3600_000;
+  for (let t = start; t < start + 28 * 3600_000; t += 60_000) {
+    const d = new Date(t);
+    if (getLocalScheduleParts(d, tz).timeLocal === hhmm) return d;
+  }
+  throw new Error(`Could not find UTC instant for local ${hhmm} in ${tz}`);
+}
 
 function loadDotEnv() {
   try {
@@ -277,6 +289,128 @@ async function main() {
   }
 
   if (failed) process.exit(1);
+
+  // Active hours: enter skipped outside window; leave-off still works outside.
+  let activeId: string | undefined;
+  clearSensorDebounceState();
+  try {
+    const off2 = await setDirigeraLightState(testDeviceId, false);
+    if (!off2.success) {
+      console.error(`FAIL: reset light off — ${off2.error}`);
+      process.exit(1);
+    }
+
+    const created = await createAutomation(householdId, {
+      name: `active-hours smoke ${new Date().toISOString()}`,
+      triggerKind: "SENSOR_EDGE",
+      sensorDirigeraDeviceId: sensor.id,
+      sensorEdgeAttribute: sensor.edgeAttribute,
+      sensorEdgePolarity: "rising",
+      on: true,
+      toggle: true,
+      activeFromLocal: "10:00",
+      activeUntilLocal: "11:00",
+      targetDeviceIds: [testDeviceId],
+    });
+    if (isDomainError(created)) {
+      console.error(`FAIL: create active-hours — ${created.message}`);
+      process.exit(1);
+    }
+    activeId = created.id;
+    console.log(`OK: created active-hours Toggle ${activeId}`);
+
+    // Outside window enter → skip
+    clearSensorDebounceState();
+    const outsideEnter = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "rising",
+      receivedAt: utcInstantForLocal("03:00"),
+    });
+    if (outsideEnter.applied !== 0) {
+      console.error("FAIL: outside-window enter must not apply");
+      process.exit(1);
+    }
+    let row = await getAutomation(householdId, activeId);
+    if (isDomainError(row) || row.toggleSession !== "idle") {
+      console.error("FAIL: session should stay idle outside window");
+      process.exit(1);
+    }
+    if (row.lastRunResult !== "skipped:outside_active_window") {
+      console.error(
+        `FAIL: expected skipped:outside_active_window, got ${row.lastRunResult}`,
+      );
+      process.exit(1);
+    }
+    if ((await readIsOn(testDeviceId)) !== false) {
+      console.error("FAIL: light should stay off outside window");
+      process.exit(1);
+    }
+    console.log("OK: outside window enter → skip");
+
+    // Inside window enter → on
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    clearSensorDebounceState();
+    const insideEnter = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "rising",
+      receivedAt: utcInstantForLocal("10:30"),
+    });
+    if (insideEnter.applied < 1) {
+      console.error("FAIL: inside-window enter expected apply");
+      process.exit(1);
+    }
+    row = await getAutomation(householdId, activeId);
+    if (isDomainError(row) || row.toggleSession !== "occupied") {
+      console.error("FAIL: expected occupied after in-window enter");
+      process.exit(1);
+    }
+    console.log("OK: inside window enter → on + occupied");
+
+    // Leave open/close outside window → still off
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    clearSensorDebounceState();
+    await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "rising",
+      receivedAt: utcInstantForLocal("03:10"),
+    });
+    row = await getAutomation(householdId, activeId);
+    if (isDomainError(row) || row.toggleSession !== "leaving") {
+      console.error("FAIL: expected leaving after outside leave-open");
+      process.exit(1);
+    }
+
+    await sleep(SENSOR_DEBOUNCE_MS + 50);
+    clearSensorDebounceState();
+    const leaveOff = await handleSensorEdge({
+      sensorId: sensor.id,
+      attribute: sensor.edgeAttribute,
+      polarity: "falling",
+      receivedAt: utcInstantForLocal("03:11"),
+    });
+    if (leaveOff.applied < 1) {
+      console.error("FAIL: leave-off outside window expected apply");
+      process.exit(1);
+    }
+    if ((await readIsOn(testDeviceId)) !== false) {
+      console.error("FAIL: light should be off after outside leave-close");
+      process.exit(1);
+    }
+    console.log("OK: leave-off still works outside active window");
+  } finally {
+    if (activeId) {
+      const deleted = await deleteAutomation(householdId, activeId);
+      if (isDomainError(deleted)) {
+        console.error(`WARN: active-hours cleanup — ${deleted.message}`);
+      } else {
+        console.log("OK: cleaned up active-hours automation");
+      }
+    }
+  }
+
   console.log("All leave-session Toggle smoke checks passed");
 }
 

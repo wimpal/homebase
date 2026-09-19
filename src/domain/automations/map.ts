@@ -13,6 +13,8 @@ export function mapAutomation(row: Row): LightAutomationDto {
     timeLocal: row.timeLocal,
     daysOfWeek: [...row.daysOfWeek],
     timezone: row.timezone,
+    activeFromLocal: row.activeFromLocal,
+    activeUntilLocal: row.activeUntilLocal,
     sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
     sensorEdgeAttribute: row.sensorEdgeAttribute,
     sensorEdgePolarity:

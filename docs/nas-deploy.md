@@ -191,7 +191,6 @@ Full schedule, retention, restore drill, and disaster recovery:
 | Build fails on NAS | NAS CPU may be slow — first build can take 10–20 min |
 | Out of memory during build | Build on your PC, push image to a registry, or increase NAS swap |
 | Scheduler not running | Ensure `worker` container is up: `docker compose ps` |
-| Hue not working | Set `HUE_BRIDGE_IP` in `.env`; NAS must be on same LAN as Hue bridge |
 | Dirigera not working | Set `DIRIGERA_IP` + `DIRIGERA_TOKEN` in `.env`; NAS must reach `https://<IP>:8443` — see [dirigera-setup.md](dirigera-setup.md) |
 
 ---

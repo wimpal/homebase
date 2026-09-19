@@ -377,7 +377,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.lights.list",
     {
       description:
-        'List controllable IKEA lights from the Dirigera hub. Use for "which lights are on", "lights in the office", or before toggling a lamp by name. Returns brightness, colour/warmth state and capability hints when available. Does not include Philips Hue — IKEA/Dirigera only in v1.',
+        'List controllable IKEA lights from the Dirigera hub. Use for "which lights are on", "lights in the office", or before toggling a lamp by name. Returns brightness, colour/warmth state and capability hints when available.',
       inputSchema: {},
     },
     async () => {

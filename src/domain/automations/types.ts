@@ -32,6 +32,10 @@ export interface LightAutomationDto {
   timeLocal: string | null;
   daysOfWeek: number[];
   timezone: string;
+  /** Optional active window start HH:MM; both null = all day. */
+  activeFromLocal: string | null;
+  /** Optional active window end HH:MM; both null = all day. */
+  activeUntilLocal: string | null;
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
@@ -58,6 +62,10 @@ export interface AutomationWriteInput {
   /** Required non-empty for SCHEDULE; empty for SENSOR_EDGE. */
   daysOfWeek?: number[];
   timezone?: string;
+  /** Optional active window start HH:MM; both null/omit = all day. */
+  activeFromLocal?: string | null;
+  /** Optional active window end HH:MM; both null/omit = all day. */
+  activeUntilLocal?: string | null;
   /** Required for SENSOR_EDGE. */
   sensorDirigeraDeviceId?: string | null;
   /** Required for SENSOR_EDGE: isOpen | isDetected. */

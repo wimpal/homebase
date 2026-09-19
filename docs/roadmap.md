@@ -351,15 +351,14 @@ Legend: **Done** · **Partial** · **Missing** · **Risk** (security/ops gap)
 |--------------|--------|------------------------|------------------------|
 | Sensor readings | **Partial** | Manual log form | Automated ingestion contract |
 | Window recommendations | **Done** | `getWindowRecommendation` in `src/lib/smarthome.ts` | — |
-| Philips Hue | **Partial** | `controlHueLight` (env + device config) | Brightness in UI; device ownership guard |
+| IKEA / Dirigera lights | **Done** | MCP + Smart Home UI | Palette / party UI polish deferred |
 | Cameras | **Partial** | Static `<img>` from device config | Secure stream proxy; no credential leak |
 
 **Implementation plan (Phase 8):**
 
 1. **Guards:** All device/sensor mutations verify `householdId`.
-2. **Hue:** Brightness slider; discover/link flow (optional).
-3. **Sensors:** Optional webhook or periodic poll adapter; retention policy for readings.
-4. **Cameras:** Server-side stream URL resolution only; never expose bridge passwords to client.
+2. **Sensors:** Optional webhook or periodic poll adapter; retention policy for readings.
+3. **Cameras:** Server-side stream URL resolution only; never expose bridge passwords to client.
 
 **Files:** `src/modules/smarthome/actions.ts`, `src/lib/smarthome.ts`, `src/app/(app)/smart-home/SmartHomeClient.tsx`
 
@@ -731,7 +730,7 @@ flowchart LR
 
 **Smart home** — last; highest env/hardware variance; needs solid auth from Phase 1.
 
-**Exit gate:** Approve grocery request → item on shopping list; Hue/camera actions household-scoped; integration errors visible in UI.
+**Exit gate:** Approve grocery request → item on shopping list; camera actions household-scoped; integration errors visible in UI.
 
 **Estimated effort:** 3–4 weeks
 
@@ -832,7 +831,6 @@ The following items are deliberately separated from committed phase work. They a
 | Home Assistant | **Discovery priority** after Phase 8 foundations | A local-first hub can expose sensors and device controls through one household-scoped adapter |
 | Read-only sensor ingestion | **Committed direction** within Smart Home maturation | Delivers useful context with lower safety risk than actuation |
 | Weather forecast adapter | **Discovery** with weather-driven window ventilation alerts, after Phase 8 foundations | Use an adapter boundary so provider credentials, household location, polling, rate limits, and fallback behavior remain isolated from alert logic |
-| Hue pairing/discovery | **Discovery** after device authorization is complete | Avoid relying solely on global environment credentials; evaluate household-specific configuration |
 | Calendar interoperability (ICS) | **Discovery** after Calendar CRUD and timezone model | Export first; import/sync only after conflict and ownership rules exist |
 | Carrier tracking APIs | **Deferred** | Provider accounts, rate limits, credentials, privacy, and support complexity exceed manual-tracking value today |
 | Cloud cameras/streams | **Deferred** | Security boundary and browser proxy requirements are not mature enough for a safe product promise |

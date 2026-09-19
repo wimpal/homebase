@@ -1,6 +1,7 @@
 import { ModuleId } from "@prisma/client";
 import { prisma } from "@/core/db";
 import { isDomainError } from "@/domain/error";
+import { isWithinActiveWindow } from "./active-window";
 import { applyAutomationAction } from "./apply";
 import { AUTOMATION_TIMEZONE_V1 } from "./types";
 
@@ -129,6 +130,8 @@ export async function evaluateLightAutomations(
         timeLocal: true,
         daysOfWeek: true,
         timezone: true,
+        activeFromLocal: true,
+        activeUntilLocal: true,
       },
     });
 
@@ -138,6 +141,15 @@ export async function evaluateLightAutomations(
       const local = getLocalScheduleParts(now, timeZone);
       if (rule.timeLocal !== local.timeLocal) continue;
       if (!rule.daysOfWeek.includes(local.isoWeekday)) continue;
+      if (
+        !isWithinActiveWindow(
+          local.timeLocal,
+          rule.activeFromLocal,
+          rule.activeUntilLocal,
+        )
+      ) {
+        continue;
+      }
 
       result.matched += 1;
       const slot = slotKey(local.dateKey, local.timeLocal);

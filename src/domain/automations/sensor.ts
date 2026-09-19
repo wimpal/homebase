@@ -5,8 +5,11 @@ import {
   listDirigeraLightOnStates,
   verifyDirigeraConnectivity,
 } from "@/domain/smarthome";
+import { isWithinActiveWindow } from "./active-window";
 import { applyAutomationAction } from "./apply";
+import { getLocalScheduleParts } from "./schedule";
 import {
+  AUTOMATION_TIMEZONE_V1,
   SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
   normalizeToggleSession,
@@ -179,14 +182,39 @@ async function handleToggleLeaveSession(input: {
   session: ToggleSession;
   polarity: SensorEdgePolarity;
   receivedAt: Date;
+  withinActiveWindow: boolean;
   result: HandleSensorEdgeResult;
 }): Promise<void> {
-  const { householdId, ruleId, targetIds, polarity, receivedAt, result } =
-    input;
+  const {
+    householdId,
+    ruleId,
+    targetIds,
+    polarity,
+    receivedAt,
+    withinActiveWindow,
+    result,
+  } = input;
   const session = input.session;
 
   if (session === "idle" && polarity === "falling") {
     result.skipped += 1;
+    return;
+  }
+
+  // Outside active hours: do not start a new visit (enter→on).
+  // Session / leave-off still run so lights cannot stick on overnight.
+  if (
+    !withinActiveWindow &&
+    session === "idle" &&
+    polarity === "rising"
+  ) {
+    result.skipped += 1;
+    await prisma.lightAutomation.updateMany({
+      where: { id: ruleId, householdId },
+      data: {
+        lastRunResult: truncateLastRunResult("skipped:outside_active_window"),
+      },
+    });
     return;
   }
 
@@ -378,6 +406,9 @@ export async function handleSensorEdge(input: {
         on: true,
         toggle: true,
         toggleSession: true,
+        timezone: true,
+        activeFromLocal: true,
+        activeUntilLocal: true,
         targets: { select: { dirigeraDeviceId: true } },
       },
     });
@@ -385,6 +416,13 @@ export async function handleSensorEdge(input: {
     for (const rule of rules) {
       result.rulesMatched += 1;
       const targetIds = rule.targets.map((t) => t.dirigeraDeviceId);
+      const timeZone = rule.timezone || AUTOMATION_TIMEZONE_V1;
+      const local = getLocalScheduleParts(input.receivedAt, timeZone);
+      const withinActiveWindow = isWithinActiveWindow(
+        local.timeLocal,
+        rule.activeFromLocal,
+        rule.activeUntilLocal,
+      );
 
       if (rule.toggle) {
         await handleToggleLeaveSession({
@@ -394,7 +432,21 @@ export async function handleSensorEdge(input: {
           session: normalizeToggleSession(rule.toggleSession),
           polarity: input.polarity,
           receivedAt: input.receivedAt,
+          withinActiveWindow,
           result,
+        });
+        continue;
+      }
+
+      if (!withinActiveWindow) {
+        result.skipped += 1;
+        await prisma.lightAutomation.updateMany({
+          where: { id: rule.id, householdId: household.id },
+          data: {
+            lastRunResult: truncateLastRunResult(
+              "skipped:outside_active_window",
+            ),
+          },
         });
         continue;
       }

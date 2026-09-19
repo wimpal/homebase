@@ -14,7 +14,7 @@ A self-hosted household management platform. Track inventory, manage tasks, care
 - **Budget** - Category budgets and expense tracking
 - **Delivery** - Package tracking with arrival alerts
 - **Messages** - Group chat, grocery/task requests, visitor preferences
-- **Smart Home** - Sensor readings, window recommendations, Philips Hue, cameras
+- **Smart Home** - Sensor readings, window recommendations, IKEA lights, cameras
 - **Module system** - Toggle features on/off per household
 - **PWA** - Installable web app with push notifications
 
@@ -120,8 +120,6 @@ See `.env.example` for all options. Key variables:
 | `AUTH_SECRET` | Random secret for Auth.js |
 | `VAPID_PUBLIC_KEY` | Web Push public key |
 | `VAPID_PRIVATE_KEY` | Web Push private key |
-| `HUE_BRIDGE_IP` | Philips Hue bridge IP (optional) |
-| `HUE_USERNAME` | Hue API username (optional) |
 
 ## License
 

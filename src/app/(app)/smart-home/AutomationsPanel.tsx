@@ -324,6 +324,28 @@ function AutomationFormFields({
         </>
       )}
 
+      <div>
+        <Label htmlFor={`${idPrefix}-active-from`}>{t("activeFrom")}</Label>
+        <Input
+          id={`${idPrefix}-active-from`}
+          name="activeFromLocal"
+          type="time"
+          defaultValue={defaults?.activeFromLocal ?? undefined}
+        />
+      </div>
+      <div>
+        <Label htmlFor={`${idPrefix}-active-until`}>{t("activeUntil")}</Label>
+        <Input
+          id={`${idPrefix}-active-until`}
+          name="activeUntilLocal"
+          type="time"
+          defaultValue={defaults?.activeUntilLocal ?? undefined}
+        />
+      </div>
+      <p className="md:col-span-2 text-xs text-zinc-500">
+        {t("activeHoursHint")}
+      </p>
+
       <div className="md:col-span-2">
         <Label>{t("targets")}</Label>
         {lights.length === 0 ? (
@@ -397,6 +419,13 @@ export function AutomationsPanel({
     const targets = rule.targets
       .map((x) => lightLabel(x.dirigeraDeviceId, lightById, t("unavailable")))
       .join(", ");
+    const activeHours =
+      rule.activeFromLocal && rule.activeUntilLocal
+        ? t("activeHoursSummary", {
+            from: rule.activeFromLocal,
+            until: rule.activeUntilLocal,
+          })
+        : null;
     if (rule.triggerKind === "SENSOR_EDGE") {
       const sensor = sensorLabel(
         rule.sensorDirigeraDeviceId,
@@ -417,20 +446,22 @@ export function AutomationsPanel({
         : rule.on
           ? t("turnOn")
           : t("turnOff");
-      return t("sensorRuleSummary", {
+      const base = t("sensorRuleSummary", {
         sensor,
         edge: rule.toggle ? t("toggleLeaveEdge") : edge,
         action,
         targets: targets || t("noTargets"),
       });
+      return activeHours ? `${base} · ${activeHours}` : base;
     }
     const action = rule.on ? t("turnOn") : t("turnOff");
-    return t("ruleSummary", {
+    const base = t("ruleSummary", {
       time: rule.timeLocal ?? "—",
       days: daySummary(rule.daysOfWeek),
       action,
       targets: targets || t("noTargets"),
     });
+    return activeHours ? `${base} · ${activeHours}` : base;
   }
 
   function toggleEnabled(rule: AutomationListItem, enabled: boolean) {

@@ -40,7 +40,7 @@ async function restoreSnapshot(snapshot: Map<string, boolean>): Promise<boolean>
 
 /**
  * Party mode v1: all reachable IKEA lights flicker on/off together, then restore isOn only.
- * Out of scope: brightness restore, Hue, colour, cancel endpoint, parallel hub calls.
+ * Out of scope: brightness restore, colour, cancel endpoint, parallel hub calls.
  */
 export async function runDirigeraPartyMode(opts?: {
   durationSeconds?: number;

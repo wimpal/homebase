@@ -24,6 +24,8 @@ export type ValidatedAutomationWrite = {
   timeLocal: string | null;
   daysOfWeek: number[];
   timezone: string;
+  activeFromLocal: string | null;
+  activeUntilLocal: string | null;
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
@@ -40,6 +42,33 @@ function isSensorEdgeAttribute(value: string): value is SensorEdgeAttribute {
 
 function isSensorEdgePolarity(value: string): value is SensorEdgePolarity {
   return (SENSOR_EDGE_POLARITIES as readonly string[]).includes(value);
+}
+
+/**
+ * Parse optional active window. Both empty → null/null (all day).
+ * One set without the other → error. Both set → validated HH:MM.
+ */
+function parseActiveWindow(
+  input: AutomationWriteInput,
+):
+  | { activeFromLocal: string | null; activeUntilLocal: string | null }
+  | DomainError {
+  const fromRaw = input.activeFromLocal?.trim() ?? "";
+  const untilRaw = input.activeUntilLocal?.trim() ?? "";
+  if (!fromRaw && !untilRaw) {
+    return { activeFromLocal: null, activeUntilLocal: null };
+  }
+  if (!fromRaw || !untilRaw) {
+    return DomainError.invalidInput(
+      "activeFromLocal and activeUntilLocal must both be set, or both empty (all day).",
+    );
+  }
+  if (!TIME_LOCAL_RE.test(fromRaw) || !TIME_LOCAL_RE.test(untilRaw)) {
+    return DomainError.invalidInput(
+      "activeFromLocal and activeUntilLocal must be HH:MM in 24-hour form (e.g. 07:00).",
+    );
+  }
+  return { activeFromLocal: fromRaw, activeUntilLocal: untilRaw };
 }
 
 /**
@@ -66,6 +95,11 @@ export async function validateAutomationWrite(
     return DomainError.invalidInput(
       `timezone must be ${AUTOMATION_TIMEZONE_V1} in v1.`,
     );
+  }
+
+  const activeWindow = parseActiveWindow(input);
+  if (isDomainError(activeWindow)) {
+    return activeWindow;
   }
 
   const toggle = input.toggle === true;
@@ -203,6 +237,8 @@ export async function validateAutomationWrite(
       timeLocal: null,
       daysOfWeek: [],
       timezone,
+      activeFromLocal: activeWindow.activeFromLocal,
+      activeUntilLocal: activeWindow.activeUntilLocal,
       sensorDirigeraDeviceId: sensorId,
       sensorEdgeAttribute: attrRaw,
       sensorEdgePolarity: storedPolarity,
@@ -246,6 +282,8 @@ export async function validateAutomationWrite(
     timeLocal,
     daysOfWeek,
     timezone,
+    activeFromLocal: activeWindow.activeFromLocal,
+    activeUntilLocal: activeWindow.activeUntilLocal,
     sensorDirigeraDeviceId: null,
     sensorEdgeAttribute: null,
     sensorEdgePolarity: null,

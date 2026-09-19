@@ -86,43 +86,6 @@ export async function deleteDevice(formData: FormData) {
   revalidatePath("/smart-home");
 }
 
-export async function controlHueLight(deviceId: string, on: boolean, brightness?: number) {
-  const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
-  const input = z.object({
-    deviceId: z.string().min(1),
-    on: z.boolean(),
-    brightness: z.number().min(0).max(100).optional(),
-  }).parse({ deviceId, on, brightness });
-  const device = await assertDevice(householdId, input.deviceId);
-  if (device.type !== "LIGHT") return { success: false, error: "Device not found" };
-
-  const bridgeIp = process.env.HUE_BRIDGE_IP;
-  const username = process.env.HUE_USERNAME;
-  const config = device.config as { lightId?: number } | null;
-
-  if (!bridgeIp || !username || !config?.lightId) {
-    return { success: false, error: "Hue not configured" };
-  }
-
-  try {
-    const body: Record<string, unknown> = { on: input.on };
-    if (input.brightness != null) body.bri = Math.round((input.brightness / 100) * 254);
-
-    const res = await fetch(
-      `http://${bridgeIp}/api/${username}/lights/${config.lightId}/state`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
-
-    return { success: res.ok };
-  } catch {
-    return { success: false, error: "Failed to reach Hue bridge" };
-  }
-}
-
 export async function getCameraStreamUrl(deviceId: string) {
   const { householdId } = await requireHousehold();
   const device = await prisma.device.findFirst({ where: { id: deviceId, householdId } });
@@ -178,6 +141,8 @@ export type AutomationListItem = {
   triggerKind: "SCHEDULE" | "SENSOR_EDGE";
   timeLocal: string | null;
   daysOfWeek: number[];
+  activeFromLocal: string | null;
+  activeUntilLocal: string | null;
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: "rising" | "falling" | null;
@@ -203,6 +168,8 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     triggerKind: row.triggerKind,
     timeLocal: row.timeLocal,
     daysOfWeek: row.daysOfWeek,
+    activeFromLocal: row.activeFromLocal,
+    activeUntilLocal: row.activeUntilLocal,
     sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
     sensorEdgeAttribute: row.sensorEdgeAttribute,
     sensorEdgePolarity: row.sensorEdgePolarity,
@@ -264,12 +231,23 @@ function parseAutomationWriteInput(formData: FormData) {
   const sensorEdgePolarity =
     polarityRaw === "falling" ? ("falling" as const) : ("rising" as const);
 
+  const activeFromRaw = String(formData.get("activeFromLocal") ?? "").trim();
+  const activeUntilRaw = String(formData.get("activeUntilLocal") ?? "").trim();
+  const activeFromLocal =
+    activeFromRaw.length >= 5 ? activeFromRaw.slice(0, 5) : activeFromRaw || null;
+  const activeUntilLocal =
+    activeUntilRaw.length >= 5
+      ? activeUntilRaw.slice(0, 5)
+      : activeUntilRaw || null;
+
   if (triggerKind === "SENSOR_EDGE") {
     return {
       name: String(formData.get("name") ?? ""),
       triggerKind,
       timeLocal: null,
       daysOfWeek: [] as number[],
+      activeFromLocal,
+      activeUntilLocal,
       sensorDirigeraDeviceId,
       sensorEdgeAttribute: sensorEdgeAttribute || null,
       sensorEdgePolarity,
@@ -286,6 +264,8 @@ function parseAutomationWriteInput(formData: FormData) {
     triggerKind,
     timeLocal,
     daysOfWeek,
+    activeFromLocal,
+    activeUntilLocal,
     sensorDirigeraDeviceId: null,
     sensorEdgeAttribute: null,
     sensorEdgePolarity: null,

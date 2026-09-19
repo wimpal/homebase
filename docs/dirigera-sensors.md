@@ -91,6 +91,10 @@ Persisted on the rule as `toggleSession` (`null`/idle | `occupied` | `leaving`).
 Cooldown only on hub writes (enter on / leave off); ignored sit-close does not burn
 cooldown. Disable resets session to idle.
 
+**Active hours:** optional `activeFromLocal` / `activeUntilLocal` (HH:MM, local).
+Both empty = all day. Outside the window, enter→on is skipped; leave-session
+completions still run so lights do not stick on after the window ends.
+
 **Quick visit caveat:** open → use → close once (never close mid-stay, never second
 open) never reaches `leaving`, so light stays on until a later Open+Close or manual
 off. Classic sit-with-door-closed works.
