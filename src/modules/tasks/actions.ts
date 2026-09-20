@@ -248,11 +248,18 @@ export async function addWorkItem(formData: FormData) {
   });
   const order = (max._max.order ?? -1) + 1;
 
-  await prisma.projectWorkItem.create({
+  const item = await prisma.projectWorkItem.create({
     data: { projectId, title, notes, status: statusRaw, order },
   });
   await touchProject(projectId);
   revalidateProjectPaths(projectId);
+  return {
+    id: item.id,
+    title: item.title,
+    notes: item.notes,
+    status: item.status,
+    order: item.order,
+  };
 }
 
 export async function updateWorkItem(formData: FormData) {
@@ -337,11 +344,19 @@ export async function addProjectUpdate(formData: FormData) {
     photoUrl = (await saveUpload(photo, { householdId, subdir: "projects" })).url;
   }
 
-  await prisma.projectUpdate.create({
+  const update = await prisma.projectUpdate.create({
     data: { projectId, userId, comment, photoUrl },
+    include: { user: { select: userNameSelect } },
   });
   await touchProject(projectId);
   revalidateProjectPaths(projectId);
+  return {
+    id: update.id,
+    comment: update.comment,
+    photoUrl: update.photoUrl,
+    createdAt: update.createdAt,
+    user: update.user,
+  };
 }
 
 export async function uploadProjectFile(formData: FormData) {
@@ -356,7 +371,7 @@ export async function uploadProjectFile(formData: FormData) {
     subdir: "projects/files",
   });
 
-  await prisma.projectFile.create({
+  const created = await prisma.projectFile.create({
     data: {
       projectId,
       userId,
@@ -365,9 +380,19 @@ export async function uploadProjectFile(formData: FormData) {
       sizeBytes: saved.sizeBytes,
       url: saved.url,
     },
+    include: { user: { select: userNameSelect } },
   });
   await touchProject(projectId);
   revalidateProjectPaths(projectId);
+  return {
+    id: created.id,
+    originalName: created.originalName,
+    mimeType: created.mimeType,
+    sizeBytes: created.sizeBytes,
+    url: created.url,
+    createdAt: created.createdAt,
+    user: created.user,
+  };
 }
 
 export async function deleteProjectFile(formData: FormData) {
@@ -395,10 +420,11 @@ export async function addVisionPin(formData: FormData) {
   const xPct = clampPct(parseFloat((formData.get("xPct") as string) || "12"));
   const yPct = clampPct(parseFloat((formData.get("yPct") as string) || "12"));
 
+  let pin;
   if (kind === "text") {
     const body = (formData.get("body") as string)?.trim();
     if (!body) throw new Error("Pin text is required");
-    await prisma.projectVisionPin.create({
+    pin = await prisma.projectVisionPin.create({
       data: { projectId, kind, body, xPct, yPct, zIndex },
     });
   } else {
@@ -408,7 +434,7 @@ export async function addVisionPin(formData: FormData) {
       householdId,
       subdir: "projects/vision",
     });
-    await prisma.projectVisionPin.create({
+    pin = await prisma.projectVisionPin.create({
       data: {
         projectId,
         kind,
@@ -423,6 +449,15 @@ export async function addVisionPin(formData: FormData) {
 
   await touchProject(projectId);
   revalidateProjectPaths(projectId);
+  return {
+    id: pin.id,
+    kind: pin.kind,
+    body: pin.body,
+    imageUrl: pin.imageUrl,
+    xPct: pin.xPct,
+    yPct: pin.yPct,
+    zIndex: pin.zIndex,
+  };
 }
 
 export async function moveVisionPin(input: {

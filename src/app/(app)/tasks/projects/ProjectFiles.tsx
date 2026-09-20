@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,15 +42,22 @@ function formatBytes(bytes: number): string {
 
 export function ProjectFiles({
   projectId,
-  files,
+  files: initialFiles,
 }: {
   projectId: string;
   files: ProjectFileRow[];
 }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [files, setFiles] = useState(initialFiles);
   const [preview, setPreview] = useState<ProjectFileRow | null>(null);
   const [textBody, setTextBody] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFiles(initialFiles);
+  }, [initialFiles]);
 
   const previewKind = useMemo(() => {
     if (!preview) return null;
@@ -73,9 +81,28 @@ export function ProjectFiles({
     }
   }
 
+  async function handleUpload(formData: FormData) {
+    const created = await uploadProjectFile(formData);
+    setFiles((prev) => [created, ...prev]);
+    formRef.current?.reset();
+    router.refresh();
+  }
+
+  async function handleDelete(formData: FormData) {
+    const id = formData.get("id") as string;
+    await deleteProjectFile(formData);
+    setFiles((prev) => prev.filter((file) => file.id !== id));
+    if (preview?.id === id) setPreview(null);
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
-      <form action={uploadProjectFile} className="flex flex-wrap items-end gap-2">
+      <form
+        ref={formRef}
+        action={handleUpload}
+        className="flex flex-wrap items-end gap-2"
+      >
         <input type="hidden" name="projectId" value={projectId} />
         <div className="min-w-[12rem] flex-1">
           <Input
@@ -113,7 +140,7 @@ export function ProjectFiles({
                 <Button type="button" size="sm" variant="outline" onClick={() => openPreview(file)}>
                   {t("preview")}
                 </Button>
-                <ConfirmForm action={deleteProjectFile} message={t("confirmDeleteFile")}>
+                <ConfirmForm action={handleDelete} message={t("confirmDeleteFile")}>
                   <input type="hidden" name="id" value={file.id} />
                   <Button type="submit" size="sm" variant="destructive">
                     {tc("delete")}
@@ -141,12 +168,24 @@ export function ProjectFiles({
                   <img src={preview.url} alt="" className="max-h-[60vh] w-full object-contain" />
                 )}
                 {previewKind === "pdf" && (
-                  <iframe
+                  <object
                     title={preview.originalName}
-                    src={preview.url}
+                    data={preview.url}
+                    type="application/pdf"
                     className="h-[60vh] w-full rounded border border-zinc-200 dark:border-zinc-800"
-                    sandbox=""
-                  />
+                  >
+                    <p className="p-3 text-sm text-zinc-500">
+                      {t("previewLoadFailed")}{" "}
+                      <a
+                        href={preview.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-700 underline dark:text-emerald-400"
+                      >
+                        {t("openInNewTab")}
+                      </a>
+                    </p>
+                  </object>
                 )}
                 {previewKind === "text" && (
                   <pre

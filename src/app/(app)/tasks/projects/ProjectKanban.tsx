@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -11,6 +12,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
@@ -57,17 +59,23 @@ function parseColumnId(id: string): WorkItemStatus | null {
     : null;
 }
 
+function isWorkStatus(value: string): value is WorkItemStatus {
+  return (WORK_ITEM_STATUSES as readonly string[]).includes(value);
+}
+
 function SortableCard({
   item,
   onSave,
+  onDelete,
 }: {
   item: WorkItem;
-  onSave: (formData: FormData) => void;
+  onSave: (formData: FormData) => void | Promise<void>;
+  onDelete: (formData: FormData) => void | Promise<void>;
 }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item.id });
+    useSortable({ id: item.id, data: { type: "item", status: item.status } });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -103,7 +111,7 @@ function SortableCard({
           </Button>
         </div>
       </form>
-      <ConfirmForm action={deleteWorkItem} message={t("confirmDeleteWorkItem")} className="mt-2">
+      <ConfirmForm action={onDelete} message={t("confirmDeleteWorkItem")} className="mt-2">
         <input type="hidden" name="id" value={item.id} />
         <Button type="submit" size="sm" variant="destructive">
           {tc("delete")}
@@ -117,13 +125,18 @@ function Column({
   status,
   items,
   onSave,
+  onDelete,
 }: {
   status: WorkItemStatus;
   items: WorkItem[];
-  onSave: (formData: FormData) => void;
+  onSave: (formData: FormData) => void | Promise<void>;
+  onDelete: (formData: FormData) => void | Promise<void>;
 }) {
   const t = useTranslations("tasks");
-  const { setNodeRef, isOver } = useDroppable({ id: columnId(status) });
+  const { setNodeRef, isOver } = useDroppable({
+    id: columnId(status),
+    data: { type: "column", status },
+  });
 
   return (
     <div
@@ -138,9 +151,9 @@ function Column({
         {t(`workStatus_${status}`)} ({items.length})
       </h3>
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-2">
+        <div className="flex min-h-[8rem] flex-col gap-2">
           {items.map((item) => (
-            <SortableCard key={item.id} item={item} onSave={onSave} />
+            <SortableCard key={item.id} item={item} onSave={onSave} onDelete={onDelete} />
           ))}
         </div>
       </SortableContext>
@@ -156,9 +169,17 @@ export function ProjectKanban({
   initialItems: WorkItem[];
 }) {
   const t = useTranslations("tasks");
+  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const titleRef = useRef<HTMLInputElement>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -181,19 +202,92 @@ export function ProjectKanban({
     return map;
   }, [items]);
 
-  function isWorkStatus(value: string): value is WorkItemStatus {
-    return (WORK_ITEM_STATUSES as readonly string[]).includes(value);
-  }
-
-  function findContainer(id: string): WorkItemStatus | null {
+  function findContainer(id: string, list: WorkItem[] = items): WorkItemStatus | null {
     const asColumn = parseColumnId(id);
     if (asColumn) return asColumn;
-    const item = items.find((row) => row.id === id);
+    const item = list.find((row) => row.id === id);
     return item && isWorkStatus(item.status) ? item.status : null;
+  }
+
+  function flattenByStatus(
+    nextByStatus: Record<WorkItemStatus, WorkItem[]>,
+  ): WorkItem[] {
+    return WORK_ITEM_STATUSES.flatMap((status) =>
+      nextByStatus[status].map((item, order) => ({
+        ...item,
+        status,
+        order,
+      })),
+    );
   }
 
   function onDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
+  }
+
+  function onDragOver(event: DragOverEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeItemId = String(active.id);
+    const overId = String(over.id);
+    if (activeItemId === overId) return;
+
+    setItems((prev) => {
+      const fromStatus = findContainer(activeItemId, prev);
+      const toStatus = parseColumnId(overId) ?? findContainer(overId, prev);
+      if (!fromStatus || !toStatus) return prev;
+
+      const fromItems = prev
+        .filter((i) => i.status === fromStatus)
+        .sort((a, b) => a.order - b.order);
+      const fromIndex = fromItems.findIndex((i) => i.id === activeItemId);
+      if (fromIndex < 0) return prev;
+
+      if (fromStatus === toStatus) {
+        if (parseColumnId(overId)) return prev;
+        const overIndex = fromItems.findIndex((i) => i.id === overId);
+        if (overIndex < 0 || fromIndex === overIndex) return prev;
+        const nextByStatus: Record<WorkItemStatus, WorkItem[]> = {
+          backlog: prev
+            .filter((i) => i.status === "backlog")
+            .sort((a, b) => a.order - b.order),
+          in_progress: prev
+            .filter((i) => i.status === "in_progress")
+            .sort((a, b) => a.order - b.order),
+          done: prev
+            .filter((i) => i.status === "done")
+            .sort((a, b) => a.order - b.order),
+        };
+        nextByStatus[fromStatus] = arrayMove(fromItems, fromIndex, overIndex);
+        return flattenByStatus(nextByStatus);
+      }
+
+      const toItems = prev
+        .filter((i) => i.status === toStatus)
+        .sort((a, b) => a.order - b.order);
+      const [moved] = fromItems.splice(fromIndex, 1);
+      const overIndex = parseColumnId(overId)
+        ? toItems.length
+        : toItems.findIndex((i) => i.id === overId);
+      const insertAt = overIndex < 0 ? toItems.length : overIndex;
+      toItems.splice(insertAt, 0, { ...moved, status: toStatus });
+
+      const nextByStatus: Record<WorkItemStatus, WorkItem[]> = {
+        backlog: prev
+          .filter((i) => i.status === "backlog" && i.id !== activeItemId)
+          .sort((a, b) => a.order - b.order),
+        in_progress: prev
+          .filter((i) => i.status === "in_progress" && i.id !== activeItemId)
+          .sort((a, b) => a.order - b.order),
+        done: prev
+          .filter((i) => i.status === "done" && i.id !== activeItemId)
+          .sort((a, b) => a.order - b.order),
+      };
+      nextByStatus[fromStatus] = fromItems;
+      nextByStatus[toStatus] = toItems;
+      return flattenByStatus(nextByStatus);
+    });
   }
 
   function onDragEnd(event: DragEndEvent) {
@@ -202,56 +296,24 @@ export function ProjectKanban({
     if (!over) return;
 
     const activeItemId = String(active.id);
-    const fromStatus = findContainer(activeItemId);
-    const toStatus =
-      parseColumnId(String(over.id)) ?? findContainer(String(over.id));
-    if (!fromStatus || !toStatus) return;
-
-    const fromItems = [...byStatus[fromStatus]];
-    const toItems =
-      fromStatus === toStatus ? fromItems : [...byStatus[toStatus]];
-    const fromIndex = fromItems.findIndex((i) => i.id === activeItemId);
-    if (fromIndex < 0) return;
-
-    const overIndex = parseColumnId(String(over.id))
-      ? toItems.length
-      : toItems.findIndex((i) => i.id === String(over.id));
-
-    const nextByStatus: Record<WorkItemStatus, WorkItem[]> = {
-      backlog: [...byStatus.backlog],
-      in_progress: [...byStatus.in_progress],
-      done: [...byStatus.done],
-    };
-
-    if (fromStatus === toStatus) {
-      nextByStatus[fromStatus] = arrayMove(
-        fromItems,
-        fromIndex,
-        overIndex < 0 ? fromItems.length - 1 : overIndex,
-      ).map((item, order) => ({ ...item, order, status: fromStatus }));
-    } else {
-      const [moved] = fromItems.splice(fromIndex, 1);
-      const insertAt = overIndex < 0 ? toItems.length : overIndex;
-      toItems.splice(insertAt, 0, { ...moved, status: toStatus });
-      nextByStatus[fromStatus] = fromItems.map((item, order) => ({
-        ...item,
-        order,
-        status: fromStatus,
-      }));
-      nextByStatus[toStatus] = toItems.map((item, order) => ({
-        ...item,
-        order,
-        status: toStatus,
-      }));
-    }
-
-    const flat = WORK_ITEM_STATUSES.flatMap((status) => nextByStatus[status]);
-    setItems(flat);
+    const next = itemsRef.current;
+    const item = next.find((i) => i.id === activeItemId);
+    if (!item || !isWorkStatus(item.status)) return;
+    const toStatus = item.status;
 
     const orderedIdsByStatus = {
-      backlog: nextByStatus.backlog.map((i) => i.id),
-      in_progress: nextByStatus.in_progress.map((i) => i.id),
-      done: nextByStatus.done.map((i) => i.id),
+      backlog: next
+        .filter((i) => i.status === "backlog")
+        .sort((a, b) => a.order - b.order)
+        .map((i) => i.id),
+      in_progress: next
+        .filter((i) => i.status === "in_progress")
+        .sort((a, b) => a.order - b.order)
+        .map((i) => i.id),
+      done: next
+        .filter((i) => i.status === "done")
+        .sort((a, b) => a.order - b.order)
+        .map((i) => i.id),
     };
 
     startTransition(async () => {
@@ -261,17 +323,51 @@ export function ProjectKanban({
         toStatus,
         orderedIdsByStatus,
       });
+      router.refresh();
     });
+  }
+
+  async function handleAdd(formData: FormData) {
+    const created = await addWorkItem(formData);
+    setItems((prev) => [...prev, created]);
+    if (titleRef.current) titleRef.current.value = "";
+    router.refresh();
+  }
+
+  async function handleDelete(formData: FormData) {
+    const id = formData.get("id") as string;
+    await deleteWorkItem(formData);
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    router.refresh();
+  }
+
+  async function handleSave(formData: FormData) {
+    const id = formData.get("id") as string;
+    const title = (formData.get("title") as string)?.trim();
+    const notes = ((formData.get("notes") as string) || "").trim() || null;
+    await updateWorkItem(formData);
+    if (title) {
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, title, notes } : item)),
+      );
+    }
+    router.refresh();
   }
 
   const activeItem = items.find((i) => i.id === activeId) ?? null;
 
   return (
     <div className="space-y-4">
-      <form action={addWorkItem} className="flex flex-wrap gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      <form action={handleAdd} className="flex flex-wrap gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
         <input type="hidden" name="projectId" value={projectId} />
         <input type="hidden" name="status" value="backlog" />
-        <Input name="title" placeholder={t("newWorkItem")} required className="min-w-[12rem] flex-1" />
+        <Input
+          ref={titleRef}
+          name="title"
+          placeholder={t("newWorkItem")}
+          required
+          className="min-w-[12rem] flex-1"
+        />
         <Button type="submit" size="sm">
           {t("addWorkItem")}
         </Button>
@@ -281,6 +377,7 @@ export function ProjectKanban({
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={onDragStart}
+        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
       >
         <div className="flex flex-col gap-3 lg:flex-row">
@@ -289,7 +386,8 @@ export function ProjectKanban({
               key={status}
               status={status}
               items={byStatus[status]}
-              onSave={updateWorkItem}
+              onSave={handleSave}
+              onDelete={handleDelete}
             />
           ))}
         </div>

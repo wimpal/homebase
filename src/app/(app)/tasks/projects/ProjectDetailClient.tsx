@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,20 @@ export type ProjectDetail = {
 export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
+  const router = useRouter();
+  const updateFormRef = useRef<HTMLFormElement>(null);
+  const [updates, setUpdates] = useState(project.updates);
+
+  useEffect(() => {
+    setUpdates(project.updates);
+  }, [project.updates]);
+
+  async function handleAddUpdate(formData: FormData) {
+    const created = await addProjectUpdate(formData);
+    setUpdates((prev) => [created, ...prev]);
+    updateFormRef.current?.reset();
+    router.refresh();
+  }
 
   return (
     <div className="space-y-8">
@@ -113,7 +129,11 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("sectionActivity")}</h2>
-        <form action={addProjectUpdate} className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <form
+          ref={updateFormRef}
+          action={handleAddUpdate}
+          className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+        >
           <input type="hidden" name="projectId" value={project.id} />
           <Textarea name="comment" placeholder={t("progressUpdate")} required />
           <Input name="photo" type="file" accept="image/*" />
@@ -121,11 +141,11 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
             {t("addUpdate")}
           </Button>
         </form>
-        {project.updates.length === 0 ? (
+        {updates.length === 0 ? (
           <p className="text-sm text-zinc-500">{t("noActivity")}</p>
         ) : (
           <ul className="space-y-2">
-            {project.updates.map((u) => (
+            {updates.map((u) => (
               <li
                 key={u.id}
                 className="rounded bg-zinc-50 p-2 text-sm dark:bg-zinc-900"
