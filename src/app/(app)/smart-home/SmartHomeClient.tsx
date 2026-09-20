@@ -217,6 +217,7 @@ export function SmartHomeClient({
 
   const cameras = devices.filter((d) => d.type === "CAMERA");
   const [snapshotBust, setSnapshotBust] = useState<Record<string, number>>({});
+  const [tab, setTab] = useState("sensors");
 
   return (
     <div className="space-y-6">
@@ -232,7 +233,7 @@ export function SmartHomeClient({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="sensors">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="sensors">{t("sensors")}</TabsTrigger>
           <TabsTrigger value="ikea-lights">{t("ikeaLights")}</TabsTrigger>
@@ -546,6 +547,7 @@ export function SmartHomeClient({
                       <ReolinkSnapshot
                         deviceId={cam.id}
                         name={cam.name}
+                        live={tab === "cameras"}
                         bust={bust}
                         onRefresh={() =>
                           setSnapshotBust((prev) => ({

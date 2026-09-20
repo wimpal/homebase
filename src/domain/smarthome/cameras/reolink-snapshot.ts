@@ -12,21 +12,33 @@ export const CAMERA_INVALID_CONFIG = "Invalid Reolink camera configuration";
 
 const SNAPSHOT_TIMEOUT_MS = 12_000;
 
+/** Common Reolink LAN paths — firmware varies (E1 Pro / others). */
+const REOLINK_STREAM_PATHS = [
+  "h264Preview_01_sub",
+  "h264Preview_01_main",
+  "Preview_01_sub",
+  "Preview_01_main",
+] as const;
+
 function encodeRtspUserInfo(username: string, password: string): string {
   return `${encodeURIComponent(username)}:${encodeURIComponent(password)}`;
 }
 
-/** Build RTSP URL for Reolink Preview paths (E1 Pro / typical LAN firmware). */
-export function buildReolinkRtspUrl(config: ReolinkCameraConfig): string {
-  const path =
-    config.stream === "main" ? "h264Preview_01_main" : "h264Preview_01_sub";
+export function buildReolinkRtspUrl(
+  config: ReolinkCameraConfig,
+  path?: string,
+): string {
+  const streamPath =
+    path ??
+    (config.stream === "main" ? "h264Preview_01_main" : "h264Preview_01_sub");
   const auth = encodeRtspUserInfo(config.username, config.password);
-  return `rtsp://${auth}@${config.host}:${config.rtspPort}/${path}`;
+  return `rtsp://${auth}@${config.host}:${config.rtspPort}/${streamPath}`;
 }
 
 /**
  * Grab a single JPEG frame from Reolink RTSP via system ffmpeg.
  * E1 Pro has no HTTP Snap CGI — RTSP is required.
+ * Tries several Preview path names used across Reolink firmware.
  */
 export async function fetchReolinkSnapshot(
   configInput: unknown,
@@ -36,8 +48,25 @@ export async function fetchReolinkSnapshot(
     return DomainError.invalidInput(CAMERA_INVALID_CONFIG);
   }
 
-  const url = buildReolinkRtspUrl(config);
-  return runFfmpegSnapshot(url);
+  const preferred =
+    config.stream === "main" ? "h264Preview_01_main" : "h264Preview_01_sub";
+  const paths = [
+    preferred,
+    ...REOLINK_STREAM_PATHS.filter((p) => p !== preferred),
+  ];
+
+  let lastError: DomainError = DomainError.unavailable(CAMERA_SNAPSHOT_FAILED);
+  for (const path of paths) {
+    const result = await runFfmpegSnapshot(buildReolinkRtspUrl(config, path));
+    if (!(result instanceof DomainError)) {
+      return result;
+    }
+    if (result.message === CAMERA_FFMPEG_MISSING) {
+      return result;
+    }
+    lastError = result;
+  }
+  return lastError;
 }
 
 function runFfmpegSnapshot(rtspUrl: string): Promise<Buffer | DomainError> {
@@ -61,7 +90,6 @@ function runFfmpegSnapshot(rtspUrl: string): Promise<Buffer | DomainError> {
 
     let settled = false;
     const chunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
 
     let child;
     try {
@@ -96,9 +124,8 @@ function runFfmpegSnapshot(rtspUrl: string): Promise<Buffer | DomainError> {
     child.stdout.on("data", (chunk: Buffer) => {
       chunks.push(chunk);
     });
-    child.stderr.on("data", (chunk: Buffer) => {
-      stderrChunks.push(chunk);
-    });
+    // Discard stderr — may echo the RTSP URL with credentials.
+    child.stderr.on("data", () => {});
 
     child.on("close", (code) => {
       if (settled) return;
@@ -109,8 +136,6 @@ function runFfmpegSnapshot(rtspUrl: string): Promise<Buffer | DomainError> {
         resolve(jpeg);
         return;
       }
-      // Do not surface ffmpeg stderr (may contain RTSP URL with credentials).
-      void stderrChunks;
       resolve(DomainError.unavailable(CAMERA_SNAPSHOT_FAILED));
     });
   });

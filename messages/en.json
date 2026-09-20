@@ -415,6 +415,8 @@
     "cameraPasswordPlaceholder": "Camera password",
     "cameraHostLabel": "Host",
     "refreshSnapshot": "Refresh",
+    "snapshotLoading": "Capturing snapshot…",
+    "livePreviewHint": "Updates every few seconds while this tab is open and visible.",
     "reolinkHint": "Reolink E1 Pro: enable RTSP in the Reolink app. Prefer a DHCP reservation so the IP stays stable. Snapshot uses FFmpeg on the server — credentials stay server-side.",
     "configureStream": "No preview configured for this camera.",
     "legacyStreamHidden": "A stream URL with credentials is stored server-side and is not shown in the browser. Re-add as a Reolink camera for a safe snapshot preview.",
