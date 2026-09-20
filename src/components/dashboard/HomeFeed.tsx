@@ -1,5 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { markNotificationRead } from "@/core/notifications/service";
+import {
+  dismissNotification,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/core/notifications/service";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -17,7 +21,11 @@ interface NotificationItem {
   createdAt: Date;
 }
 
-export async function HomeFeed({ notifications }: { notifications: NotificationItem[] }) {
+export async function HomeFeed({
+  notifications,
+}: {
+  notifications: NotificationItem[];
+}) {
   const t = await getTranslations("dashboard");
   const localeRaw = await getLocale();
   const bcp47 = localeToBcp47(isLocale(localeRaw) ? localeRaw : "en");
@@ -29,13 +37,40 @@ export async function HomeFeed({ notifications }: { notifications: NotificationI
     revalidatePath("/dashboard");
   }
 
+  async function handleMarkAllRead() {
+    "use server";
+    await markAllNotificationsRead();
+    revalidatePath("/dashboard");
+  }
+
+  async function handleDismiss(formData: FormData) {
+    "use server";
+    const id = formData.get("id") as string;
+    await dismissNotification(id);
+    revalidatePath("/dashboard");
+  }
+
+  const hasUnread = notifications.some((n) => !n.read);
+
   return (
     <Card className="flex h-full flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Bell className="h-5 w-5 text-emerald-600" />
-          {t("homeFeed")}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-5 w-5 text-emerald-600" />
+            {t("homeFeed")}
+          </CardTitle>
+          {hasUnread && (
+            <form action={handleMarkAllRead}>
+              <button
+                type="submit"
+                className="text-xs text-emerald-600 hover:underline"
+              >
+                {t("markAllRead")}
+              </button>
+            </form>
+          )}
+        </div>
       </CardHeader>
       <CardContent
         className={
@@ -56,25 +91,44 @@ export async function HomeFeed({ notifications }: { notifications: NotificationI
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     {n.link ? (
-                      <Link href={n.link} className="font-medium hover:underline">
+                      <Link
+                        href={n.link}
+                        className="font-medium hover:underline"
+                      >
                         {n.title}
                       </Link>
                     ) : (
                       <p className="font-medium">{n.title}</p>
                     )}
-                    <p className="text-zinc-600 dark:text-zinc-400">{n.message}</p>
+                    <p className="text-zinc-600 dark:text-zinc-400">
+                      {n.message}
+                    </p>
                     <p className="mt-1 text-xs text-zinc-400">
                       {formatDateTime(n.createdAt, bcp47)}
                     </p>
                   </div>
-                  {!n.read && (
-                    <form action={handleMarkRead}>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {!n.read && (
+                      <form action={handleMarkRead}>
+                        <input type="hidden" name="id" value={n.id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-emerald-600 hover:underline"
+                        >
+                          {t("markRead")}
+                        </button>
+                      </form>
+                    )}
+                    <form action={handleDismiss}>
                       <input type="hidden" name="id" value={n.id} />
-                      <button type="submit" className="text-xs text-emerald-600 hover:underline">
-                        {t("markRead")}
+                      <button
+                        type="submit"
+                        className="text-xs text-zinc-500 hover:underline"
+                      >
+                        {t("dismiss")}
                       </button>
                     </form>
-                  )}
+                  </div>
                 </div>
               </li>
             ))}

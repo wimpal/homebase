@@ -138,6 +138,29 @@
       "saveFailed": "Failed to save subscription",
       "subscriptionFailed": "Subscription failed"
     },
+    "notifications": {
+      "title": "Home Feed alerts",
+      "description": "Choose which alert types appear on the dashboard Home Feed",
+      "adminOnly": "Only household admins can change alert preferences.",
+      "types": {
+        "INFO": "Info",
+        "WARNING": "Warnings",
+        "REMINDER": "Reminders",
+        "LOW_STOCK": "Low stock",
+        "EXPIRY": "Expiring products",
+        "DELIVERY": "Deliveries",
+        "TASK": "Chore deadlines"
+      },
+      "typeHints": {
+        "INFO": "General household notices",
+        "WARNING": "Important warnings",
+        "REMINDER": "Calendar and plant watering reminders",
+        "LOW_STOCK": "Products at or below their stock threshold",
+        "EXPIRY": "Items nearing their expiry date",
+        "DELIVERY": "Packages arriving soon",
+        "TASK": "Chores with an upcoming deadline"
+      }
+    },
     "visitor": {
       "title": "Visitor Preferences",
       "description": "Track preferences for guests (e.g. tea preferences)",
@@ -177,6 +200,8 @@
     "homeFeed": "Home Feed",
     "noNotifications": "No notifications yet.",
     "markRead": "Mark read",
+    "markAllRead": "Mark all read",
+    "dismiss": "Dismiss",
     "today": {
       "title": "Today",
       "dayOfYear": "Day of year",

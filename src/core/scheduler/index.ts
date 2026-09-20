@@ -1,23 +1,61 @@
-import { ModuleId } from "@prisma/client";
+import { ModuleId, NotificationType } from "@prisma/client";
 import cron from "node-cron";
 import { prisma } from "@/core/db";
-import { createNotification } from "@/core/notifications/service";
+import { notify, purgeOldNotifications } from "@/core/notifications/service";
 import { evaluateLightAutomations } from "@/domain/automations";
 import { markProductNeeded } from "@/domain/shopping";
-import { NotificationType } from "@prisma/client";
-import { addDays, differenceInDays, isBefore, subMinutes } from "date-fns";
+import { addDays, isBefore, subMinutes } from "date-fns";
+
+/** Local YYYY-MM-DD for once-per-day dedupe keys (worker container TZ). */
+function localDateKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export function startScheduler() {
-  cron.schedule("*/15 * * * *", checkLowStock);
-  cron.schedule("0 8 * * *", checkExpiringProducts);
-  cron.schedule("0 7 * * *", checkPlantWatering);
-  cron.schedule("*/5 * * * *", checkChoreDeadlines);
-  cron.schedule("*/5 * * * *", checkCalendarReminders);
-  cron.schedule("*/5 * * * *", checkDeliveryAlerts);
+  cron.schedule("*/15 * * * *", () => {
+    void checkLowStock();
+  });
+  cron.schedule("0 8 * * *", () => {
+    void checkExpiringProducts();
+  });
+  cron.schedule("0 7 * * *", () => {
+    void checkPlantWatering();
+  });
+  cron.schedule("*/5 * * * *", () => {
+    void checkChoreDeadlines();
+  });
+  cron.schedule("*/5 * * * *", () => {
+    void checkCalendarReminders();
+  });
+  cron.schedule("*/5 * * * *", () => {
+    void checkDeliveryAlerts();
+  });
+  cron.schedule("15 3 * * *", () => {
+    void runNotificationRetention();
+  });
   cron.schedule("* * * * *", () => {
     void checkLightAutomations();
   });
   console.log("[scheduler] Background jobs started");
+}
+
+async function runNotificationRetention() {
+  try {
+    const result = await purgeOldNotifications();
+    if (result.readPurged > 0 || result.stalePurged > 0) {
+      console.log(
+        `[scheduler] notification retention: read=${result.readPurged} stale=${result.stalePurged}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      "[scheduler] notification retention failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 async function checkLightAutomations() {
@@ -57,22 +95,13 @@ async function checkLowStock() {
     for (const product of products) {
       const totalQty = product.stockItems.reduce((s, i) => s + i.quantity, 0);
       if (totalQty <= product.lowStockAt) {
-        const existing = await prisma.notification.findFirst({
-          where: {
-            householdId: household.id,
-            title: `Low stock: ${product.name}`,
-            read: false,
-            createdAt: { gte: addDays(new Date(), -1) },
-          },
-        });
-        if (existing) continue;
-
-        await createNotification({
+        await notify({
           householdId: household.id,
           type: NotificationType.LOW_STOCK,
           title: `Low stock: ${product.name}`,
           message: `${product.name} has ${totalQty} left (threshold: ${product.lowStockAt})`,
           link: "/inventory",
+          dedupeKey: `low-stock:${product.id}`,
         });
 
         const list = await prisma.shoppingList.findFirst({
@@ -119,12 +148,13 @@ async function checkExpiringProducts() {
           ? ` Try: ${recipes.map((r) => r.title).join(", ")}`
           : "";
 
-      await createNotification({
+      await notify({
         householdId: household.id,
         type: NotificationType.EXPIRY,
         title: `Expiring: ${item.product.name}`,
         message: `${item.product.name} expires on ${item.expiryDate?.toLocaleDateString()}.${recipeHint}`,
         link: "/recipes",
+        dedupeKey: `expiry:${item.id}`,
       });
     }
   }
@@ -133,21 +163,19 @@ async function checkExpiringProducts() {
 async function checkPlantWatering() {
   const plants = await prisma.plant.findMany({
     where: {
-      OR: [
-        { nextWatering: { lte: new Date() } },
-        { nextWatering: null },
-      ],
+      OR: [{ nextWatering: { lte: new Date() } }, { nextWatering: null }],
     },
-    include: { household: true },
   });
 
+  const day = localDateKey();
   for (const plant of plants) {
-    await createNotification({
+    await notify({
       householdId: plant.householdId,
       type: NotificationType.REMINDER,
       title: `Water ${plant.name}`,
       message: `${plant.name} needs watering today.`,
       link: "/plants",
+      dedupeKey: `plant:${plant.id}:water:${day}`,
     });
   }
 }
@@ -159,13 +187,15 @@ async function checkChoreDeadlines() {
     },
   });
 
+  const day = localDateKey();
   for (const chore of chores) {
-    await createNotification({
+    await notify({
       householdId: chore.householdId,
       type: NotificationType.TASK,
       title: `Chore due: ${chore.title}`,
       message: `Deadline: ${chore.deadline?.toLocaleString()}`,
       link: "/tasks",
+      dedupeKey: `chore:${chore.id}:due:${day}`,
     });
   }
 }
@@ -179,26 +209,18 @@ async function checkCalendarReminders() {
   for (const event of events) {
     const reminderAt = subMinutes(event.startAt, event.reminderMinutes);
     if (isBefore(reminderAt, now) && isBefore(now, event.startAt)) {
-      const existing = await prisma.notification.findFirst({
-        where: {
-          householdId: event.householdId,
-          title: `Upcoming: ${event.title}`,
-          createdAt: { gte: subMinutes(now, event.reminderMinutes) },
-        },
-      });
-      if (existing) continue;
-
       const items =
         event.itemsNeeded.length > 0
           ? ` Items needed: ${event.itemsNeeded.join(", ")}`
           : "";
 
-      await createNotification({
+      await notify({
         householdId: event.householdId,
         type: NotificationType.REMINDER,
         title: `Upcoming: ${event.title}`,
         message: `Starts at ${event.startAt.toLocaleString()}.${items}`,
         link: "/calendar",
+        dedupeKey: `calendar:${event.id}`,
       });
     }
   }
@@ -217,19 +239,25 @@ async function checkDeliveryAlerts() {
     if (!delivery.earliestTime) continue;
     const alertTime = subMinutes(delivery.earliestTime, 5);
     if (isBefore(alertTime, now) && isBefore(now, delivery.earliestTime)) {
-      await createNotification({
+      await notify({
         householdId: delivery.householdId,
         type: NotificationType.DELIVERY,
         title: "Delivery arriving soon",
         message: `${delivery.description || "Package"} expected around ${delivery.earliestTime.toLocaleTimeString()}`,
         link: "/delivery",
+        dedupeKey: `delivery:${delivery.id}:${delivery.earliestTime.toISOString()}`,
       });
     }
   }
 }
 
-export async function updatePlantWateringSchedule(plantId: string, householdId: string) {
-  const plant = await prisma.plant.findFirst({ where: { id: plantId, householdId } });
+export async function updatePlantWateringSchedule(
+  plantId: string,
+  householdId: string,
+) {
+  const plant = await prisma.plant.findFirst({
+    where: { id: plantId, householdId },
+  });
   if (!plant) return;
 
   await prisma.plant.updateMany({
@@ -241,7 +269,9 @@ export async function updatePlantWateringSchedule(plantId: string, householdId: 
   });
 }
 
-export function getAverageChoreDuration(completions: { durationMin: number | null }[]) {
+export function getAverageChoreDuration(
+  completions: { durationMin: number | null }[],
+) {
   const withDuration = completions.filter((c) => c.durationMin != null);
   if (withDuration.length === 0) return null;
   const total = withDuration.reduce((s, c) => s + (c.durationMin || 0), 0);

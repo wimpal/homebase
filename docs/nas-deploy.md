@@ -161,6 +161,13 @@ docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply  # delete
 Optional: set `MCP_HOUSEHOLD_ID` in the worker env to limit scope. Does not touch
 demo seed users or real household rows without those prefixes.
 
+### Notification retention
+
+The worker purges Home Feed rows daily at 03:15 (`read` older than 30 days; any
+row older than 90 days). New schema fields (`Notification.dedupeKey`,
+`NotificationTypeSetting`) need a `prisma db push` on deploy (already part of
+`deploy.sh` / `deploy:nas`).
+
 ---
 
 ## Synology (Container Manager)

@@ -138,6 +138,29 @@
       "saveFailed": "Abonnement opslaan mislukt",
       "subscriptionFailed": "Inschrijving mislukt"
     },
+    "notifications": {
+      "title": "Home Feed-meldingen",
+      "description": "Kies welke meldingstypen op het dashboard verschijnen",
+      "adminOnly": "Alleen huishoud-admins kunnen meldingsvoorkeuren wijzigen.",
+      "types": {
+        "INFO": "Info",
+        "WARNING": "Waarschuwingen",
+        "REMINDER": "Herinneringen",
+        "LOW_STOCK": "Lage voorraad",
+        "EXPIRY": "Verlopende producten",
+        "DELIVERY": "Bezorgingen",
+        "TASK": "Klus-deadlines"
+      },
+      "typeHints": {
+        "INFO": "Algemene huishoudberichten",
+        "WARNING": "Belangrijke waarschuwingen",
+        "REMINDER": "Agenda- en plantwaterherinneringen",
+        "LOW_STOCK": "Producten op of onder hun voorraaddrempel",
+        "EXPIRY": "Artikelen die bijna verlopen",
+        "DELIVERY": "Pakketten die binnenkort aankomen",
+        "TASK": "Klussen met een naderende deadline"
+      }
+    },
     "visitor": {
       "title": "Bezoekersvoorkeuren",
       "description": "Voorkeuren van gasten bijhouden (bijv. thee-voorkeuren)",
@@ -177,6 +200,8 @@
     "homeFeed": "Home feed",
     "noNotifications": "Nog geen meldingen.",
     "markRead": "Markeer als gelezen",
+    "markAllRead": "Alles als gelezen markeren",
+    "dismiss": "Verwijderen",
     "today": {
       "title": "Vandaag",
       "dayOfYear": "Dag van het jaar",

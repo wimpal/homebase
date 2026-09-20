@@ -8,16 +8,22 @@ import { MODULE_REGISTRY } from "@/core/modules/registry";
 import { getEnabledModules, toggleModule } from "@/core/modules/settings";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
 import {
+  ALL_NOTIFICATION_TYPES,
+  getNotificationTypeSettings,
+  setNotificationTypeEnabled,
+} from "@/core/notifications/prefs";
+import {
   deleteVisitorPreference,
   getVisitorPreferences,
   saveVisitorPreference,
 } from "@/modules/social/actions";
-import { ModuleId } from "@prisma/client";
+import { ModuleId, NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PushNotificationSetup } from "./PushNotificationSetup";
 import { LanguageToggle } from "@/components/settings/LanguageToggle";
 import { ModuleToggle } from "@/components/settings/ModuleToggle";
+import { NotificationTypeToggle } from "@/components/settings/NotificationTypeToggle";
 import { isLocale } from "@/i18n/config";
 
 async function handleToggleModule(formData: FormData) {
@@ -29,12 +35,25 @@ async function handleToggleModule(formData: FormData) {
   revalidatePath("/settings");
 }
 
+async function handleToggleNotificationType(formData: FormData) {
+  "use server";
+  const { householdId } = await requireAdmin();
+  const type = formData.get("type") as NotificationType;
+  if (!ALL_NOTIFICATION_TYPES.includes(type)) {
+    throw new Error("Invalid notification type");
+  }
+  const enabled = formData.get("enabled") === "true";
+  await setNotificationTypeEnabled(householdId, type, enabled);
+  revalidatePath("/settings");
+}
+
 export default async function SettingsPage() {
   const { householdId, household, role } = await requireHousehold();
   const isAdmin = role === "ADMIN";
   const enabledModules = await getEnabledModules(householdId);
   const enabledIds = new Set(enabledModules.map((m) => m.id));
   const visitorPrefs = await getVisitorPreferences();
+  const notifSettings = await getNotificationTypeSettings(householdId);
   const t = await getTranslations("settings");
   const tm = await getTranslations("modules");
   const tc = await getTranslations("common");
@@ -45,7 +64,9 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{household.name} · {role}</p>
+        <p className="text-zinc-500">
+          {household.name} · {role}
+        </p>
       </div>
 
       <Card>
@@ -71,12 +92,17 @@ export default async function SettingsPage() {
             const enabled = enabledIds.has(mod.id);
             const Icon = mod.icon;
             return (
-              <div key={mod.id} className="flex items-center justify-between rounded-lg border p-4">
+              <div
+                key={mod.id}
+                className="flex items-center justify-between rounded-lg border p-4"
+              >
                 <div className="flex items-center gap-3">
                   <Icon className="h-5 w-5 text-emerald-600" />
                   <div>
                     <p className="font-medium">{tm(`${mod.nameKey}.name`)}</p>
-                    <p className="text-sm text-zinc-500">{tm(`${mod.descriptionKey}.description`)}</p>
+                    <p className="text-sm text-zinc-500">
+                      {tm(`${mod.descriptionKey}.description`)}
+                    </p>
                   </div>
                 </div>
                 {isAdmin ? (
@@ -84,6 +110,47 @@ export default async function SettingsPage() {
                     moduleId={mod.id}
                     enabled={enabled}
                     action={handleToggleModule}
+                  />
+                ) : (
+                  <Switch checked={enabled} disabled />
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("notifications.title")}</CardTitle>
+          <CardDescription>{t("notifications.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!isAdmin && (
+            <p className="text-sm text-zinc-500">
+              {t("notifications.adminOnly")}
+            </p>
+          )}
+          {ALL_NOTIFICATION_TYPES.map((type) => {
+            const enabled = notifSettings[type];
+            return (
+              <div
+                key={type}
+                className="flex items-center justify-between rounded-lg border p-4"
+              >
+                <div>
+                  <p className="font-medium">
+                    {t(`notifications.types.${type}`)}
+                  </p>
+                  <p className="text-sm text-zinc-500">
+                    {t(`notifications.typeHints.${type}`)}
+                  </p>
+                </div>
+                {isAdmin ? (
+                  <NotificationTypeToggle
+                    type={type}
+                    enabled={enabled}
+                    action={handleToggleNotificationType}
                   />
                 ) : (
                   <Switch checked={enabled} disabled />
@@ -103,20 +170,32 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <form action={saveVisitorPreference} className="space-y-3">
-            <div><Label>{t("visitor.visitorName")}</Label><Input name="visitorName" required /></div>
+            <div>
+              <Label>{t("visitor.visitorName")}</Label>
+              <Input name="visitorName" required />
+            </div>
             <div>
               <Label>{t("visitor.preferencesJson")}</Label>
-              <Input name="preferences" defaultValue='{"tea": "Earl Grey, no milk"}' required />
+              <Input
+                name="preferences"
+                defaultValue='{"tea": "Earl Grey, no milk"}'
+                required
+              />
             </div>
             <Button type="submit">{tc("save")}</Button>
           </form>
           {visitorPrefs.length > 0 && (
             <div className="mt-4 space-y-2">
               {visitorPrefs.map((vp) => (
-                <div key={vp.id} className="flex items-start justify-between gap-3 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+                <div
+                  key={vp.id}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900"
+                >
                   <div>
                     <p className="font-medium">{vp.visitorName}</p>
-                    <p className="text-zinc-500">{JSON.stringify(vp.preferences)}</p>
+                    <p className="text-zinc-500">
+                      {JSON.stringify(vp.preferences)}
+                    </p>
                   </div>
                   <ConfirmForm
                     action={deleteVisitorPreference}

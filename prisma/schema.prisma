@@ -139,10 +139,11 @@ model Household {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships      Membership[]
-  moduleSettings   ModuleSetting[]
-  notifications    Notification[]
-  preferences      Preference[]
+  memberships               Membership[]
+  moduleSettings            ModuleSetting[]
+  notifications             Notification[]
+  notificationTypeSettings  NotificationTypeSetting[]
+  preferences               Preference[]
   locations        Location[]
   products         Product[]
   stockItems       StockItem[]
@@ -221,10 +222,29 @@ model Notification {
   message     String
   read        Boolean          @default(false)
   link        String?
+  /// Stable once-per-event key; null = one-off (no dedupe). Unique per household when set.
+  dedupeKey   String?
   createdAt   DateTime         @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, dedupeKey])
+  @@index([householdId, createdAt(sort: Desc)])
+}
+
+/// Per-type mute for household Home Feed. Missing row = enabled.
+model NotificationTypeSetting {
+  id          String           @id @default(cuid())
+  householdId String
+  type        NotificationType
+  enabled     Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, type])
 }
 
 model Preference {
