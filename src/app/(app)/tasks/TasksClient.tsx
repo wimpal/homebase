@@ -14,15 +14,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import {
   createChoreWithState,
   completeChoreWithState,
-  createProject,
-  toggleProjectStep,
-  addProjectUpdate,
   deleteChore,
-  deleteProject,
   type ChoreFormState,
 } from "@/modules/tasks/actions";
 import type { ChoreHistoryItem } from "@/domain/tasks";
 import { Timer } from "lucide-react";
+import { ProjectsList, type ProjectListItem } from "./ProjectsList";
 
 interface Chore {
   id: string;
@@ -34,19 +31,6 @@ interface Chore {
   completions: { durationMin: number | null }[];
 }
 
-interface Project {
-  id: string;
-  title: string;
-  description: string | null;
-  status: string;
-  steps: { id: string; title: string; completed: boolean }[];
-  updates: {
-    comment: string;
-    photoUrl: string | null;
-    user: { name: string | null } | null;
-  }[];
-}
-
 const initialFormState: ChoreFormState = {};
 
 export function TasksClient({
@@ -55,7 +39,7 @@ export function TasksClient({
   history,
 }: {
   chores: Chore[];
-  projects: Project[];
+  projects: ProjectListItem[];
   history: ChoreHistoryItem[];
 }) {
   const t = useTranslations("tasks");
@@ -284,116 +268,7 @@ export function TasksClient({
         </TabsContent>
 
         <TabsContent value="projects" className="space-y-4">
-          <CollapsibleCreate
-            openLabel={t("newProject")}
-            cancelLabel={tc("cancelAdd")}
-            defaultOpen={projects.length === 0}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("newProject")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form action={createProject} className="space-y-3">
-                  <div>
-                    <Label>{tc("title")}</Label>
-                    <Input name="title" required />
-                  </div>
-                  <div>
-                    <Label>{tc("description")}</Label>
-                    <Textarea name="description" />
-                  </div>
-                  <div>
-                    <Label>{t("stepsOnePerLine")}</Label>
-                    <Textarea name="steps" placeholder={t("stepsPlaceholder")} />
-                  </div>
-                  <Button type="submit">{t("createProject")}</Button>
-                </form>
-              </CardContent>
-            </Card>
-          </CollapsibleCreate>
-
-          {projects.length === 0 ? (
-            <EmptyState message={t("noProjects")} />
-          ) : (
-            projects.map((project) => {
-              const done = project.steps.filter((s) => s.completed).length;
-              const total = project.steps.length;
-              return (
-                <Card key={project.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <CardTitle className="text-base">{project.title}</CardTitle>
-                        <p className="text-sm text-zinc-500">
-                          {t("stepsComplete", { done, total })}
-                        </p>
-                      </div>
-                      <ConfirmForm
-                        action={deleteProject}
-                        message={t("confirmDeleteProject")}
-                      >
-                        <input type="hidden" name="id" value={project.id} />
-                        <Button type="submit" variant="destructive" size="sm">
-                          {tc("delete")}
-                        </Button>
-                      </ConfirmForm>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {project.steps.map((step) => (
-                      <form
-                        key={step.id}
-                        action={toggleProjectStep}
-                        className="flex items-center gap-2"
-                      >
-                        <input type="hidden" name="id" value={step.id} />
-                        <input
-                          type="hidden"
-                          name="completed"
-                          value={(!step.completed).toString()}
-                        />
-                        <Button type="submit" size="sm" variant="outline">
-                          {step.completed ? "✓" : t("toggleStep")}
-                        </Button>
-                        <span className={step.completed ? "line-through" : ""}>
-                          {step.title}
-                        </span>
-                      </form>
-                    ))}
-                    <form action={addProjectUpdate} className="space-y-2 border-t pt-3">
-                      <input type="hidden" name="projectId" value={project.id} />
-                      <Textarea
-                        name="comment"
-                        placeholder={t("progressUpdate")}
-                        required
-                      />
-                      <Input name="photo" type="file" accept="image/*" />
-                      <Button type="submit" size="sm">
-                        {t("addUpdate")}
-                      </Button>
-                    </form>
-                    {project.updates.map((u, i) => (
-                      <div
-                        key={i}
-                        className="rounded bg-zinc-50 p-2 text-sm dark:bg-zinc-900"
-                      >
-                        <p>{u.comment}</p>
-                        {u.photoUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={u.photoUrl}
-                            alt=""
-                            className="mt-2 max-h-32 rounded"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
+          <ProjectsList projects={projects} />
         </TabsContent>
       </Tabs>
     </div>

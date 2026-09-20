@@ -3,16 +3,17 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/core/auth/config";
 import { prisma } from "@/core/db";
+import { contentTypeForUploadPath } from "@/core/uploads/service";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const segments = (await params).path;
   if (
-    segments.length !== 3 ||
+    segments.length < 3 ||
     segments.some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\0"))
   ) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -39,16 +40,17 @@ export async function GET(
 
   try {
     const file = await readFile(filepath);
-    const ext = path.extname(filepath).toLowerCase();
-    const contentType =
-      ext === ".png" ? "image/png" :
-      ext === ".gif" ? "image/gif" :
-      ext === ".webp" ? "image/webp" :
-      "image/jpeg";
+    const contentType = contentTypeForUploadPath(filepath);
+    const download = new URL(request.url).searchParams.get("download") === "1";
+    const filename = path.basename(filepath);
+    const disposition = download
+      ? `attachment; filename="${filename}"`
+      : `inline; filename="${filename}"`;
 
     return new NextResponse(file, {
       headers: {
         "Content-Type": contentType,
+        "Content-Disposition": disposition,
         "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },

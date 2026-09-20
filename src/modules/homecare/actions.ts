@@ -46,7 +46,7 @@ export async function waterPlant(formData: FormData) {
 
   let photoUrl: string | undefined;
   if (photo && photo.size > 0) {
-    photoUrl = await saveUpload(photo, { householdId, subdir: "plants" });
+    photoUrl = (await saveUpload(photo, { householdId, subdir: "plants" })).url;
   }
 
   await prisma.plantLog.create({

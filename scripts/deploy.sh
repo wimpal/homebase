@@ -10,6 +10,9 @@ docker compose up -d --build
 echo "==> Migrating shopping slots (T-035, safe to re-run)..."
 docker compose exec -T worker npx tsx scripts/migrate-shopping-slots.ts
 
+echo "==> Migrating project work items (T-082, safe to re-run)..."
+docker compose exec -T worker npx tsx scripts/migrate-project-work-items.ts
+
 echo "==> Applying database schema..."
 # Use worker image — it has Prisma 6 CLI; app image does not (npx would fetch Prisma 7)
 docker compose exec -T worker npx prisma db push --accept-data-loss

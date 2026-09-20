@@ -20,7 +20,12 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PrismaClient, type Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import {
+  applySmokePurge,
+  collectSmokeMatches,
+  formatPurgeCounts,
+} from "./lib/purge-smoke";
 
 function loadDotEnv() {
   try {
@@ -55,104 +60,10 @@ const SAMPLE_LIMIT = 15;
 
 const prisma = new PrismaClient();
 
-type NamedRow = { id: string; label: string; householdId: string };
-
-function notificationWhere(): Prisma.NotificationWhereInput {
-  return {
-    title: { contains: "mcp-smoke" },
-    ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-  };
-}
-
-async function collectMatches(): Promise<{
-  shoppingItems: NamedRow[];
-  products: NamedRow[];
-  chores: NamedRow[];
-  recipes: NamedRow[];
-  notifications: NamedRow[];
-}> {
-  const shoppingWhere: Prisma.ShoppingItemWhereInput = {
-    name: { startsWith: "mcp-smoke" },
-    ...(HOUSEHOLD_ID
-      ? { shoppingList: { householdId: HOUSEHOLD_ID } }
-      : {}),
-  };
-  const productWhere: Prisma.ProductWhereInput = {
-    name: { startsWith: "mcp-smoke" },
-    ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-  };
-  const choreWhere: Prisma.ChoreWhereInput = {
-    title: { startsWith: "mcp-smoke" },
-    ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-  };
-  const recipeWhere: Prisma.RecipeWhereInput = {
-    title: { startsWith: "Smoke Add " },
-    ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-  };
-
-  const [shoppingItems, products, chores, recipes, notifications] =
-    await Promise.all([
-      prisma.shoppingItem.findMany({
-        where: shoppingWhere,
-        select: {
-          id: true,
-          name: true,
-          shoppingList: { select: { householdId: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.product.findMany({
-        where: productWhere,
-        select: { id: true, name: true, householdId: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.chore.findMany({
-        where: choreWhere,
-        select: { id: true, title: true, householdId: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.recipe.findMany({
-        where: recipeWhere,
-        select: { id: true, title: true, householdId: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.notification.findMany({
-        where: notificationWhere(),
-        select: { id: true, title: true, householdId: true },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
-
-  return {
-    shoppingItems: shoppingItems.map((r) => ({
-      id: r.id,
-      label: r.name,
-      householdId: r.shoppingList.householdId,
-    })),
-    products: products.map((r) => ({
-      id: r.id,
-      label: r.name,
-      householdId: r.householdId,
-    })),
-    chores: chores.map((r) => ({
-      id: r.id,
-      label: r.title,
-      householdId: r.householdId,
-    })),
-    recipes: recipes.map((r) => ({
-      id: r.id,
-      label: r.title,
-      householdId: r.householdId,
-    })),
-    notifications: notifications.map((r) => ({
-      id: r.id,
-      label: r.title,
-      householdId: r.householdId,
-    })),
-  };
-}
-
-function printSection(title: string, rows: NamedRow[]) {
+function printSection(
+  title: string,
+  rows: { id: string; label: string; householdId: string }[],
+) {
   console.log(`\n${title}: ${rows.length}`);
   for (const row of rows.slice(0, SAMPLE_LIMIT)) {
     console.log(`  - ${row.label}  (${row.id}, household=${row.householdId})`);
@@ -163,7 +74,9 @@ function printSection(title: string, rows: NamedRow[]) {
 }
 
 async function main() {
-  const matches = await collectMatches();
+  const matches = await collectSmokeMatches(prisma, {
+    householdId: HOUSEHOLD_ID,
+  });
   const allEntityIds = [
     ...matches.shoppingItems.map((r) => r.id),
     ...matches.products.map((r) => r.id),
@@ -195,7 +108,7 @@ async function main() {
   printSection("ShoppingItem (name starts with mcp-smoke)", matches.shoppingItems);
   printSection("Product (name starts with mcp-smoke)", matches.products);
   printSection("Chore (title starts with mcp-smoke)", matches.chores);
-  printSection("Recipe (title starts with \"Smoke Add \")", matches.recipes);
+  printSection('Recipe (title starts with "Smoke Add ")', matches.recipes);
   printSection(
     "Notification (title contains mcp-smoke)",
     matches.notifications,
@@ -222,61 +135,8 @@ async function main() {
     return;
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const changeLog =
-      allEntityIds.length === 0
-        ? { count: 0 }
-        : await tx.mcpChangeLog.deleteMany({
-            where: {
-              entityId: { in: allEntityIds },
-              ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-            },
-          });
-
-    const notification = await tx.notification.deleteMany({
-      where: notificationWhere(),
-    });
-
-    const shoppingItem = await tx.shoppingItem.deleteMany({
-      where: {
-        name: { startsWith: "mcp-smoke" },
-        ...(HOUSEHOLD_ID
-          ? { shoppingList: { householdId: HOUSEHOLD_ID } }
-          : {}),
-      },
-    });
-
-    const product = await tx.product.deleteMany({
-      where: {
-        name: { startsWith: "mcp-smoke" },
-        ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-      },
-    });
-
-    const chore = await tx.chore.deleteMany({
-      where: {
-        title: { startsWith: "mcp-smoke" },
-        ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-      },
-    });
-
-    const recipe = await tx.recipe.deleteMany({
-      where: {
-        title: { startsWith: "Smoke Add " },
-        ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-      },
-    });
-
-    return { changeLog, notification, shoppingItem, product, chore, recipe };
-  });
-
-  console.log("\nDeleted:");
-  console.log(`  McpChangeLog:  ${result.changeLog.count}`);
-  console.log(`  Notification:  ${result.notification.count}`);
-  console.log(`  ShoppingItem:  ${result.shoppingItem.count}`);
-  console.log(`  Product:       ${result.product.count}`);
-  console.log(`  Chore:         ${result.chore.count}`);
-  console.log(`  Recipe:        ${result.recipe.count}`);
+  const counts = await applySmokePurge(prisma, { householdId: HOUSEHOLD_ID });
+  console.log(`\nDeleted: ${formatPurgeCounts(counts)}`);
 }
 
 main()

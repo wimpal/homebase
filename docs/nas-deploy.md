@@ -118,7 +118,7 @@ The script:
 
 1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
 2. SSH → `docker compose up --build -d`
-3. `npx tsx scripts/migrate-shopping-slots.ts` then `prisma db push --accept-data-loss` inside the **worker** container (migration backfills orphan shopping rows before T-035 NOT NULL on `productId`)
+3. `npx tsx scripts/migrate-shopping-slots.ts` then `npx tsx scripts/migrate-project-work-items.ts` then `prisma db push --accept-data-loss` inside the **worker** container (shopping backfill + ProjectStep → work items before push)
 4. Curl `/health` on port 3000
 
 Legacy alternative (SSH + on-NAS `deploy.sh` only):
@@ -140,8 +140,9 @@ git pull
 
 1. `docker compose up -d --build` — rebuild app + worker, restart all services
 2. `migrate-shopping-slots.ts` — T-035 data cleanup (raw SQL, before push; safe to re-run)
-3. `prisma db push --accept-data-loss` — apply schema changes
-4. `ensure-product-ci-index.ts` — case-insensitive unique product names per household
+3. `migrate-project-work-items.ts` — T-082 ProjectStep → ProjectWorkItem (before push; safe to re-run)
+4. `prisma db push --accept-data-loss` — apply schema changes
+5. `ensure-product-ci-index.ts` — case-insensitive unique product names per household
 
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 
@@ -150,8 +151,9 @@ Your **database and uploads are preserved** in Docker volumes across redeploys.
 `mcp:smoke` leaves shopping items, products, chores, recipes named with
 `mcp-smoke*` / `Smoke Add *`, plus Home Feed notifications titled
 `Chore due: mcp-smoke-…` (worker wrote them every 5 minutes while the chore
-existed). Postgres is not exposed on the LAN — run the purge inside the
-**worker** container (after deploy so the script is in the image):
+existed). Successful smoke runs now **auto-delete** those leftovers (Prisma when
+the DB is reachable; otherwise SSH + worker when `NAS_HOST` is set). Skip with
+`HOMEBASE_SMOKE_KEEP_DATA=1`. Manual purge inside the **worker** container:
 
 ```bash
 docker compose exec worker npx tsx scripts/purge-smoke-data.ts          # dry-run

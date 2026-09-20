@@ -9,10 +9,19 @@
  *   PowerShell: $env:MCP_BASE_URL="http://192.168.1.142:3000"; npm run mcp:smoke
 
  * Lights write smoke (local only): HOMEBASE_SMOKE_LIGHTS_WRITE=1 + DIRIGERA_TEST_DEVICE_ID
+ *
+ * After success, deletes smoke leftovers (Prisma if DB reachable; else SSH worker purge
+ * when NAS_HOST is set). Skip with HOMEBASE_SMOKE_KEEP_DATA=1.
  */
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import {
+  applySmokePurge,
+  formatPurgeCounts,
+  totalPurgeCounts,
+} from "./lib/purge-smoke";
 
 function loadDotEnv() {
   if (process.env.HOMEBASE_SMOKE_SKIP_DOTENV === "1") {
@@ -667,6 +676,74 @@ async function main() {
   await runLightsSmoke(callTool);
 
   console.log("\nAll MCP smoke checks passed.");
+  await cleanupSmokeLeftovers();
+}
+
+/**
+ * Remove mcp-smoke / Smoke Add leftovers after a green run.
+ * Local: Prisma against DATABASE_URL. Remote NAS: SSH into worker purge when NAS_HOST set.
+ */
+async function cleanupSmokeLeftovers() {
+  if (process.env.HOMEBASE_SMOKE_KEEP_DATA === "1") {
+    console.log(
+      "NOTE: HOMEBASE_SMOKE_KEEP_DATA=1 — leaving smoke rows in the database",
+    );
+    return;
+  }
+
+  const prisma = new PrismaClient();
+  try {
+    const household = await prisma.household.findUnique({
+      where: { id: HOUSEHOLD_ID! },
+      select: { id: true },
+    });
+    if (household) {
+      const counts = await applySmokePurge(prisma, {
+        householdId: HOUSEHOLD_ID!,
+      });
+      if (totalPurgeCounts(counts) === 0) {
+        ok("smoke cleanup (nothing to delete)");
+      } else {
+        ok(`smoke cleanup (${formatPurgeCounts(counts)})`);
+      }
+      return;
+    }
+  } catch (err) {
+    console.log(
+      `NOTE: local DB not usable for smoke cleanup (${err instanceof Error ? err.message : err})`,
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+
+  const nasHost = process.env.NAS_HOST?.trim();
+  if (nasHost) {
+    const nasUser = process.env.NAS_USER?.trim() || "wim";
+    const nasPath =
+      process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+    const remote = `${nasUser}@${nasHost}`;
+    const remoteCmd = [
+      "set -eu",
+      `cd '${nasPath}'`,
+      "docker compose exec -T worker npx tsx scripts/purge-smoke-data.ts --apply",
+    ].join(" && ");
+    console.log(`Cleaning smoke leftovers via SSH ${remote}...`);
+    try {
+      execFileSync("ssh", [remote, remoteCmd], { stdio: "inherit" });
+      ok("smoke cleanup (via NAS worker)");
+      return;
+    } catch (err) {
+      console.warn(
+        `WARN: SSH smoke cleanup failed (${err instanceof Error ? err.message : err})`,
+      );
+    }
+  }
+
+  console.warn(
+    "WARN: could not delete smoke leftovers automatically. On NAS run:\n" +
+      "  docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply\n" +
+      "Or set NAS_HOST (and optional NAS_USER / NAS_PATH) for SSH cleanup.",
+  );
 }
 
 type CallTool = (

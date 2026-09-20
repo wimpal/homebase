@@ -88,6 +88,7 @@ model User {
   preferences       Preference[]
   choreCompletions  ChoreCompletion[]
   projectUpdates    ProjectUpdate[]
+  projectFiles      ProjectFile[]
   plantLogs         PlantLog[]
   routineMembers    RoutineMember[]
   routineCompletions RoutineTaskCompletion[]
@@ -440,19 +441,59 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  steps     ProjectStep[]
-  updates   ProjectUpdate[]
+  household  Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  workItems  ProjectWorkItem[]
+  files      ProjectFile[]
+  visionPins ProjectVisionPin[]
+  updates    ProjectUpdate[]
 }
 
-model ProjectStep {
-  id        String  @id @default(cuid())
+model ProjectWorkItem {
+  id        String   @id @default(cuid())
   projectId String
   title     String
-  completed Boolean @default(false)
-  order     Int     @default(0)
+  notes     String?
+  status    String   @default("backlog")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status, order])
+}
+
+model ProjectFile {
+  id           String   @id @default(cuid())
+  projectId    String
+  userId       String?
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  url          String
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+}
+
+model ProjectVisionPin {
+  id        String   @id @default(cuid())
+  projectId String
+  kind      String
+  body      String?
+  imageUrl  String?
+  xPct      Float    @default(10)
+  yPct      Float    @default(10)
+  zIndex    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model ProjectUpdate {

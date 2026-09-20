@@ -174,7 +174,7 @@ Legend: **Done** · **Partial** · **Missing** · **Risk** (security/ops gap)
 
 **T-035 shipped (2026-09-02, ADR-010, NAS verified):** Persistent `Product` catalog; one primary-list slot per `(shoppingListId, productId)`; needed = `checked: false`; bought hides from list, logs purchase, bumps inventory when stock exists; desktop catalog panel + mobile typeahead; MCP dedupe on `add_item`.
 
-**Deploy / migration (existing DBs):** `scripts/migrate-shopping-slots.ts` (raw SQL, before `db push`) → `prisma db push` → `scripts/ensure-product-ci-index.ts`. Wired in `deploy-nas.ps1`, `deploy.sh`, `docs/nas-deploy.md`.
+**Deploy / migration (existing DBs):** `scripts/migrate-shopping-slots.ts` (raw SQL, before `db push`) → `scripts/migrate-project-work-items.ts` (T-082 ProjectStep → work items) → `prisma db push` → `scripts/ensure-product-ci-index.ts`. Wired in `deploy-nas.ps1`, `deploy.sh`, `docs/nas-deploy.md`.
 
 **Remaining (Phase 6+):**
 

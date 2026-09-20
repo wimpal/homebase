@@ -2,7 +2,13 @@
 
 import { prisma } from "@/core/db";
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
-import { assertChore, assertProject } from "@/core/tenancy/assertHouseholdResource";
+import {
+  assertChore,
+  assertProject,
+  assertProjectFile,
+  assertProjectVisionPin,
+  assertProjectWorkItem,
+} from "@/core/tenancy/assertHouseholdResource";
 import { isDomainError } from "@/domain/error";
 import {
   addChore,
@@ -10,11 +16,33 @@ import {
   isChoreActive,
   listChoreHistory,
 } from "@/domain/tasks";
+import {
+  clampPct,
+  isProjectStatus,
+  isVisionPinKind,
+  isWorkItemStatus,
+  projectDetailPath,
+  type WorkItemStatus,
+} from "@/domain/tasks/projectConstants";
 import { ModuleId } from "@prisma/client";
 import { getAverageChoreDuration } from "@/core/scheduler";
 import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
-import { saveUpload } from "@/core/uploads/service";
+import { deleteUploadsByUrls, saveUpload } from "@/core/uploads/service";
+
+const userNameSelect = { id: true, name: true } as const;
+
+function revalidateProjectPaths(projectId?: string) {
+  revalidatePath("/tasks");
+  if (projectId) revalidatePath(projectDetailPath(projectId));
+}
+
+async function touchProject(projectId: string) {
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { updatedAt: new Date() },
+  });
+}
 
 export async function getChores() {
   const { householdId } = await requireHousehold();
@@ -122,60 +150,307 @@ export async function getProjects() {
   return prisma.project.findMany({
     where: { householdId },
     include: {
-      steps: { orderBy: { order: "asc" } },
-      updates: { include: { user: true }, orderBy: { createdAt: "desc" }, take: 5 },
+      workItems: {
+        select: { id: true, status: true },
+      },
+      _count: {
+        select: { files: true, visionPins: true, updates: true },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
 }
 
+export async function getProject(projectId: string) {
+  const { householdId } = await requireHousehold();
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, householdId },
+    include: {
+      workItems: { orderBy: [{ status: "asc" }, { order: "asc" }] },
+      files: {
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: userNameSelect } },
+      },
+      visionPins: { orderBy: { zIndex: "asc" } },
+      updates: {
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: { user: { select: userNameSelect } },
+      },
+    },
+  });
+  if (!project) throw new Error("Project not found");
+  return project;
+}
+
 export async function createProject(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.TASKS);
-  const title = formData.get("title") as string;
-  const description = (formData.get("description") as string) || undefined;
-  const steps = ((formData.get("steps") as string) || "").split("\n").filter(Boolean);
+  const title = (formData.get("title") as string)?.trim();
+  if (!title) throw new Error("Title is required");
+  const description = ((formData.get("description") as string) || "").trim() || undefined;
+  const items = ((formData.get("workItems") as string) || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  await prisma.project.create({
+  const project = await prisma.project.create({
     data: {
       householdId,
       title,
       description,
-      steps: {
-        create: steps.map((title, order) => ({ title, order })),
+      status: "active",
+      workItems: {
+        create: items.map((itemTitle, order) => ({
+          title: itemTitle,
+          status: "backlog",
+          order,
+        })),
       },
     },
   });
-  revalidatePath("/tasks");
+  revalidateProjectPaths(project.id);
 }
 
-export async function toggleProjectStep(formData: FormData) {
+export async function updateProjectStatus(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.TASKS);
   const id = formData.get("id") as string;
-  const completed = formData.get("completed") === "true";
-  const result = await prisma.projectStep.updateMany({
-    where: { id, project: { householdId } },
-    data: { completed },
+  const status = formData.get("status") as string;
+  if (!isProjectStatus(status)) throw new Error("Invalid project status");
+  await assertProject(householdId, id);
+  await prisma.project.update({ where: { id }, data: { status } });
+  revalidateProjectPaths(id);
+}
+
+export async function updateProjectMeta(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  const title = (formData.get("title") as string)?.trim();
+  if (!title) throw new Error("Title is required");
+  const description = ((formData.get("description") as string) || "").trim() || null;
+  await assertProject(householdId, id);
+  await prisma.project.update({ where: { id }, data: { title, description } });
+  revalidateProjectPaths(id);
+}
+
+export async function addWorkItem(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const projectId = formData.get("projectId") as string;
+  const title = (formData.get("title") as string)?.trim();
+  if (!title) throw new Error("Title is required");
+  const notes = ((formData.get("notes") as string) || "").trim() || null;
+  const statusRaw = (formData.get("status") as string) || "backlog";
+  if (!isWorkItemStatus(statusRaw)) throw new Error("Invalid work item status");
+  await assertProject(householdId, projectId);
+
+  const max = await prisma.projectWorkItem.aggregate({
+    where: { projectId, status: statusRaw },
+    _max: { order: true },
   });
-  if (result.count === 0) throw new Error("Project step not found");
-  revalidatePath("/tasks");
+  const order = (max._max.order ?? -1) + 1;
+
+  await prisma.projectWorkItem.create({
+    data: { projectId, title, notes, status: statusRaw, order },
+  });
+  await touchProject(projectId);
+  revalidateProjectPaths(projectId);
+}
+
+export async function updateWorkItem(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  const title = (formData.get("title") as string)?.trim();
+  if (!title) throw new Error("Title is required");
+  const notes = ((formData.get("notes") as string) || "").trim() || null;
+  const item = await assertProjectWorkItem(householdId, id);
+  await prisma.projectWorkItem.update({
+    where: { id },
+    data: { title, notes },
+  });
+  await touchProject(item.projectId);
+  revalidateProjectPaths(item.projectId);
+}
+
+export async function deleteWorkItem(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  const item = await assertProjectWorkItem(householdId, id);
+  await prisma.projectWorkItem.delete({ where: { id } });
+  await touchProject(item.projectId);
+  revalidateProjectPaths(item.projectId);
+}
+
+export async function reorderWorkItems(input: {
+  projectId: string;
+  itemId: string;
+  toStatus: WorkItemStatus;
+  orderedIdsByStatus: Record<WorkItemStatus, string[]>;
+}) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const { projectId, itemId, toStatus, orderedIdsByStatus } = input;
+  if (!isWorkItemStatus(toStatus)) throw new Error("Invalid work item status");
+  await assertProject(householdId, projectId);
+  await assertProjectWorkItem(householdId, itemId);
+
+  const allIds = [
+    ...orderedIdsByStatus.backlog,
+    ...orderedIdsByStatus.in_progress,
+    ...orderedIdsByStatus.done,
+  ];
+  const owned = await prisma.projectWorkItem.findMany({
+    where: { projectId, project: { householdId } },
+    select: { id: true },
+  });
+  const ownedSet = new Set(owned.map((row) => row.id));
+  if (allIds.some((id) => !ownedSet.has(id)) || !ownedSet.has(itemId)) {
+    throw new Error("Invalid work item reorder");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const status of ["backlog", "in_progress", "done"] as const) {
+      const ids = orderedIdsByStatus[status] ?? [];
+      for (let order = 0; order < ids.length; order++) {
+        await tx.projectWorkItem.update({
+          where: { id: ids[order] },
+          data: { status, order },
+        });
+      }
+    }
+    await tx.project.update({
+      where: { id: projectId },
+      data: { updatedAt: new Date() },
+    });
+  });
+
+  revalidateProjectPaths(projectId);
 }
 
 export async function addProjectUpdate(formData: FormData) {
   const { householdId, userId } = await requireMutationAccess(ModuleId.TASKS);
   const projectId = formData.get("projectId") as string;
-  const comment = formData.get("comment") as string;
+  const comment = (formData.get("comment") as string)?.trim();
+  if (!comment) throw new Error("Comment is required");
   const photo = formData.get("photo") as File | null;
   await assertProject(householdId, projectId);
 
   let photoUrl: string | undefined;
   if (photo && photo.size > 0) {
-    photoUrl = await saveUpload(photo, { householdId, subdir: "projects" });
+    photoUrl = (await saveUpload(photo, { householdId, subdir: "projects" })).url;
   }
 
   await prisma.projectUpdate.create({
     data: { projectId, userId, comment, photoUrl },
   });
-  revalidatePath("/tasks");
+  await touchProject(projectId);
+  revalidateProjectPaths(projectId);
+}
+
+export async function uploadProjectFile(formData: FormData) {
+  const { householdId, userId } = await requireMutationAccess(ModuleId.TASKS);
+  const projectId = formData.get("projectId") as string;
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) throw new Error("File is required");
+  await assertProject(householdId, projectId);
+
+  const saved = await saveUpload(file, {
+    householdId,
+    subdir: "projects/files",
+  });
+
+  await prisma.projectFile.create({
+    data: {
+      projectId,
+      userId,
+      originalName: saved.originalName,
+      mimeType: saved.mimeType,
+      sizeBytes: saved.sizeBytes,
+      url: saved.url,
+    },
+  });
+  await touchProject(projectId);
+  revalidateProjectPaths(projectId);
+}
+
+export async function deleteProjectFile(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  const file = await assertProjectFile(householdId, id);
+  await prisma.projectFile.delete({ where: { id } });
+  await deleteUploadsByUrls([file.url]);
+  await touchProject(file.projectId);
+  revalidateProjectPaths(file.projectId);
+}
+
+export async function addVisionPin(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const projectId = formData.get("projectId") as string;
+  const kind = formData.get("kind") as string;
+  if (!isVisionPinKind(kind)) throw new Error("Invalid pin kind");
+  await assertProject(householdId, projectId);
+
+  const maxZ = await prisma.projectVisionPin.aggregate({
+    where: { projectId },
+    _max: { zIndex: true },
+  });
+  const zIndex = (maxZ._max.zIndex ?? -1) + 1;
+  const xPct = clampPct(parseFloat((formData.get("xPct") as string) || "12"));
+  const yPct = clampPct(parseFloat((formData.get("yPct") as string) || "12"));
+
+  if (kind === "text") {
+    const body = (formData.get("body") as string)?.trim();
+    if (!body) throw new Error("Pin text is required");
+    await prisma.projectVisionPin.create({
+      data: { projectId, kind, body, xPct, yPct, zIndex },
+    });
+  } else {
+    const image = formData.get("image") as File | null;
+    if (!image || image.size === 0) throw new Error("Image is required");
+    const saved = await saveUpload(image, {
+      householdId,
+      subdir: "projects/vision",
+    });
+    await prisma.projectVisionPin.create({
+      data: {
+        projectId,
+        kind,
+        imageUrl: saved.url,
+        body: ((formData.get("body") as string) || "").trim() || null,
+        xPct,
+        yPct,
+        zIndex,
+      },
+    });
+  }
+
+  await touchProject(projectId);
+  revalidateProjectPaths(projectId);
+}
+
+export async function moveVisionPin(input: {
+  pinId: string;
+  xPct: number;
+  yPct: number;
+}) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const pin = await assertProjectVisionPin(householdId, input.pinId);
+  await prisma.projectVisionPin.update({
+    where: { id: input.pinId },
+    data: {
+      xPct: clampPct(input.xPct),
+      yPct: clampPct(input.yPct),
+    },
+  });
+  await touchProject(pin.projectId);
+  revalidateProjectPaths(pin.projectId);
+}
+
+export async function deleteVisionPin(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  const pin = await assertProjectVisionPin(householdId, id);
+  await prisma.projectVisionPin.delete({ where: { id } });
+  await deleteUploadsByUrls([pin.imageUrl]);
+  await touchProject(pin.projectId);
+  revalidateProjectPaths(pin.projectId);
 }
 
 export async function deleteChore(formData: FormData) {
@@ -193,7 +468,27 @@ export async function deleteProject(formData: FormData) {
   const id = formData.get("id") as string;
   if (!id) return;
   await assertProject(householdId, id);
+
+  const [files, pins, updates] = await Promise.all([
+    prisma.projectFile.findMany({ where: { projectId: id }, select: { url: true } }),
+    prisma.projectVisionPin.findMany({
+      where: { projectId: id },
+      select: { imageUrl: true },
+    }),
+    prisma.projectUpdate.findMany({
+      where: { projectId: id },
+      select: { photoUrl: true },
+    }),
+  ]);
+
+  const urls = [
+    ...files.map((f) => f.url),
+    ...pins.map((p) => p.imageUrl),
+    ...updates.map((u) => u.photoUrl),
+  ];
+
   await prisma.project.delete({ where: { id } });
+  await deleteUploadsByUrls(urls);
   revalidatePath("/tasks");
 }
 

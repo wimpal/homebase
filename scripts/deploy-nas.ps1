@@ -137,6 +137,7 @@ function Get-DockerRemoteCmd {
         "cd '$TargetNasPath' && " +
         "docker compose up --build -d && " +
         "docker compose exec -T worker npx tsx scripts/migrate-shopping-slots.ts && " +
+        "docker compose exec -T worker npx tsx scripts/migrate-project-work-items.ts && " +
         "docker compose exec -T worker npx prisma db push --accept-data-loss && " +
         "docker compose exec -T worker npx tsx scripts/ensure-product-ci-index.ts && " +
         "docker compose logs --tail=30 && " +
