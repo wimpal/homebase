@@ -145,6 +145,20 @@ git pull
 
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 
+### Purge MCP smoke leftovers
+
+`mcp:smoke` leaves shopping items, products, chores, and recipes named with
+`mcp-smoke*` / `Smoke Add *`. Postgres is not exposed on the LAN — run the purge
+inside the **worker** container (after deploy so the script is in the image):
+
+```bash
+docker compose exec worker npx tsx scripts/purge-smoke-data.ts          # dry-run
+docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply  # delete
+```
+
+Optional: set `MCP_HOUSEHOLD_ID` in the worker env to limit scope. Does not touch
+demo seed users or real household rows without those prefixes.
+
 ---
 
 ## Synology (Container Manager)
@@ -214,4 +228,6 @@ docker compose logs -f app     # app logs
 docker compose logs -f worker  # scheduler logs
 docker compose down            # stop (data kept in volumes)
 docker compose up -d --build   # rebuild and start
+# purge mcp-smoke leftovers — dry-run then --apply (see "Purge MCP smoke leftovers")
+docker compose exec worker npx tsx scripts/purge-smoke-data.ts
 ```

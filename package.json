@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:purge-smoke": "tsx scripts/purge-smoke-data.ts",
     "worker": "tsx worker/index.ts",
     "mcp:smoke": "tsx scripts/mcp-smoke.ts",
     "mcp:smoke:full": "tsx scripts/mcp-smoke.ts --lights-write",
