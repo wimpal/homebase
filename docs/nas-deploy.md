@@ -147,9 +147,11 @@ Your **database and uploads are preserved** in Docker volumes across redeploys.
 
 ### Purge MCP smoke leftovers
 
-`mcp:smoke` leaves shopping items, products, chores, and recipes named with
-`mcp-smoke*` / `Smoke Add *`. Postgres is not exposed on the LAN — run the purge
-inside the **worker** container (after deploy so the script is in the image):
+`mcp:smoke` leaves shopping items, products, chores, recipes named with
+`mcp-smoke*` / `Smoke Add *`, plus Home Feed notifications titled
+`Chore due: mcp-smoke-…` (worker wrote them every 5 minutes while the chore
+existed). Postgres is not exposed on the LAN — run the purge inside the
+**worker** container (after deploy so the script is in the image):
 
 ```bash
 docker compose exec worker npx tsx scripts/purge-smoke-data.ts          # dry-run

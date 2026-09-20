@@ -5,6 +5,7 @@
  *   ShoppingItem / Product — name starts with "mcp-smoke"
  *   Chore                  — title starts with "mcp-smoke"
  *   Recipe                 — title starts with "Smoke Add "
+ *   Notification           — title contains "mcp-smoke" (e.g. "Chore due: mcp-smoke-…")
  *   McpChangeLog           — entityId in the deleted set
  *
  * Usage:
@@ -56,11 +57,19 @@ const prisma = new PrismaClient();
 
 type NamedRow = { id: string; label: string; householdId: string };
 
+function notificationWhere(): Prisma.NotificationWhereInput {
+  return {
+    title: { contains: "mcp-smoke" },
+    ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
+  };
+}
+
 async function collectMatches(): Promise<{
   shoppingItems: NamedRow[];
   products: NamedRow[];
   chores: NamedRow[];
   recipes: NamedRow[];
+  notifications: NamedRow[];
 }> {
   const shoppingWhere: Prisma.ShoppingItemWhereInput = {
     name: { startsWith: "mcp-smoke" },
@@ -81,32 +90,38 @@ async function collectMatches(): Promise<{
     ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
   };
 
-  const [shoppingItems, products, chores, recipes] = await Promise.all([
-    prisma.shoppingItem.findMany({
-      where: shoppingWhere,
-      select: {
-        id: true,
-        name: true,
-        shoppingList: { select: { householdId: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.product.findMany({
-      where: productWhere,
-      select: { id: true, name: true, householdId: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.chore.findMany({
-      where: choreWhere,
-      select: { id: true, title: true, householdId: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.recipe.findMany({
-      where: recipeWhere,
-      select: { id: true, title: true, householdId: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const [shoppingItems, products, chores, recipes, notifications] =
+    await Promise.all([
+      prisma.shoppingItem.findMany({
+        where: shoppingWhere,
+        select: {
+          id: true,
+          name: true,
+          shoppingList: { select: { householdId: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.product.findMany({
+        where: productWhere,
+        select: { id: true, name: true, householdId: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.chore.findMany({
+        where: choreWhere,
+        select: { id: true, title: true, householdId: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.recipe.findMany({
+        where: recipeWhere,
+        select: { id: true, title: true, householdId: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.notification.findMany({
+        where: notificationWhere(),
+        select: { id: true, title: true, householdId: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
 
   return {
     shoppingItems: shoppingItems.map((r) => ({
@@ -125,6 +140,11 @@ async function collectMatches(): Promise<{
       householdId: r.householdId,
     })),
     recipes: recipes.map((r) => ({
+      id: r.id,
+      label: r.title,
+      householdId: r.householdId,
+    })),
+    notifications: notifications.map((r) => ({
       id: r.id,
       label: r.title,
       householdId: r.householdId,
@@ -176,6 +196,10 @@ async function main() {
   printSection("Product (name starts with mcp-smoke)", matches.products);
   printSection("Chore (title starts with mcp-smoke)", matches.chores);
   printSection("Recipe (title starts with \"Smoke Add \")", matches.recipes);
+  printSection(
+    "Notification (title contains mcp-smoke)",
+    matches.notifications,
+  );
   console.log(`\nMcpChangeLog (entityId in above): ${changeLogCount}`);
 
   const total =
@@ -183,6 +207,7 @@ async function main() {
     matches.products.length +
     matches.chores.length +
     matches.recipes.length +
+    matches.notifications.length +
     changeLogCount;
 
   if (total === 0) {
@@ -207,6 +232,10 @@ async function main() {
               ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
             },
           });
+
+    const notification = await tx.notification.deleteMany({
+      where: notificationWhere(),
+    });
 
     const shoppingItem = await tx.shoppingItem.deleteMany({
       where: {
@@ -238,11 +267,12 @@ async function main() {
       },
     });
 
-    return { changeLog, shoppingItem, product, chore, recipe };
+    return { changeLog, notification, shoppingItem, product, chore, recipe };
   });
 
   console.log("\nDeleted:");
   console.log(`  McpChangeLog:  ${result.changeLog.count}`);
+  console.log(`  Notification:  ${result.notification.count}`);
   console.log(`  ShoppingItem:  ${result.shoppingItem.count}`);
   console.log(`  Product:       ${result.product.count}`);
   console.log(`  Chore:         ${result.chore.count}`);
