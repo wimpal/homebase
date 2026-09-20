@@ -12,6 +12,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
+import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,27 +64,26 @@ function VisionPinCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="absolute w-40 rounded-md border border-zinc-200 bg-white p-2 text-xs shadow-md dark:border-zinc-700 dark:bg-zinc-950"
+      className="absolute w-40 cursor-grab rounded-md border border-zinc-200 bg-white p-2 text-xs shadow-md active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-950"
+      {...listeners}
+      {...attributes}
     >
-      <button
-        type="button"
-        className="mb-1 cursor-grab text-[10px] text-zinc-400 active:cursor-grabbing"
-        {...listeners}
-        {...attributes}
-      >
-        {t("dragHandle")}
-      </button>
+      <div className="mb-1 flex items-center gap-1 text-[10px] text-zinc-400">
+        <GripVertical className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{t("dragHandle")}</span>
+      </div>
       {pin.kind === "image" && pin.imageUrl ? (
         <button
           type="button"
-          className="block w-full text-left"
+          className="block w-full cursor-grab text-left active:cursor-grabbing"
           onClick={() => onOpen(pin)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={pin.imageUrl}
             alt=""
-            className="mb-1 max-h-28 w-full rounded object-cover"
+            className="mb-1 max-h-28 w-full rounded object-cover pointer-events-none"
+            draggable={false}
           />
         </button>
       ) : null}
@@ -114,7 +114,7 @@ export function ProjectVisionBoard({
   }, [initialPins]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
   );
 
