@@ -9,12 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createDevice,
+  createCamera,
   addSensorReading,
   controlDirigeraLight,
   getDirigeraLights,
   deleteDevice,
 } from "@/modules/smarthome/actions";
-import type { DirigeraLightsResult } from "@/modules/smarthome/actions";
+import type { DeviceForUi, DirigeraLightsResult } from "@/modules/smarthome/actions";
 import { IKEA_CHROMATIC_PRESETS } from "@/domain/smarthome/color";
 import type { DirigeraLight } from "@/domain/smarthome/types";
 import { getWindowRecommendationKey } from "@/lib/smarthome";
@@ -24,15 +25,8 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "rec
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AutomationsPanel } from "./AutomationsPanel";
+import { ReolinkSnapshot } from "./ReolinkSnapshot";
 import type { AutomationListItem, DirigeraEdgeSensorsResult } from "@/modules/smarthome/actions";
-
-interface Device {
-  id: string;
-  name: string;
-  type: string;
-  enabled: boolean;
-  config: unknown;
-}
 
 interface Reading {
   id: string;
@@ -42,6 +36,36 @@ interface Reading {
   createdAt: Date;
 }
 
+function isReolinkPublicConfig(
+  config: unknown,
+): config is { provider: "reolink"; host: string; hasPassword: true } {
+  return (
+    typeof config === "object" &&
+    config !== null &&
+    (config as { provider?: unknown }).provider === "reolink" &&
+    typeof (config as { host?: unknown }).host === "string"
+  );
+}
+
+function legacyStreamUrl(config: unknown): string | null {
+  if (
+    typeof config === "object" &&
+    config !== null &&
+    typeof (config as { streamUrl?: unknown }).streamUrl === "string"
+  ) {
+    return (config as { streamUrl: string }).streamUrl;
+  }
+  return null;
+}
+
+function legacyStreamConfigured(config: unknown): boolean {
+  return (
+    typeof config === "object" &&
+    config !== null &&
+    (config as { streamConfigured?: unknown }).streamConfigured === true
+  );
+}
+
 export function SmartHomeClient({
   devices,
   readings,
@@ -49,7 +73,7 @@ export function SmartHomeClient({
   automations,
   edgeSensors,
 }: {
-  devices: Device[];
+  devices: DeviceForUi[];
   readings: Reading[];
   dirigera: DirigeraLightsResult;
   automations: AutomationListItem[];
@@ -192,6 +216,7 @@ export function SmartHomeClient({
   }
 
   const cameras = devices.filter((d) => d.type === "CAMERA");
+  const [snapshotBust, setSnapshotBust] = useState<Record<string, number>>({});
 
   return (
     <div className="space-y-6">
@@ -444,13 +469,41 @@ export function SmartHomeClient({
 
         <TabsContent value="cameras" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">{t("addCamera")}</CardTitle></CardHeader>
-            <CardContent>
-              <form action={createDevice} className="flex gap-2">
-                <input type="hidden" name="type" value="CAMERA" />
-                <Input name="name" placeholder={t("frontDoorPlaceholder")} required />
-                <Input name="config" placeholder='{"streamUrl": "http://..."}' />
-                <Button type="submit">{tc("add")}</Button>
+            <CardHeader>
+              <CardTitle className="text-base">{t("addCamera")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-zinc-500">{t("reolinkHint")}</p>
+              <form action={createCamera} className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  name="name"
+                  placeholder={t("frontDoorPlaceholder")}
+                  required
+                  className="sm:col-span-2"
+                />
+                <Input
+                  name="host"
+                  placeholder={t("cameraHostPlaceholder")}
+                  required
+                  autoComplete="off"
+                />
+                <Input
+                  name="username"
+                  placeholder={t("cameraUsernamePlaceholder")}
+                  required
+                  autoComplete="username"
+                />
+                <Input
+                  name="password"
+                  type="password"
+                  placeholder={t("cameraPasswordPlaceholder")}
+                  required
+                  autoComplete="current-password"
+                  className="sm:col-span-2"
+                />
+                <div className="sm:col-span-2">
+                  <Button type="submit">{tc("add")}</Button>
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -459,14 +512,26 @@ export function SmartHomeClient({
             <EmptyState message={t("noCameras")} />
           ) : (
             cameras.map((cam) => {
-              const config = cam.config as { streamUrl?: string } | null;
+              const reolinkConfig = isReolinkPublicConfig(cam.config)
+                ? cam.config
+                : null;
+              const streamUrl = legacyStreamUrl(cam.config);
+              const streamConfiguredOnly = legacyStreamConfigured(cam.config);
+              const bust = snapshotBust[cam.id] ?? 0;
               return (
                 <Card key={cam.id}>
                   <CardContent className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="flex items-center gap-2 font-medium">
-                        <Camera className="h-4 w-4" /> {cam.name}
-                      </p>
+                      <div>
+                        <p className="flex items-center gap-2 font-medium">
+                          <Camera className="h-4 w-4" /> {cam.name}
+                        </p>
+                        {reolinkConfig && (
+                          <p className="mt-1 text-sm text-zinc-500">
+                            {t("cameraHostLabel")}: {reolinkConfig.host}
+                          </p>
+                        )}
+                      </div>
                       <ConfirmForm
                         action={deleteDevice}
                         message={t("confirmDeleteDevice")}
@@ -477,13 +542,29 @@ export function SmartHomeClient({
                         </Button>
                       </ConfirmForm>
                     </div>
-                    {config?.streamUrl ? (
+                    {reolinkConfig ? (
+                      <ReolinkSnapshot
+                        deviceId={cam.id}
+                        name={cam.name}
+                        bust={bust}
+                        onRefresh={() =>
+                          setSnapshotBust((prev) => ({
+                            ...prev,
+                            [cam.id]: Date.now(),
+                          }))
+                        }
+                      />
+                    ) : streamUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={config.streamUrl}
+                        src={streamUrl}
                         alt={cam.name}
                         className="max-h-48 rounded"
                       />
+                    ) : streamConfiguredOnly ? (
+                      <p className="text-sm text-zinc-500">
+                        {t("legacyStreamHidden")}
+                      </p>
                     ) : (
                       <p className="text-sm text-zinc-500">{t("configureStream")}</p>
                     )}

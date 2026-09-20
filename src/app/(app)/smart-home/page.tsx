@@ -1,6 +1,6 @@
 import {
   getAutomations,
-  getDevices,
+  getDevicesForUi,
   getDirigeraEdgeSensors,
   getDirigeraLights,
   getSensorReadings,
@@ -15,7 +15,7 @@ export default async function SmartHomePage() {
   await requireModule(householdId, ModuleId.SMART_HOME);
   const [devices, readings, dirigera, automations, edgeSensors] =
     await Promise.all([
-      getDevices(),
+      getDevicesForUi(),
       getSensorReadings(),
       getDirigeraLights(),
       getAutomations(),

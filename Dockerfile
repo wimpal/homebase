@@ -16,6 +16,8 @@ FROM base AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
+RUN apk add --no-cache ffmpeg
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 

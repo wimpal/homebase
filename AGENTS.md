@@ -384,6 +384,9 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 - **IKEA / Dirigera:** domain in `src/domain/smarthome/`; MCP `homebase.lights.list` /
   `set_state` / `party_mode`; Smart Home UI “IKEA Lights” tab. Env: `DIRIGERA_IP` +
   `DIRIGERA_TOKEN`. Operator doc: `docs/dirigera-setup.md`.
+- **Cameras (T-080):** Reolink via Smart Home Cameras tab (host + local creds).
+  Snapshot = FFmpeg RTSP proxy at `/api/cameras/[id]/snapshot` (password never to
+  client). E1 Pro has no HTTP Snap CGI. Doc: `docs/reolink-camera.md`. Not MCP.
 - **Automations:** **M4c** ✅ — time schedules + SENSOR_EDGE + leave-session Toggle
   (T-064–T-070). Worker + Smart Home Automations UI; not MCP-exposed. Do **not** put
   Dirigera lighting automations in Home Assistant. Do **not** confuse with chore
@@ -419,8 +422,8 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 
 9. **iOS Web Push** — Requires installed PWA. Home feed is the reliable fallback.
 
-10. **Smart home** — **IKEA / Dirigera only** for lights and automations. NAS app
-    container needs LAN access to the Dirigera hub.
+10. **Smart home** — IKEA / Dirigera for lights and automations; Reolink cameras via
+    UI + FFmpeg snapshot (NAS must reach camera RTSP). See `docs/reolink-camera.md`.
 
 ---
 

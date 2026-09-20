@@ -18,17 +18,35 @@ import {
   isDirigeraConfigured,
   listDirigeraEdgeSensors,
   listDirigeraLights,
+  reolinkCameraConfigSchema,
+  sanitizeDeviceConfig,
   setDirigeraLightState,
+  type DeviceConfigPublic,
   type DirigeraEdgeSensor,
   type DirigeraLight,
 } from "@/domain/smarthome";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
-export async function getDevices() {
+export type DeviceForUi = {
+  id: string;
+  name: string;
+  type: string;
+  enabled: boolean;
+  config: DeviceConfigPublic;
+};
+
+/** Devices with secrets stripped — safe for client components / server actions. */
+export async function getDevicesForUi(): Promise<DeviceForUi[]> {
   const { householdId } = await requireHousehold();
-  return prisma.device.findMany({ where: { householdId } });
+  const devices = await prisma.device.findMany({ where: { householdId } });
+  return devices.map((d) => ({
+    id: d.id,
+    name: d.name,
+    type: d.type,
+    enabled: d.enabled,
+    config: sanitizeDeviceConfig(d.config),
+  }));
 }
 
 export async function getSensorReadings(limit = 24) {
@@ -77,6 +95,38 @@ export async function createDevice(formData: FormData) {
   revalidatePath("/smart-home");
 }
 
+/** Add a Reolink camera (host + local credentials). Password stored server-side only. */
+export async function createCamera(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    throw new Error("Camera name is required.");
+  }
+
+  const parsed = reolinkCameraConfigSchema.safeParse({
+    provider: "reolink",
+    host: String(formData.get("host") ?? "").trim(),
+    username: String(formData.get("username") ?? "").trim(),
+    password: String(formData.get("password") ?? ""),
+    rtspPort: 554,
+    stream: "sub",
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid camera settings.");
+  }
+
+  await prisma.device.create({
+    data: {
+      householdId,
+      name,
+      type: "CAMERA",
+      config: parsed.data,
+    },
+  });
+  revalidatePath("/smart-home");
+}
+
 export async function deleteDevice(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const id = formData.get("id") as string;
@@ -84,14 +134,6 @@ export async function deleteDevice(formData: FormData) {
   await assertDevice(householdId, id);
   await prisma.device.delete({ where: { id } });
   revalidatePath("/smart-home");
-}
-
-export async function getCameraStreamUrl(deviceId: string) {
-  const { householdId } = await requireHousehold();
-  const device = await prisma.device.findFirst({ where: { id: deviceId, householdId } });
-  if (!device || device.type !== "CAMERA") return null;
-  const config = device.config as { streamUrl?: string } | null;
-  return config?.streamUrl ?? null;
 }
 
 export type DirigeraLightsResult =
