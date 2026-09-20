@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmForm } from "@/components/ui/confirm-form";
 import {
+  dismissAllNotifications,
   dismissNotification,
   markAllNotificationsRead,
   markNotificationRead,
@@ -50,7 +52,14 @@ export async function HomeFeed({
     revalidatePath("/dashboard");
   }
 
+  async function handleDismissAll() {
+    "use server";
+    await dismissAllNotifications();
+    revalidatePath("/dashboard");
+  }
+
   const hasUnread = notifications.some((n) => !n.read);
+  const hasAny = notifications.length > 0;
 
   return (
     <Card className="flex h-full flex-col">
@@ -60,15 +69,30 @@ export async function HomeFeed({
             <Bell className="h-5 w-5 text-emerald-600" />
             {t("homeFeed")}
           </CardTitle>
-          {hasUnread && (
-            <form action={handleMarkAllRead}>
-              <button
-                type="submit"
-                className="text-xs text-emerald-600 hover:underline"
+          {hasAny && (
+            <div className="flex shrink-0 items-center gap-3">
+              {hasUnread && (
+                <form action={handleMarkAllRead}>
+                  <button
+                    type="submit"
+                    className="text-xs text-emerald-600 hover:underline"
+                  >
+                    {t("markAllRead")}
+                  </button>
+                </form>
+              )}
+              <ConfirmForm
+                action={handleDismissAll}
+                message={t("confirmDismissAll")}
               >
-                {t("markAllRead")}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="text-xs text-zinc-500 hover:underline"
+                >
+                  {t("dismissAll")}
+                </button>
+              </ConfirmForm>
+            </div>
           )}
         </div>
       </CardHeader>

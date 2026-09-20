@@ -137,6 +137,13 @@ export async function dismissNotification(id: string) {
   if (result.count === 0) throw new Error("Notification not found");
 }
 
+export async function dismissAllNotifications() {
+  const { householdId } = await requireHousehold();
+  await prisma.notification.deleteMany({
+    where: { householdId },
+  });
+}
+
 export async function getUnreadCount(householdId: string) {
   return prisma.notification.count({
     where: { householdId, read: false },

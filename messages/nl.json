@@ -202,6 +202,8 @@
     "markRead": "Markeer als gelezen",
     "markAllRead": "Alles als gelezen markeren",
     "dismiss": "Verwijderen",
+    "dismissAll": "Alles verwijderen",
+    "confirmDismissAll": "Alle Home Feed-meldingen voor dit huishouden verwijderen?",
     "today": {
       "title": "Vandaag",
       "dayOfYear": "Dag van het jaar",

@@ -202,6 +202,8 @@
     "markRead": "Mark read",
     "markAllRead": "Mark all read",
     "dismiss": "Dismiss",
+    "dismissAll": "Dismiss all",
+    "confirmDismissAll": "Delete all Home Feed notifications for this household?",
     "today": {
       "title": "Today",
       "dayOfYear": "Day of year",
