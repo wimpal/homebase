@@ -18,7 +18,7 @@ import {
 } from "@/modules/tasks/actions";
 import { ProjectKanban, type WorkItem } from "./ProjectKanban";
 import { ProjectFiles, type ProjectFileRow } from "./ProjectFiles";
-import { ProjectVisionBoard, type VisionPin } from "./ProjectVisionBoard";
+import { ProjectVisionBoard, type VisionPin, type VisionPinLink } from "./ProjectVisionBoard";
 
 export type ProjectDetail = {
   id: string;
@@ -28,6 +28,7 @@ export type ProjectDetail = {
   workItems: WorkItem[];
   files: ProjectFileRow[];
   visionPins: VisionPin[];
+  visionPinLinks: VisionPinLink[];
   updates: {
     id: string;
     comment: string;
@@ -124,7 +125,11 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("sectionVision")}</h2>
-        <ProjectVisionBoard projectId={project.id} initialPins={project.visionPins} />
+        <ProjectVisionBoard
+          projectId={project.id}
+          initialPins={project.visionPins}
+          initialLinks={project.visionPinLinks}
+        />
       </section>
 
       <section className="space-y-3">

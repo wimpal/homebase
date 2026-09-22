@@ -328,6 +328,15 @@
     "confirmDeletePin": "Deze vision-pin verwijderen?",
     "visionEnterFullscreen": "Volledig scherm",
     "visionExitFullscreen": "Volledig scherm sluiten",
+    "visionLinkMode": "Pins koppelen",
+    "visionLinkModeOn": "Koppelen…",
+    "visionLinkHint": "Klik twee pins om ze te verbinden. Escape annuleert.",
+    "confirmDeleteLink": "Deze verbinding verwijderen?",
+    "visionLinkAria": "Verbinding tussen pins. Activeer om te verwijderen.",
+    "visionResizeNw": "Formaat wijzigen vanaf linkerbovenhoek",
+    "visionResizeNe": "Formaat wijzigen vanaf rechterbovenhoek",
+    "visionResizeSw": "Formaat wijzigen vanaf linkeronderhoek",
+    "visionResizeSe": "Formaat wijzigen vanaf rechteronderhoek",
     "noActivity": "Nog geen updates."
   },
   "recipes": {

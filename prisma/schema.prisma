@@ -441,11 +441,12 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  household  Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  workItems  ProjectWorkItem[]
-  files      ProjectFile[]
-  visionPins ProjectVisionPin[]
-  updates    ProjectUpdate[]
+  household      Household              @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  workItems      ProjectWorkItem[]
+  files          ProjectFile[]
+  visionPins     ProjectVisionPin[]
+  visionPinLinks ProjectVisionPinLink[]
+  updates        ProjectUpdate[]
 }
 
 model ProjectWorkItem {
@@ -487,12 +488,31 @@ model ProjectVisionPin {
   imageUrl  String?
   xPct      Float    @default(10)
   yPct      Float    @default(10)
+  wPct      Float    @default(18)
+  hPct      Float    @default(22)
   zIndex    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  linksFrom ProjectVisionPinLink[] @relation("VisionPinLinkFrom")
+  linksTo   ProjectVisionPinLink[] @relation("VisionPinLinkTo")
 
+  @@index([projectId])
+}
+
+model ProjectVisionPinLink {
+  id        String   @id @default(cuid())
+  projectId String
+  fromPinId String
+  toPinId   String
+  createdAt DateTime @default(now())
+
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromPin ProjectVisionPin @relation("VisionPinLinkFrom", fields: [fromPinId], references: [id], onDelete: Cascade)
+  toPin   ProjectVisionPin @relation("VisionPinLinkTo", fields: [toPinId], references: [id], onDelete: Cascade)
+
+  @@unique([fromPinId, toPinId])
   @@index([projectId])
 }
 

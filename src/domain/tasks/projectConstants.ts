@@ -24,6 +24,22 @@ export function clampPct(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
+/** Vision pin width/height as % of board (defaults match schema). */
+export const VISION_PIN_SIZE_MIN = 8;
+export const VISION_PIN_SIZE_MAX = 45;
+export const VISION_PIN_W_DEFAULT = 18;
+export const VISION_PIN_H_DEFAULT = 22;
+
+export function clampPinSizePct(value: number): number {
+  if (Number.isNaN(value)) return VISION_PIN_SIZE_MIN;
+  return Math.min(VISION_PIN_SIZE_MAX, Math.max(VISION_PIN_SIZE_MIN, value));
+}
+
+/** Normalize undirected edge so fromPinId < toPinId. */
+export function normalizePinLinkIds(pinAId: string, pinBId: string): [string, string] {
+  return pinAId < pinBId ? [pinAId, pinBId] : [pinBId, pinAId];
+}
+
 export function projectDetailPath(projectId: string): string {
   return `/tasks/projects/${projectId}`;
 }

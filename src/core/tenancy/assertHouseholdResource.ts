@@ -55,6 +55,13 @@ export async function assertProjectVisionPin(householdId: string, id: string) {
   return resource ?? notFound("Project vision pin");
 }
 
+export async function assertProjectVisionPinLink(householdId: string, id: string) {
+  const resource = await prisma.projectVisionPinLink.findFirst({
+    where: { id, project: { householdId } },
+  });
+  return resource ?? notFound("Project vision pin link");
+}
+
 export async function assertPlant(householdId: string, id: string) {
   const resource = await prisma.plant.findFirst({ where: { id, householdId } });
   return resource ?? notFound("Plant");

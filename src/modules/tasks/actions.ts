@@ -7,6 +7,7 @@ import {
   assertProject,
   assertProjectFile,
   assertProjectVisionPin,
+  assertProjectVisionPinLink,
   assertProjectWorkItem,
 } from "@/core/tenancy/assertHouseholdResource";
 import { isDomainError } from "@/domain/error";
@@ -18,9 +19,11 @@ import {
 } from "@/domain/tasks";
 import {
   clampPct,
+  clampPinSizePct,
   isProjectStatus,
   isVisionPinKind,
   isWorkItemStatus,
+  normalizePinLinkIds,
   projectDetailPath,
   type WorkItemStatus,
 } from "@/domain/tasks/projectConstants";
@@ -172,6 +175,7 @@ export async function getProject(projectId: string) {
         include: { user: { select: userNameSelect } },
       },
       visionPins: { orderBy: { zIndex: "asc" } },
+      visionPinLinks: true,
       updates: {
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -181,6 +185,30 @@ export async function getProject(projectId: string) {
   });
   if (!project) throw new Error("Project not found");
   return project;
+}
+
+function visionPinDto(pin: {
+  id: string;
+  kind: string;
+  body: string | null;
+  imageUrl: string | null;
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+  zIndex: number;
+}) {
+  return {
+    id: pin.id,
+    kind: pin.kind,
+    body: pin.body,
+    imageUrl: pin.imageUrl,
+    xPct: pin.xPct,
+    yPct: pin.yPct,
+    wPct: pin.wPct,
+    hPct: pin.hPct,
+    zIndex: pin.zIndex,
+  };
 }
 
 export async function createProject(formData: FormData) {
@@ -449,15 +477,7 @@ export async function addVisionPin(formData: FormData) {
 
   await touchProject(projectId);
   revalidateProjectPaths(projectId);
-  return {
-    id: pin.id,
-    kind: pin.kind,
-    body: pin.body,
-    imageUrl: pin.imageUrl,
-    xPct: pin.xPct,
-    yPct: pin.yPct,
-    zIndex: pin.zIndex,
-  };
+  return visionPinDto(pin);
 }
 
 export async function moveVisionPin(input: {
@@ -476,6 +496,80 @@ export async function moveVisionPin(input: {
   });
   await touchProject(pin.projectId);
   revalidateProjectPaths(pin.projectId);
+}
+
+export async function resizeVisionPin(input: {
+  pinId: string;
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+}) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const pin = await assertProjectVisionPin(householdId, input.pinId);
+  await prisma.projectVisionPin.update({
+    where: { id: input.pinId },
+    data: {
+      xPct: clampPct(input.xPct),
+      yPct: clampPct(input.yPct),
+      wPct: clampPinSizePct(input.wPct),
+      hPct: clampPinSizePct(input.hPct),
+    },
+  });
+  await touchProject(pin.projectId);
+  revalidateProjectPaths(pin.projectId);
+}
+
+export async function createVisionPinLink(input: {
+  pinAId: string;
+  pinBId: string;
+}) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  if (input.pinAId === input.pinBId) {
+    throw new Error("Cannot link a pin to itself");
+  }
+  const pinA = await assertProjectVisionPin(householdId, input.pinAId);
+  const pinB = await assertProjectVisionPin(householdId, input.pinBId);
+  if (pinA.projectId !== pinB.projectId) {
+    throw new Error("Pins must belong to the same project");
+  }
+  const [fromPinId, toPinId] = normalizePinLinkIds(input.pinAId, input.pinBId);
+  const existing = await prisma.projectVisionPinLink.findUnique({
+    where: { fromPinId_toPinId: { fromPinId, toPinId } },
+  });
+  if (existing) {
+    return {
+      id: existing.id,
+      projectId: existing.projectId,
+      fromPinId: existing.fromPinId,
+      toPinId: existing.toPinId,
+    };
+  }
+  const link = await prisma.projectVisionPinLink.create({
+    data: {
+      projectId: pinA.projectId,
+      fromPinId,
+      toPinId,
+    },
+  });
+  await touchProject(pinA.projectId);
+  revalidateProjectPaths(pinA.projectId);
+  return {
+    id: link.id,
+    projectId: link.projectId,
+    fromPinId: link.fromPinId,
+    toPinId: link.toPinId,
+  };
+}
+
+export async function deleteVisionPinLink(formData: FormData) {
+  const { householdId } = await requireMutationAccess(ModuleId.TASKS);
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const link = await assertProjectVisionPinLink(householdId, id);
+  await prisma.projectVisionPinLink.delete({ where: { id } });
+  await touchProject(link.projectId);
+  revalidateProjectPaths(link.projectId);
 }
 
 export async function deleteVisionPin(formData: FormData) {
