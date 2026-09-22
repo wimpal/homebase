@@ -33,6 +33,8 @@ export type ValidatedAutomationWrite = {
   toggle: boolean;
   brightness: number | null;
   colorTempKelvin: number | null;
+  sunsetLinkEnabled: boolean;
+  minutesBeforeSunset: number | null;
   targetDeviceIds: string[];
 };
 
@@ -246,6 +248,8 @@ export async function validateAutomationWrite(
       toggle,
       brightness: allowLevel ? brightness : null,
       colorTempKelvin: allowLevel ? colorTempKelvin : null,
+      sunsetLinkEnabled: false,
+      minutesBeforeSunset: null,
       targetDeviceIds: uniqueTargets,
     };
   }
@@ -275,6 +279,24 @@ export async function validateAutomationWrite(
   }
   const daysOfWeek = [...daySet].sort((a, b) => a - b);
 
+  const sunsetLinkEnabled = input.sunsetLinkEnabled === true;
+  let minutesBeforeSunset: number | null = null;
+  if (sunsetLinkEnabled) {
+    const raw = input.minutesBeforeSunset;
+    if (
+      raw === undefined ||
+      raw === null ||
+      !Number.isInteger(raw) ||
+      raw < 0 ||
+      raw > 180
+    ) {
+      return DomainError.invalidInput(
+        "minutesBeforeSunset must be an integer 0–180 when Sunset link is enabled.",
+      );
+    }
+    minutesBeforeSunset = raw;
+  }
+
   return {
     name,
     enabled: input.enabled ?? true,
@@ -291,6 +313,8 @@ export async function validateAutomationWrite(
     toggle: false,
     brightness: on ? brightness : null,
     colorTempKelvin: on ? colorTempKelvin : null,
+    sunsetLinkEnabled,
+    minutesBeforeSunset,
     targetDeviceIds: uniqueTargets,
   };
 }

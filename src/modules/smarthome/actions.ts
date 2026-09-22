@@ -193,6 +193,10 @@ export type AutomationListItem = {
   toggleSession: "idle" | "occupied" | "leaving";
   brightness: number | null;
   colorTempKelvin: number | null;
+  sunsetLinkEnabled: boolean;
+  minutesBeforeSunset: number | null;
+  sunsetLastAdjustAt: string | null;
+  sunsetLastAdjustResult: string | null;
   lastRunAt: string | null;
   lastRunResult: string | null;
   targets: { id: string; dirigeraDeviceId: string }[];
@@ -220,6 +224,12 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     toggleSession: row.toggleSession,
     brightness: row.brightness,
     colorTempKelvin: row.colorTempKelvin,
+    sunsetLinkEnabled: row.sunsetLinkEnabled,
+    minutesBeforeSunset: row.minutesBeforeSunset,
+    sunsetLastAdjustAt: row.sunsetLastAdjustAt
+      ? row.sunsetLastAdjustAt.toISOString()
+      : null,
+    sunsetLastAdjustResult: row.sunsetLastAdjustResult,
     lastRunAt: row.lastRunAt ? row.lastRunAt.toISOString() : null,
     lastRunResult: row.lastRunResult,
     targets: row.targets.map((t) => ({
@@ -282,6 +292,19 @@ function parseAutomationWriteInput(formData: FormData) {
       ? activeUntilRaw.slice(0, 5)
       : activeUntilRaw || null;
 
+  const sunsetLinkRaw = String(formData.get("sunsetLinkEnabled") ?? "")
+    .trim()
+    .toLowerCase();
+  const sunsetLinkEnabled =
+    sunsetLinkRaw === "true" ||
+    sunsetLinkRaw === "on" ||
+    sunsetLinkRaw === "1";
+  const minutesBeforeRaw = String(
+    formData.get("minutesBeforeSunset") ?? "",
+  ).trim();
+  const minutesBeforeSunset =
+    minutesBeforeRaw === "" ? null : Number(minutesBeforeRaw);
+
   if (triggerKind === "SENSOR_EDGE") {
     return {
       name: String(formData.get("name") ?? ""),
@@ -297,6 +320,8 @@ function parseAutomationWriteInput(formData: FormData) {
       toggle,
       brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
       colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
+      sunsetLinkEnabled: false,
+      minutesBeforeSunset: null,
       targetDeviceIds,
     };
   }
@@ -315,6 +340,8 @@ function parseAutomationWriteInput(formData: FormData) {
     toggle: false,
     brightness: brightnessRaw === "" ? null : Number(brightnessRaw),
     colorTempKelvin: colorTempRaw === "" ? null : Number(colorTempRaw),
+    sunsetLinkEnabled,
+    minutesBeforeSunset,
     targetDeviceIds,
   };
 }

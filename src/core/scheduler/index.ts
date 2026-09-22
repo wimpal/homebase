@@ -2,7 +2,10 @@ import { ModuleId, NotificationType } from "@prisma/client";
 import cron from "node-cron";
 import { prisma } from "@/core/db";
 import { notify, purgeOldNotifications } from "@/core/notifications/service";
-import { evaluateLightAutomations } from "@/domain/automations";
+import {
+  adjustSunsetLinkedAutomations,
+  evaluateLightAutomations,
+} from "@/domain/automations";
 import { markProductNeeded } from "@/domain/shopping";
 import { addDays, isBefore, subMinutes } from "date-fns";
 
@@ -36,10 +39,36 @@ export function startScheduler() {
   cron.schedule("15 3 * * *", () => {
     void runNotificationRetention();
   });
+  // T-087: rewrite sunset-linked Automation clocks before evening fire.
+  cron.schedule("0 4 * * *", () => {
+    void runSunsetAdjust();
+  });
   cron.schedule("* * * * *", () => {
     void checkLightAutomations();
   });
   console.log("[scheduler] Background jobs started");
+  // Catch-up after missed 04:00 / worker restart (idempotent per local day).
+  void runSunsetAdjust();
+}
+
+async function runSunsetAdjust() {
+  try {
+    const summary = await adjustSunsetLinkedAutomations();
+    if (
+      summary.considered > 0 ||
+      summary.rewritten > 0 ||
+      summary.failed > 0
+    ) {
+      console.log(
+        `[scheduler] sunset-adjust: considered=${summary.considered} rewritten=${summary.rewritten} skipped=${summary.skipped} failed=${summary.failed}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      "[scheduler] sunset-adjust failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 async function runNotificationRetention() {

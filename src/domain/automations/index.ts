@@ -30,6 +30,19 @@ export type {
   HandleSensorRisingEdgeResult,
 } from "./sensor";
 export {
+  applyMinutesBefore,
+  getLocalSunsetHhMm,
+  isValidLatLon,
+  parseLatLon,
+} from "./sunset";
+export type { SunsetLookupInput, SunsetLookupResult } from "./sunset";
+export { adjustSunsetLinkedAutomations } from "./sunset-adjust";
+export type {
+  AdjustSunsetOptions,
+  AdjustSunsetSummary,
+  SunsetLookupFn,
+} from "./sunset-adjust";
+export {
   AUTOMATION_TIMEZONE_V1,
   LAST_RUN_RESULT_MAX,
   SENSOR_COOLDOWN_MS,

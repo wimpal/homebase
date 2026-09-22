@@ -93,6 +93,9 @@ function AutomationFormFields({
   const [sensorId, setSensorId] = useState(
     defaults?.sensorDirigeraDeviceId ?? sensors[0]?.id ?? "",
   );
+  const [sunsetLinkEnabled, setSunsetLinkEnabled] = useState(
+    defaults?.sunsetLinkEnabled ?? false,
+  );
   const defaultDays = new Set(defaults?.daysOfWeek ?? [1, 2, 3, 4, 5, 6, 7]);
   const defaultTargets = new Set(
     defaults?.targets.map((x) => x.dirigeraDeviceId) ?? [],
@@ -135,6 +138,9 @@ function AutomationFormFields({
             setTriggerKind(next);
             if (next === "SCHEDULE" && action === "toggle") {
               setAction("on");
+            }
+            if (next === "SENSOR_EDGE") {
+              setSunsetLinkEnabled(false);
             }
           }}
         >
@@ -215,6 +221,40 @@ function AutomationFormFields({
                 </label>
               ))}
             </div>
+          </div>
+          <div className="md:col-span-2 space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+            <input
+              type="hidden"
+              name="sunsetLinkEnabled"
+              value={sunsetLinkEnabled ? "true" : "false"}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{t("sunsetLink")}</p>
+                <p className="text-xs text-zinc-500">{t("sunsetLinkHint")}</p>
+              </div>
+              <Switch
+                checked={sunsetLinkEnabled}
+                onCheckedChange={setSunsetLinkEnabled}
+                aria-label={t("sunsetLink")}
+              />
+            </div>
+            {sunsetLinkEnabled ? (
+              <div>
+                <Label htmlFor={`${idPrefix}-minutes-before`}>
+                  {t("minutesBeforeSunset")}
+                </Label>
+                <Input
+                  id={`${idPrefix}-minutes-before`}
+                  name="minutesBeforeSunset"
+                  type="number"
+                  min={0}
+                  max={180}
+                  required
+                  defaultValue={defaults?.minutesBeforeSunset ?? 30}
+                />
+              </div>
+            ) : null}
           </div>
         </>
       ) : (
@@ -455,12 +495,17 @@ export function AutomationsPanel({
       return activeHours ? `${base} · ${activeHours}` : base;
     }
     const action = rule.on ? t("turnOn") : t("turnOff");
-    const base = t("ruleSummary", {
+    let base = t("ruleSummary", {
       time: rule.timeLocal ?? "—",
       days: daySummary(rule.daysOfWeek),
       action,
       targets: targets || t("noTargets"),
     });
+    if (rule.sunsetLinkEnabled) {
+      base = `${base} · ${t("sunsetLinkSummary", {
+        minutes: rule.minutesBeforeSunset ?? 0,
+      })}`;
+    }
     return activeHours ? `${base} · ${activeHours}` : base;
   }
 
@@ -607,6 +652,14 @@ export function AutomationsPanel({
                     {t("lastRun")}: {lastRunLabel}
                     {rule.lastRunResult ? ` — ${rule.lastRunResult}` : null}
                   </p>
+                  {rule.sunsetLinkEnabled &&
+                  rule.sunsetLastAdjustResult?.startsWith("failed:") ? (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                      {t("sunsetAdjustFailed", {
+                        detail: rule.sunsetLastAdjustResult,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-2">

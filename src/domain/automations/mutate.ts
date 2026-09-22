@@ -31,6 +31,8 @@ export async function createAutomation(
       toggle: validated.toggle,
       brightness: validated.brightness,
       colorTempKelvin: validated.colorTempKelvin,
+      sunsetLinkEnabled: validated.sunsetLinkEnabled,
+      minutesBeforeSunset: validated.minutesBeforeSunset,
       targets: {
         create: validated.targetDeviceIds.map((dirigeraDeviceId) => ({
           dirigeraDeviceId,
@@ -86,6 +88,15 @@ export async function updateAutomation(
         toggleSession: null,
         brightness: validated.brightness,
         colorTempKelvin: validated.colorTempKelvin,
+        sunsetLinkEnabled: validated.sunsetLinkEnabled,
+        minutesBeforeSunset: validated.minutesBeforeSunset,
+        // Clear adjust status when link is turned off.
+        ...(validated.sunsetLinkEnabled
+          ? {}
+          : {
+              sunsetLastAdjustAt: null,
+              sunsetLastAdjustResult: null,
+            }),
       },
     });
     if (updated.count === 0) {

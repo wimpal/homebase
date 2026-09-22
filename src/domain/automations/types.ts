@@ -45,6 +45,11 @@ export interface LightAutomationDto {
   toggleSession: ToggleSession;
   brightness: number | null;
   colorTempKelvin: number | null;
+  /** SCHEDULE only: daily adjuster rewrites timeLocal from sunset − offset. */
+  sunsetLinkEnabled: boolean;
+  minutesBeforeSunset: number | null;
+  sunsetLastAdjustAt: Date | null;
+  sunsetLastAdjustResult: string | null;
   lastRunAt: Date | null;
   lastRunResult: string | null;
   lastFiredSlot: string | null;
@@ -77,6 +82,9 @@ export interface AutomationWriteInput {
   toggle?: boolean;
   brightness?: number | null;
   colorTempKelvin?: number | null;
+  /** SCHEDULE only. When true, minutesBeforeSunset required (0–180). */
+  sunsetLinkEnabled?: boolean;
+  minutesBeforeSunset?: number | null;
   /** Dirigera device ids to target (at least one). */
   targetDeviceIds: string[];
 }

@@ -4,7 +4,7 @@ Homebase talks to the **IKEA Dirigera** hub over HTTPS on port **8443** using a 
 
 MCP tools: `homebase.lights.list`, `homebase.lights.set_state`, `homebase.lights.party_mode`.
 
-## Automations (M4c Phase A + B)
+## Automations (M4c Phase A + B + M4d Sunset link)
 
 User-configurable **Automations** are light rules in **Homebase** (not chore
 **Routines**, not Home Assistant). ADR-012: Homebase owns IKEA/Dirigera light
@@ -18,6 +18,13 @@ minute evaluator (`Europe/Amsterdam`, `lastFiredSlot`, no catch-up).
 (seeded, no boot replay); rising/falling edge → debounce 2s / cooldown 10s → turn target
 lights on **only if currently off**.
 
+**M4d Sunset link (T-087 / ADR-014):** optional on SCHEDULE rules. A daily adjuster
+Job (cron `0 4 * * *` + startup catch-up) looks up local sunset from household
+lat/long, subtracts minutes-before-sunset, and **rewrites** stored `timeLocal`.
+The minute evaluator stays clock-fire only — it never fires on “sunset” directly.
+Lookup failure keeps the last good clock and records `sunsetLastAdjustResult`.
+Backfill geo: `npx tsx scripts/backfill-household-geo.ts` (Zwolle-area defaults).
+
 **Worker must run** for schedules **and** sensor rules. Ensure NAS compose
 `worker` has `DIRIGERA_IP` and `DIRIGERA_TOKEN` (same as `app`). UI **Run now**
 still applies immediately without waiting for the clock or an edge.
@@ -29,6 +36,8 @@ still applies immediately without waiting for the clock or an edge.
 npm run automations:smoke
 # Sensor path (needs DIRIGERA_TEST_DEVICE_ID + edge sensor on hub)
 npm run automations:sensor-smoke
+# Sunset adjuster (no Dirigera writes; needs DATABASE_URL + household)
+npm run automations:sunset-smoke
 ```
 
 Manual/UI Run now does **not** set `lastFiredSlot` / sensor cooldown claim (worker

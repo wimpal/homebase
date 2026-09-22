@@ -137,6 +137,11 @@ model VerificationToken {
 model Household {
   id        String   @id @default(cuid())
   name      String
+  /// Home coords for Sunset link (T-087 / M4d). Null = adjuster skips linked rules.
+  latitude  Float?
+  longitude Float?
+  /// IANA timezone for household geo docs; schedule rules still use LightAutomation.timezone.
+  timezone  String   @default("Europe/Amsterdam")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -833,6 +838,13 @@ model LightAutomation {
   toggleSession   String?
   brightness      Int?
   colorTempKelvin Int?
+
+  /// Sunset link (M4d): daily adjuster rewrites timeLocal from sunset − offset.
+  sunsetLinkEnabled     Boolean   @default(false)
+  /// Minutes before local sunset; required when sunsetLinkEnabled (0–180).
+  minutesBeforeSunset   Int?
+  sunsetLastAdjustAt    DateTime?
+  sunsetLastAdjustResult String?
 
   lastRunAt       DateTime?
   lastRunResult   String?

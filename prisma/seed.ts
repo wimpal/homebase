@@ -27,6 +27,18 @@ async function main() {
 
   const householdId = user.memberships[0].householdId;
 
+  // T-087: idempotent household geo (Zwolle area). Existing DBs skip create-only paths.
+  await prisma.household.updateMany({
+    where: {
+      OR: [{ latitude: null }, { longitude: null }],
+    },
+    data: {
+      latitude: 52.51,
+      longitude: 6.09,
+      timezone: "Europe/Amsterdam",
+    },
+  });
+
   for (const moduleId of Object.values(ModuleId)) {
     await prisma.moduleSetting.upsert({
       where: { householdId_moduleId: { householdId, moduleId } },
