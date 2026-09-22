@@ -21,7 +21,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
-import { Expand, GripVertical, Link2, X } from "lucide-react";
+import { Expand, GripVertical, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,16 @@ export type VisionPinLink = {
 };
 
 type ResizeCorner = "nw" | "ne" | "sw" | "se";
+type ConnectPort = "n" | "e" | "s" | "w";
+
+type ConnectDraft = {
+  fromPinId: string;
+  x1Pct: number;
+  y1Pct: number;
+  x2Pct: number;
+  y2Pct: number;
+  hoverPinId: string | null;
+};
 
 function pinWithDefaults(pin: VisionPin): VisionPin {
   return {
@@ -92,16 +102,14 @@ function applyResizeCorner(
   const top = pin.yPct - halfH;
   const bottom = pin.yPct + halfH;
 
-  let fixedLeft = left;
-  let fixedRight = right;
-  let fixedTop = top;
-  let fixedBottom = bottom;
-  let movingX = pointerXPct;
-  let movingY = pointerYPct;
+  const fixedLeft = left;
+  const fixedRight = right;
+  const fixedTop = top;
+  const fixedBottom = bottom;
 
   if (corner === "se") {
-    movingX = Math.max(fixedLeft + VISION_PIN_SIZE_MIN, Math.min(100, pointerXPct));
-    movingY = Math.max(fixedTop + VISION_PIN_SIZE_MIN, Math.min(100, pointerYPct));
+    const movingX = Math.max(fixedLeft + VISION_PIN_SIZE_MIN, Math.min(100, pointerXPct));
+    const movingY = Math.max(fixedTop + VISION_PIN_SIZE_MIN, Math.min(100, pointerYPct));
     const wPct = clampPinSizePct(movingX - fixedLeft);
     const hPct = clampPinSizePct(movingY - fixedTop);
     return {
@@ -112,8 +120,8 @@ function applyResizeCorner(
     };
   }
   if (corner === "sw") {
-    movingX = Math.min(fixedRight - VISION_PIN_SIZE_MIN, Math.max(0, pointerXPct));
-    movingY = Math.max(fixedTop + VISION_PIN_SIZE_MIN, Math.min(100, pointerYPct));
+    const movingX = Math.min(fixedRight - VISION_PIN_SIZE_MIN, Math.max(0, pointerXPct));
+    const movingY = Math.max(fixedTop + VISION_PIN_SIZE_MIN, Math.min(100, pointerYPct));
     const wPct = clampPinSizePct(fixedRight - movingX);
     const hPct = clampPinSizePct(movingY - fixedTop);
     return {
@@ -124,8 +132,8 @@ function applyResizeCorner(
     };
   }
   if (corner === "ne") {
-    movingX = Math.max(fixedLeft + VISION_PIN_SIZE_MIN, Math.min(100, pointerXPct));
-    movingY = Math.min(fixedBottom - VISION_PIN_SIZE_MIN, Math.max(0, pointerYPct));
+    const movingX = Math.max(fixedLeft + VISION_PIN_SIZE_MIN, Math.min(100, pointerXPct));
+    const movingY = Math.min(fixedBottom - VISION_PIN_SIZE_MIN, Math.max(0, pointerYPct));
     const wPct = clampPinSizePct(movingX - fixedLeft);
     const hPct = clampPinSizePct(fixedBottom - movingY);
     return {
@@ -135,35 +143,77 @@ function applyResizeCorner(
       hPct,
     };
   }
-  // nw
-  movingX = Math.min(fixedRight - VISION_PIN_SIZE_MIN, Math.max(0, pointerXPct));
-  movingY = Math.min(fixedBottom - VISION_PIN_SIZE_MIN, Math.max(0, pointerYPct));
-  {
-    const wPct = clampPinSizePct(fixedRight - movingX);
-    const hPct = clampPinSizePct(fixedBottom - movingY);
-    return {
-      xPct: clampPct(fixedRight - wPct / 2),
-      yPct: clampPct(fixedBottom - hPct / 2),
-      wPct,
-      hPct,
-    };
+  const movingX = Math.min(fixedRight - VISION_PIN_SIZE_MIN, Math.max(0, pointerXPct));
+  const movingY = Math.min(fixedBottom - VISION_PIN_SIZE_MIN, Math.max(0, pointerYPct));
+  const wPct = clampPinSizePct(fixedRight - movingX);
+  const hPct = clampPinSizePct(fixedBottom - movingY);
+  return {
+    xPct: clampPct(fixedRight - wPct / 2),
+    yPct: clampPct(fixedBottom - hPct / 2),
+    wPct,
+    hPct,
+  };
+}
+
+function portCenterPct(pin: VisionPin, port: ConnectPort): { xPct: number; yPct: number } {
+  const halfW = pin.wPct / 2;
+  const halfH = pin.hPct / 2;
+  if (port === "n") return { xPct: pin.xPct, yPct: pin.yPct - halfH };
+  if (port === "s") return { xPct: pin.xPct, yPct: pin.yPct + halfH };
+  if (port === "w") return { xPct: pin.xPct - halfW, yPct: pin.yPct };
+  return { xPct: pin.xPct + halfW, yPct: pin.yPct };
+}
+
+function clientToBoardPct(
+  board: HTMLElement,
+  clientX: number,
+  clientY: number,
+): { xPct: number; yPct: number } | null {
+  const rect = board.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return null;
+  return {
+    xPct: ((clientX - rect.left) / rect.width) * 100,
+    yPct: ((clientY - rect.top) / rect.height) * 100,
+  };
+}
+
+function pinIdFromPoint(
+  board: HTMLElement,
+  clientX: number,
+  clientY: number,
+  excludePinId: string,
+): string | null {
+  const stack = document.elementsFromPoint(clientX, clientY);
+  for (const el of stack) {
+    if (!(el instanceof Element)) continue;
+    if (!board.contains(el)) continue;
+    const host = el.closest("[data-vision-pin-id]");
+    if (!(host instanceof HTMLElement)) continue;
+    const id = host.dataset.visionPinId;
+    if (!id || id === excludePinId) continue;
+    return id;
   }
+  return null;
 }
 
 function VisionPinCard({
   pin,
-  linkMode,
-  linkSelected,
+  dropHighlight,
+  connectingFromThis,
   onOpen,
-  onSelectForLink,
+  onConnectStart,
   onResizeLive,
   onResizeEnd,
 }: {
   pin: VisionPin;
-  linkMode: boolean;
-  linkSelected: boolean;
+  dropHighlight: boolean;
+  connectingFromThis: boolean;
   onOpen: (pin: VisionPin) => void;
-  onSelectForLink: (pin: VisionPin) => void;
+  onConnectStart: (
+    pin: VisionPin,
+    port: ConnectPort,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
   onResizeLive: (
     pinId: string,
     next: Pick<VisionPin, "xPct" | "yPct" | "wPct" | "hPct">,
@@ -176,32 +226,22 @@ function VisionPinCard({
   const t = useTranslations("tasks");
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: pin.id,
-    disabled: linkMode,
   });
   const style = {
     left: `${pin.xPct}%`,
     top: `${pin.yPct}%`,
     width: `${pin.wPct}%`,
     height: `${pin.hPct}%`,
-    zIndex: Math.max(1, pin.zIndex + 1),
+    zIndex: Math.max(25, pin.zIndex + 1),
     transform: transform
       ? `translate(-50%, -50%) translate3d(${transform.x}px, ${transform.y}px, 0)`
       : "translate(-50%, -50%)",
   };
 
-  function handleBodyClick() {
-    if (linkMode) {
-      onSelectForLink(pin);
-      return;
-    }
-    if (pin.kind === "image" && pin.imageUrl) onOpen(pin);
-  }
-
   function onCornerPointerDown(
     event: ReactPointerEvent<HTMLButtonElement>,
     corner: ResizeCorner,
   ) {
-    if (linkMode) return;
     event.preventDefault();
     event.stopPropagation();
     const board = event.currentTarget.closest("[data-vision-board]") as HTMLElement | null;
@@ -218,11 +258,9 @@ function VisionPinCard({
 
     function onMove(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return;
-      const rect = board!.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      const xPct = ((ev.clientX - rect.left) / rect.width) * 100;
-      const yPct = ((ev.clientY - rect.top) / rect.height) * 100;
-      latest = applyResizeCorner(pin, corner, xPct, yPct);
+      const pct = clientToBoardPct(board!, ev.clientX, ev.clientY);
+      if (!pct) return;
+      latest = applyResizeCorner(pin, corner, pct.xPct, pct.yPct);
       onResizeLive(pin.id, latest);
     }
 
@@ -246,25 +284,29 @@ function VisionPinCard({
     { corner: "se", className: "right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize", label: t("visionResizeSe") },
   ];
 
+  const ports: { port: ConnectPort; className: string }[] = [
+    { port: "n", className: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 cursor-crosshair" },
+    { port: "e", className: "right-0 top-1/2 translate-x-1/2 -translate-y-1/2 cursor-crosshair" },
+    { port: "s", className: "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-crosshair" },
+    { port: "w", className: "left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair" },
+  ];
+
   return (
     <div
       ref={setNodeRef}
+      data-vision-pin-id={pin.id}
       style={style}
       className={cn(
         "group absolute flex flex-col overflow-visible rounded-md border bg-white text-xs shadow-md dark:bg-zinc-950",
-        linkSelected
+        dropHighlight
           ? "border-emerald-500 ring-2 ring-emerald-400/60"
           : "border-zinc-200 dark:border-zinc-700",
-        linkMode && "cursor-pointer",
       )}
     >
       <div
-        className={cn(
-          "mb-1 flex shrink-0 items-center gap-1 px-2 pt-2 text-[10px] text-zinc-400",
-          !linkMode && "cursor-grab active:cursor-grabbing",
-        )}
-        {...(linkMode ? {} : listeners)}
-        {...(linkMode ? {} : attributes)}
+        className="mb-1 flex shrink-0 cursor-grab items-center gap-1 px-2 pt-2 text-[10px] text-zinc-400 active:cursor-grabbing"
+        {...listeners}
+        {...attributes}
       >
         <GripVertical className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span>{t("dragHandle")}</span>
@@ -272,7 +314,9 @@ function VisionPinCard({
       <button
         type="button"
         className="min-h-0 flex-1 overflow-hidden px-2 pb-2 text-left"
-        onClick={handleBodyClick}
+        onClick={() => {
+          if (pin.kind === "image" && pin.imageUrl) onOpen(pin);
+        }}
       >
         {pin.kind === "image" && pin.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -287,19 +331,38 @@ function VisionPinCard({
           <p className="whitespace-pre-wrap break-words">{pin.body}</p>
         ) : null}
       </button>
-      {!linkMode &&
-        corners.map(({ corner, className, label }) => (
-          <button
-            key={corner}
-            type="button"
-            aria-label={label}
-            className={cn(
-              "absolute z-10 h-3.5 w-3.5 rounded-sm border border-emerald-600 bg-white opacity-70 shadow hover:opacity-100 focus:opacity-100 dark:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100",
-              className,
-            )}
-            onPointerDown={(e) => onCornerPointerDown(e, corner)}
-          />
-        ))}
+      {corners.map(({ corner, className, label }) => (
+        <button
+          key={corner}
+          type="button"
+          aria-label={label}
+          className={cn(
+            "absolute z-10 h-3.5 w-3.5 rounded-sm border border-emerald-600 bg-white opacity-70 shadow hover:opacity-100 focus:opacity-100 dark:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100",
+            className,
+          )}
+          onPointerDown={(e) => onCornerPointerDown(e, corner)}
+        />
+      ))}
+      {ports.map(({ port, className }) => (
+        <button
+          key={port}
+          type="button"
+          aria-label={t("visionConnectPort")}
+          tabIndex={-1}
+          className={cn(
+            "absolute z-30 h-3.5 w-3.5 touch-none rounded-full border-2 border-emerald-600 bg-white shadow dark:bg-zinc-900",
+            connectingFromThis
+              ? "opacity-100"
+              : "opacity-70 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+            className,
+          )}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onConnectStart(pin, port, e);
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -399,14 +462,18 @@ function VisionLinkLayer({
   pins,
   links,
   dragOffset,
+  connectDraft,
   onDeleteLink,
   mode,
+  hitEnabled,
 }: {
   pins: VisionPin[];
   links: VisionPinLink[];
   dragOffset: { pinId: string; dxPct: number; dyPct: number } | null;
+  connectDraft: ConnectDraft | null;
   onDeleteLink: (linkId: string) => void;
   mode: "paint" | "hit";
+  hitEnabled: boolean;
 }) {
   const t = useTranslations("tasks");
   const byId = new Map(pins.map((p) => [p.id, p]));
@@ -459,10 +526,10 @@ function VisionLinkLayer({
             stroke="transparent"
             strokeWidth={14}
             vectorEffect="non-scaling-stroke"
-            className="cursor-pointer"
-            style={{ pointerEvents: "stroke" }}
+            className={hitEnabled ? "cursor-pointer" : undefined}
+            style={{ pointerEvents: hitEnabled ? "stroke" : "none" }}
             role="button"
-            tabIndex={0}
+            tabIndex={hitEnabled ? 0 : -1}
             aria-label={t("visionLinkAria")}
             onClick={(e) => {
               e.stopPropagation();
@@ -477,6 +544,18 @@ function VisionLinkLayer({
           />
         );
       })}
+      {mode === "paint" && connectDraft ? (
+        <line
+          x1={`${connectDraft.x1Pct}%`}
+          y1={`${connectDraft.y1Pct}%`}
+          x2={`${connectDraft.x2Pct}%`}
+          y2={`${connectDraft.y2Pct}%`}
+          className="stroke-emerald-500"
+          strokeWidth={2}
+          strokeDasharray="6 4"
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : null}
     </svg>
   );
 }
@@ -485,11 +564,10 @@ function VisionBoardSurface({
   boardRef,
   pins,
   links,
-  linkMode,
-  linkFromId,
   dragOffset,
+  connectDraft,
   onOpen,
-  onSelectForLink,
+  onConnectStart,
   onDeleteLink,
   onResizeLive,
   onResizeEnd,
@@ -498,11 +576,14 @@ function VisionBoardSurface({
   boardRef: RefObject<HTMLDivElement | null>;
   pins: VisionPin[];
   links: VisionPinLink[];
-  linkMode: boolean;
-  linkFromId: string | null;
   dragOffset: { pinId: string; dxPct: number; dyPct: number } | null;
+  connectDraft: ConnectDraft | null;
   onOpen: (pin: VisionPin) => void;
-  onSelectForLink: (pin: VisionPin) => void;
+  onConnectStart: (
+    pin: VisionPin,
+    port: ConnectPort,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
   onDeleteLink: (linkId: string) => void;
   onResizeLive: (
     pinId: string,
@@ -515,6 +596,7 @@ function VisionBoardSurface({
   className?: string;
 }) {
   const t = useTranslations("tasks");
+  const hitEnabled = !connectDraft;
   return (
     <div
       ref={boardRef}
@@ -533,17 +615,19 @@ function VisionBoardSurface({
         pins={pins}
         links={links}
         dragOffset={dragOffset}
+        connectDraft={connectDraft}
         onDeleteLink={onDeleteLink}
         mode="paint"
+        hitEnabled={hitEnabled}
       />
       {pins.map((pin) => (
         <VisionPinCard
           key={pin.id}
           pin={pin}
-          linkMode={linkMode}
-          linkSelected={linkFromId === pin.id}
+          dropHighlight={connectDraft?.hoverPinId === pin.id}
+          connectingFromThis={connectDraft?.fromPinId === pin.id}
           onOpen={onOpen}
-          onSelectForLink={onSelectForLink}
+          onConnectStart={onConnectStart}
           onResizeLive={onResizeLive}
           onResizeEnd={onResizeEnd}
         />
@@ -552,8 +636,10 @@ function VisionBoardSurface({
         pins={pins}
         links={links}
         dragOffset={dragOffset}
+        connectDraft={null}
         onDeleteLink={onDeleteLink}
         mode="hit"
+        hitEnabled={hitEnabled}
       />
     </div>
   );
@@ -576,10 +662,11 @@ export function ProjectVisionBoard({
   const enterButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const lightboxOpenRef = useRef(false);
+  const connectDraftRef = useRef<ConnectDraft | null>(null);
+  const connectGestureCleanupRef = useRef<(() => void) | null>(null);
   const [pins, setPins] = useState(() => initialPins.map(pinWithDefaults));
   const [links, setLinks] = useState(initialLinks);
-  const [linkMode, setLinkMode] = useState(false);
-  const [linkFromId, setLinkFromId] = useState<string | null>(null);
+  const [connectDraft, setConnectDraft] = useState<ConnectDraft | null>(null);
   const [dragOffset, setDragOffset] = useState<{
     pinId: string;
     dxPct: number;
@@ -592,6 +679,17 @@ export function ProjectVisionBoard({
   function setLightbox(pin: VisionPin | null) {
     lightboxOpenRef.current = pin !== null;
     setLightboxState(pin);
+  }
+
+  function clearConnectDraft() {
+    connectDraftRef.current = null;
+    setConnectDraft(null);
+  }
+
+  function cancelConnectGesture() {
+    connectGestureCleanupRef.current?.();
+    connectGestureCleanupRef.current = null;
+    clearConnectDraft();
   }
 
   useEffect(() => {
@@ -618,9 +716,8 @@ export function ProjectVisionBoard({
       if (event.key !== "Escape") return;
       if (lightboxOpenRef.current) return;
       event.preventDefault();
-      if (linkMode) {
-        setLinkMode(false);
-        setLinkFromId(null);
+      if (connectDraftRef.current) {
+        cancelConnectGesture();
         return;
       }
       setIsFullscreen(false);
@@ -638,20 +735,19 @@ export function ProjectVisionBoard({
         enterButtonRef.current?.focus();
       }
     };
-  }, [isFullscreen, linkMode]);
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (isFullscreen) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (!linkMode) return;
+      if (!connectDraftRef.current) return;
       event.preventDefault();
-      setLinkMode(false);
-      setLinkFromId(null);
+      cancelConnectGesture();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isFullscreen, linkMode]);
+  }, [isFullscreen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -660,14 +756,8 @@ export function ProjectVisionBoard({
 
   function exitFullscreen() {
     setLightbox(null);
+    cancelConnectGesture();
     setIsFullscreen(false);
-  }
-
-  function toggleLinkMode() {
-    setLinkMode((prev) => {
-      if (prev) setLinkFromId(null);
-      return !prev;
-    });
   }
 
   function pctFromDelta(delta: { x: number; y: number }) {
@@ -756,44 +846,125 @@ export function ProjectVisionBoard({
     });
   }
 
-  async function handleSelectForLink(pin: VisionPin) {
-    if (!linkFromId) {
-      setLinkFromId(pin.id);
-      return;
-    }
-    if (linkFromId === pin.id) {
-      setLinkFromId(null);
-      return;
-    }
-    const [fromPinId, toPinId] = normalizePinLinkIds(linkFromId, pin.id);
-    const already = links.some(
-      (l) => l.fromPinId === fromPinId && l.toPinId === toPinId,
-    );
-    setLinkFromId(null);
+  async function persistLink(fromPinId: string, toPinId: string) {
+    const [a, b] = normalizePinLinkIds(fromPinId, toPinId);
+    const already = links.some((l) => l.fromPinId === a && l.toPinId === b);
     if (already) return;
 
-    const tempId = `temp-${fromPinId}-${toPinId}`;
-    setLinks((prev) => [...prev, { id: tempId, fromPinId, toPinId }]);
+    const tempId = `temp-${a}-${b}`;
+    setLinks((prev) => [...prev, { id: tempId, fromPinId: a, toPinId: b }]);
     try {
       const created = await createVisionPinLink({
-        pinAId: linkFromId,
-        pinBId: pin.id,
+        pinAId: fromPinId,
+        pinBId: toPinId,
       });
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.id === tempId
-            ? {
-                id: created.id,
-                fromPinId: created.fromPinId,
-                toPinId: created.toPinId,
-              }
-            : l,
-        ),
-      );
+      setLinks((prev) => {
+        const withoutTemp = prev.filter((l) => l.id !== tempId);
+        if (
+          withoutTemp.some(
+            (l) =>
+              l.fromPinId === created.fromPinId && l.toPinId === created.toPinId,
+          )
+        ) {
+          return withoutTemp;
+        }
+        return [
+          ...withoutTemp,
+          {
+            id: created.id,
+            fromPinId: created.fromPinId,
+            toPinId: created.toPinId,
+          },
+        ];
+      });
       router.refresh();
     } catch {
       setLinks((prev) => prev.filter((l) => l.id !== tempId));
     }
+  }
+
+  function onConnectStart(
+    pin: VisionPin,
+    port: ConnectPort,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) {
+    if (event.button !== 0) return;
+    const board = boardRef.current;
+    if (!board) return;
+    const origin = portCenterPct(pin, port);
+    const pointerId = event.pointerId;
+    const target = event.currentTarget;
+
+    // Replace any prior unfinished gesture, then capture this pointer.
+    cancelConnectGesture();
+    target.setPointerCapture(pointerId);
+
+    const initial: ConnectDraft = {
+      fromPinId: pin.id,
+      x1Pct: origin.xPct,
+      y1Pct: origin.yPct,
+      x2Pct: origin.xPct,
+      y2Pct: origin.yPct,
+      hoverPinId: null,
+    };
+    connectDraftRef.current = initial;
+    setConnectDraft(initial);
+
+    function updateFromEvent(ev: PointerEvent) {
+      const pct = clientToBoardPct(board!, ev.clientX, ev.clientY);
+      if (!pct) return;
+      const hoverPinId = pinIdFromPoint(board!, ev.clientX, ev.clientY, pin.id);
+      const next: ConnectDraft = {
+        fromPinId: pin.id,
+        x1Pct: origin.xPct,
+        y1Pct: origin.yPct,
+        x2Pct: pct.xPct,
+        y2Pct: pct.yPct,
+        hoverPinId,
+      };
+      connectDraftRef.current = next;
+      setConnectDraft(next);
+    }
+
+    function cleanupListeners() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("blur", onCancel);
+      if (target.hasPointerCapture(pointerId)) {
+        target.releasePointerCapture(pointerId);
+      }
+      connectGestureCleanupRef.current = null;
+    }
+
+    function onMove(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return;
+      updateFromEvent(ev);
+    }
+
+    function onUp(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return;
+      cleanupListeners();
+      const targetId = pinIdFromPoint(board!, ev.clientX, ev.clientY, pin.id);
+      clearConnectDraft();
+      if (!targetId || targetId === pin.id) return;
+      void persistLink(pin.id, targetId);
+    }
+
+    function onCancel(ev?: Event) {
+      if (ev instanceof PointerEvent && ev.pointerId !== pointerId) return;
+      cleanupListeners();
+      clearConnectDraft();
+    }
+
+    connectGestureCleanupRef.current = () => {
+      cleanupListeners();
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("blur", onCancel);
   }
 
   function handleDeleteLink(linkId: string) {
@@ -829,7 +1000,7 @@ export function ProjectVisionBoard({
     setLinks((prev) =>
       prev.filter((l) => l.fromPinId !== id && l.toPinId !== id),
     );
-    if (linkFromId === id) setLinkFromId(null);
+    if (connectDraftRef.current?.fromPinId === id) cancelConnectGesture();
     if (lightbox?.id === id) setLightbox(null);
     router.refresh();
   }
@@ -846,11 +1017,10 @@ export function ProjectVisionBoard({
         boardRef={boardRef}
         pins={pins}
         links={links}
-        linkMode={linkMode}
-        linkFromId={linkFromId}
         dragOffset={dragOffset}
+        connectDraft={connectDraft}
         onOpen={setLightbox}
-        onSelectForLink={handleSelectForLink}
+        onConnectStart={onConnectStart}
         onDeleteLink={handleDeleteLink}
         onResizeLive={onResizeLive}
         onResizeEnd={onResizeEnd}
@@ -861,19 +1031,6 @@ export function ProjectVisionBoard({
         }
       />
     </DndContext>
-  );
-
-  const linkModeButton = (
-    <Button
-      type="button"
-      size="sm"
-      variant={linkMode ? "default" : "outline"}
-      onClick={toggleLinkMode}
-      aria-pressed={linkMode}
-    >
-      <Link2 className="mr-1 h-4 w-4" aria-hidden />
-      {linkMode ? t("visionLinkModeOn") : t("visionLinkMode")}
-    </Button>
   );
 
   const lightboxDialog = (
@@ -926,25 +1083,17 @@ export function ProjectVisionBoard({
           className="fixed inset-0 z-50 flex h-dvh flex-col bg-white dark:bg-zinc-950"
         >
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <h2 className="text-base font-semibold">{t("sectionVision")}</h2>
-              {linkMode ? (
-                <p className="text-xs text-zinc-500">{t("visionLinkHint")}</p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {linkModeButton}
-              <Button
-                ref={closeButtonRef}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={exitFullscreen}
-              >
-                <X className="mr-1 h-4 w-4" aria-hidden />
-                {t("visionExitFullscreen")}
-              </Button>
-            </div>
+            <h2 className="text-base font-semibold">{t("sectionVision")}</h2>
+            <Button
+              ref={closeButtonRef}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={exitFullscreen}
+            >
+              <X className="mr-1 h-4 w-4" aria-hidden />
+              {t("visionExitFullscreen")}
+            </Button>
           </div>
           <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 md:flex-row">
             <div className="flex max-h-[40vh] shrink-0 flex-col gap-3 overflow-auto md:max-h-none md:w-72 md:overflow-y-auto">
@@ -968,7 +1117,6 @@ export function ProjectVisionBoard({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {linkModeButton}
         <Button
           ref={enterButtonRef}
           type="button"
@@ -980,9 +1128,6 @@ export function ProjectVisionBoard({
           {t("visionEnterFullscreen")}
         </Button>
       </div>
-      {linkMode ? (
-        <p className="text-xs text-zinc-500">{t("visionLinkHint")}</p>
-      ) : null}
       <VisionAddForms
         projectId={projectId}
         textFormRef={textFormRef}
