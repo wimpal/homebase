@@ -326,6 +326,8 @@
     "emptyVision": "Voeg pins toe om de vision van dit project te bouwen.",
     "imagePin": "Afbeeldingspin",
     "confirmDeletePin": "Deze vision-pin verwijderen?",
+    "visionEnterFullscreen": "Volledig scherm",
+    "visionExitFullscreen": "Volledig scherm sluiten",
     "noActivity": "Nog geen updates."
   },
   "recipes": {

@@ -326,6 +326,8 @@
     "emptyVision": "Add pins to build the vision for this project.",
     "imagePin": "Image pin",
     "confirmDeletePin": "Delete this vision pin?",
+    "visionEnterFullscreen": "Fullscreen",
+    "visionExitFullscreen": "Exit fullscreen",
     "noActivity": "No updates yet."
   },
   "recipes": {
