@@ -148,12 +148,23 @@ Your **database and uploads are preserved** in Docker volumes across redeploys.
 
 ### Purge MCP smoke leftovers
 
-`mcp:smoke` leaves shopping items, products, chores, recipes named with
+`mcp:smoke` creates shopping items, products, chores, and recipes named with
 `mcp-smoke*` / `Smoke Add *`, plus Home Feed notifications titled
-`Chore due: mcp-smoke-…` (worker wrote them every 5 minutes while the chore
-existed). Successful smoke runs now **auto-delete** those leftovers (Prisma when
-the DB is reachable; otherwise SSH + worker when `NAS_HOST` is set). Skip with
-`HOMEBASE_SMOKE_KEEP_DATA=1`. Manual purge inside the **worker** container:
+`Low stock: mcp-smoke-…` / `Chore due: mcp-smoke-…` while those rows exist.
+
+**Auto-cleanup (T-081):**
+
+- **Local** MCP target (`localhost` / `127.0.0.1`) — Prisma purge against `DATABASE_URL`.
+- **Remote** MCP target (e.g. post-deploy against the NAS) — **always** SSH into the
+  NAS worker and run the purge there. Local Prisma is never used for remote smoke
+  (it would clean the wrong database). `deploy:nas` exports `NAS_HOST` /
+  `NAS_USER` / `NAS_PATH` / `NAS_SSH_PORT` for this path.
+- Cleanup runs after success **and** after failure (best-effort), so a mid-run
+  abort does not leave junk.
+- Remote cleanup failure **fails the smoke** (and thus `deploy:nas`).
+- Skip with `HOMEBASE_SMOKE_KEEP_DATA=1`.
+
+Manual purge inside the **worker** container:
 
 ```bash
 docker compose exec worker npx tsx scripts/purge-smoke-data.ts          # dry-run

@@ -10,10 +10,18 @@ import { Switch } from "@/components/ui/switch";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { DirigeraLight } from "@/domain/smarthome/types";
 import type { DirigeraEdgeSensor } from "@/domain/smarthome";
 import type {
   AutomationListItem,
+  AutomationWriteResult,
   DirigeraEdgeSensorsResult,
   DirigeraLightsResult,
 } from "@/modules/smarthome/actions";
@@ -435,6 +443,7 @@ export function AutomationsPanel({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runMessage, setRunMessage] = useState<string | null>(null);
+  const [saveErrorDialog, setSaveErrorDialog] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const lights = dirigera.configured && !dirigera.error ? dirigera.lights : [];
@@ -448,6 +457,30 @@ export function AutomationsPanel({
     () => new Map(sensors.map((s) => [s.id, s])),
     [sensors],
   );
+
+  function messageForWriteResult(result: AutomationWriteResult): string {
+    if (result.ok) return "";
+    if (result.reason === "active_window_incomplete") {
+      return t("activeWindowIncomplete");
+    }
+    return t("saveFailedGeneric");
+  }
+
+  async function handleCreate(formData: FormData) {
+    const result = await createAutomationAction(formData);
+    if (!result.ok) {
+      setSaveErrorDialog(messageForWriteResult(result));
+    }
+  }
+
+  async function handleUpdate(formData: FormData) {
+    const result = await updateAutomationAction(formData);
+    if (!result.ok) {
+      setSaveErrorDialog(messageForWriteResult(result));
+      return;
+    }
+    setEditingId(null);
+  }
 
   function daySummary(days: number[]): string {
     if (days.length === 7) return t("everyDay");
@@ -599,6 +632,25 @@ export function AutomationsPanel({
         </p>
       ) : null}
 
+      <Dialog
+        open={saveErrorDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setSaveErrorDialog(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("saveFailedTitle")}</DialogTitle>
+            <DialogDescription>{saveErrorDialog}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setSaveErrorDialog(null)}>
+              {t("dialogOk")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <CollapsibleCreate
         openLabel={t("createAutomation")}
         cancelLabel={tc("cancel")}
@@ -609,7 +661,7 @@ export function AutomationsPanel({
             <CardTitle className="text-base">{t("createAutomation")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createAutomationAction} className="space-y-4">
+            <form action={handleCreate} className="space-y-4">
               <AutomationFormFields
                 lights={lights}
                 sensors={sensors}
@@ -705,10 +757,7 @@ export function AutomationsPanel({
 
               {editing ? (
                 <form
-                  action={async (fd) => {
-                    await updateAutomationAction(fd);
-                    setEditingId(null);
-                  }}
+                  action={handleUpdate}
                   className="space-y-4 border-t border-zinc-100 pt-3 dark:border-zinc-800"
                 >
                   <input type="hidden" name="id" value={rule.id} />

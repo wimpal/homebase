@@ -34,7 +34,10 @@ function notificationWhere(
   householdId?: string,
 ): Prisma.NotificationWhereInput {
   return {
-    title: { contains: "mcp-smoke" },
+    OR: [
+      { title: { contains: "mcp-smoke" } },
+      { message: { contains: "mcp-smoke" } },
+    ],
     ...(householdId ? { householdId } : {}),
   };
 }

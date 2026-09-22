@@ -62,7 +62,8 @@ function parseActiveWindow(
   }
   if (!fromRaw || !untilRaw) {
     return DomainError.invalidInput(
-      "activeFromLocal and activeUntilLocal must both be set, or both empty (all day).",
+      "Set both Active from and Active until, or leave both empty for all day.",
+      "active_window_incomplete",
     );
   }
   if (!TIME_LOCAL_RE.test(fromRaw) || !TIME_LOCAL_RE.test(untilRaw)) {

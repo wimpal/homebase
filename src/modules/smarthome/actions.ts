@@ -367,26 +367,46 @@ export async function getDirigeraEdgeSensors(): Promise<DirigeraEdgeSensorsResul
   return { configured: true, sensors: result };
 }
 
-export async function createAutomationAction(formData: FormData) {
+export type AutomationWriteResult =
+  | { ok: true }
+  | { ok: false; reason?: string; message: string };
+
+export async function createAutomationAction(
+  formData: FormData,
+): Promise<AutomationWriteResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const input = parseAutomationWriteInput(formData);
   const result = await createAutomation(householdId, input);
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return {
+      ok: false,
+      reason: result.reason,
+      message: result.message,
+    };
   }
   revalidatePath("/smart-home");
+  return { ok: true };
 }
 
-export async function updateAutomationAction(formData: FormData) {
+export async function updateAutomationAction(
+  formData: FormData,
+): Promise<AutomationWriteResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Automation id is required.");
+  if (!id) {
+    return { ok: false, message: "Automation id is required." };
+  }
   const input = parseAutomationWriteInput(formData);
   const result = await updateAutomation(householdId, id, input);
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return {
+      ok: false,
+      reason: result.reason,
+      message: result.message,
+    };
   }
   revalidatePath("/smart-home");
+  return { ok: true };
 }
 
 export async function setAutomationEnabledAction(id: string, enabled: boolean) {

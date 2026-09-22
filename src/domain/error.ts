@@ -14,32 +14,40 @@ export interface ErrorBody {
 export class DomainError extends Error {
   readonly code: ErrorCode;
   readonly retryable: boolean;
+  /** Stable machine key for UI i18n; optional. */
+  readonly reason?: string;
 
-  constructor(code: ErrorCode, message: string, retryable = false) {
+  constructor(
+    code: ErrorCode,
+    message: string,
+    retryable = false,
+    reason?: string,
+  ) {
     super(message);
     this.name = "DomainError";
     this.code = code;
     this.retryable = retryable;
+    this.reason = reason;
   }
 
-  static notFound(message: string): DomainError {
-    return new DomainError("not_found", message, false);
+  static notFound(message: string, reason?: string): DomainError {
+    return new DomainError("not_found", message, false, reason);
   }
 
-  static invalidInput(message: string): DomainError {
-    return new DomainError("invalid_input", message, false);
+  static invalidInput(message: string, reason?: string): DomainError {
+    return new DomainError("invalid_input", message, false, reason);
   }
 
-  static conflict(message: string): DomainError {
-    return new DomainError("conflict", message, false);
+  static conflict(message: string, reason?: string): DomainError {
+    return new DomainError("conflict", message, false, reason);
   }
 
-  static unavailable(message: string): DomainError {
-    return new DomainError("unavailable", message, true);
+  static unavailable(message: string, reason?: string): DomainError {
+    return new DomainError("unavailable", message, true, reason);
   }
 
-  static internal(message: string): DomainError {
-    return new DomainError("internal", message, false);
+  static internal(message: string, reason?: string): DomainError {
+    return new DomainError("internal", message, false, reason);
   }
 
   toBody(): ErrorBody {

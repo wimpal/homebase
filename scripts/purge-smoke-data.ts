@@ -5,7 +5,7 @@
  *   ShoppingItem / Product — name starts with "mcp-smoke"
  *   Chore                  — title starts with "mcp-smoke"
  *   Recipe                 — title starts with "Smoke Add "
- *   Notification           — title contains "mcp-smoke" (e.g. "Chore due: mcp-smoke-…")
+ *   Notification           — title or message contains "mcp-smoke" (e.g. "Chore due: mcp-smoke-…")
  *   McpChangeLog           — entityId in the deleted set
  *
  * Usage:
@@ -110,7 +110,7 @@ async function main() {
   printSection("Chore (title starts with mcp-smoke)", matches.chores);
   printSection('Recipe (title starts with "Smoke Add ")', matches.recipes);
   printSection(
-    "Notification (title contains mcp-smoke)",
+    "Notification (title or message contains mcp-smoke)",
     matches.notifications,
   );
   console.log(`\nMcpChangeLog (entityId in above): ${changeLogCount}`);

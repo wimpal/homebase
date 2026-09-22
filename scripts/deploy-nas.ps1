@@ -274,6 +274,11 @@ if (-not $SkipSmoke) {
             $prevBase = $env:MCP_BASE_URL
             $env:MCP_BASE_URL = "http://${NasHost}:3000"
             $env:HOMEBASE_SMOKE_SKIP_DOTENV = "1"
+            # Ensure remote smoke cleanup SSH targets the same NAS as this deploy.
+            $env:NAS_HOST = $NasHost
+            $env:NAS_USER = $NasUser
+            $env:NAS_PATH = $NasPath
+            $env:NAS_SSH_PORT = "$SshPort"
             # lights smoke is list-only on remote (T-038)
             & npm run mcp:smoke
             if ($LASTEXITCODE -ne 0) {

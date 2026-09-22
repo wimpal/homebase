@@ -10,8 +10,10 @@
 
  * Lights write smoke (local only): HOMEBASE_SMOKE_LIGHTS_WRITE=1 + DIRIGERA_TEST_DEVICE_ID
  *
- * After success, deletes smoke leftovers (Prisma if DB reachable; else SSH worker purge
- * when NAS_HOST is set). Skip with HOMEBASE_SMOKE_KEEP_DATA=1.
+ * After each run (success or failure), deletes smoke leftovers:
+ *   local MCP target  → Prisma against DATABASE_URL
+ *   remote MCP target → SSH into NAS worker purge (requires NAS_HOST)
+ * Skip with HOMEBASE_SMOKE_KEEP_DATA=1. Remote cleanup failure fails the smoke.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -63,7 +65,11 @@ const HOUSEHOLD_ID = process.env.MCP_HOUSEHOLD_ID?.trim();
 
 function isLocalMcpTarget(baseUrl: string): boolean {
   try {
-    const host = new URL(baseUrl).hostname.toLowerCase();
+    let host = new URL(baseUrl).hostname.toLowerCase();
+    // Node may return bracketed IPv6 literals (e.g. "[::1]").
+    if (host.startsWith("[") && host.endsWith("]")) {
+      host = host.slice(1, -1);
+    }
     return host === "localhost" || host === "127.0.0.1" || host === "::1";
   } catch {
     return false;
@@ -102,8 +108,7 @@ function parseJson(body: string): unknown {
 }
 
 function fail(message: string): never {
-  console.error(`FAIL: ${message}`);
-  process.exit(1);
+  throw new Error(`FAIL: ${message}`);
 }
 
 function ok(message: string) {
@@ -674,14 +679,12 @@ async function main() {
   ok("recipes.add → get ingredient group round-trip");
 
   await runLightsSmoke(callTool);
-
-  console.log("\nAll MCP smoke checks passed.");
-  await cleanupSmokeLeftovers();
 }
 
 /**
- * Remove mcp-smoke / Smoke Add leftovers after a green run.
- * Local: Prisma against DATABASE_URL. Remote NAS: SSH into worker purge when NAS_HOST set.
+ * Remove mcp-smoke / Smoke Add leftovers.
+ * Local MCP: Prisma against DATABASE_URL.
+ * Remote MCP: always SSH worker purge (never local Prisma — that DB is not what smoke wrote).
  */
 async function cleanupSmokeLeftovers() {
   if (process.env.HOMEBASE_SMOKE_KEEP_DATA === "1") {
@@ -691,59 +694,77 @@ async function cleanupSmokeLeftovers() {
     return;
   }
 
+  if (!HOUSEHOLD_ID) {
+    fail(
+      "smoke cleanup requires MCP_HOUSEHOLD_ID (refusing unscoped purge)",
+    );
+  }
+
+  if (!IS_LOCAL) {
+    await cleanupSmokeLeftoversRemote();
+    return;
+  }
+
+  await cleanupSmokeLeftoversLocal();
+}
+
+async function cleanupSmokeLeftoversLocal() {
   const prisma = new PrismaClient();
   try {
-    const household = await prisma.household.findUnique({
-      where: { id: HOUSEHOLD_ID! },
-      select: { id: true },
+    const counts = await applySmokePurge(prisma, {
+      householdId: HOUSEHOLD_ID!,
     });
-    if (household) {
-      const counts = await applySmokePurge(prisma, {
-        householdId: HOUSEHOLD_ID!,
-      });
-      if (totalPurgeCounts(counts) === 0) {
-        ok("smoke cleanup (nothing to delete)");
-      } else {
-        ok(`smoke cleanup (${formatPurgeCounts(counts)})`);
-      }
-      return;
+    if (totalPurgeCounts(counts) === 0) {
+      ok("smoke cleanup (nothing to delete)");
+    } else {
+      ok(`smoke cleanup (${formatPurgeCounts(counts)})`);
     }
-  } catch (err) {
-    console.log(
-      `NOTE: local DB not usable for smoke cleanup (${err instanceof Error ? err.message : err})`,
-    );
   } finally {
     await prisma.$disconnect();
   }
+}
 
+async function cleanupSmokeLeftoversRemote() {
   const nasHost = process.env.NAS_HOST?.trim();
-  if (nasHost) {
-    const nasUser = process.env.NAS_USER?.trim() || "wim";
-    const nasPath =
-      process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
-    const remote = `${nasUser}@${nasHost}`;
-    const remoteCmd = [
-      "set -eu",
-      `cd '${nasPath}'`,
-      "docker compose exec -T worker npx tsx scripts/purge-smoke-data.ts --apply",
-    ].join(" && ");
-    console.log(`Cleaning smoke leftovers via SSH ${remote}...`);
-    try {
-      execFileSync("ssh", [remote, remoteCmd], { stdio: "inherit" });
-      ok("smoke cleanup (via NAS worker)");
-      return;
-    } catch (err) {
-      console.warn(
-        `WARN: SSH smoke cleanup failed (${err instanceof Error ? err.message : err})`,
-      );
-    }
+  if (!nasHost) {
+    fail(
+      "remote smoke cleanup requires NAS_HOST (set by deploy:nas or .env). " +
+        "Manual: docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply",
+    );
   }
 
-  console.warn(
-    "WARN: could not delete smoke leftovers automatically. On NAS run:\n" +
-      "  docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply\n" +
-      "Or set NAS_HOST (and optional NAS_USER / NAS_PATH) for SSH cleanup.",
-  );
+  const nasUser = process.env.NAS_USER?.trim() || "wim";
+  const nasPath =
+    process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+  const sshPortRaw = process.env.NAS_SSH_PORT?.trim();
+  const sshPort =
+    sshPortRaw && Number.parseInt(sshPortRaw, 10) > 0
+      ? Number.parseInt(sshPortRaw, 10)
+      : 22;
+  const remote = `${nasUser}@${nasHost}`;
+
+  const remoteCmd = [
+    "set -eu",
+    `cd ${shellSingleQuote(nasPath)}`,
+    `docker compose exec -T -e MCP_HOUSEHOLD_ID=${shellSingleQuote(HOUSEHOLD_ID!)} worker npx tsx scripts/purge-smoke-data.ts --apply`,
+  ].join(" && ");
+
+  const sshArgs = ["-p", String(sshPort), remote, remoteCmd];
+  console.log(`Cleaning smoke leftovers via SSH ${remote} (port ${sshPort})...`);
+  try {
+    execFileSync("ssh", sshArgs, { stdio: "inherit" });
+  } catch (err) {
+    fail(
+      `SSH smoke cleanup failed (${err instanceof Error ? err.message : err}). ` +
+        "On NAS: docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply",
+    );
+  }
+  ok("smoke cleanup (via NAS worker)");
+}
+
+/** Quote a value for safe embedding in a remote single-quoted shell fragment. */
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 type CallTool = (
@@ -1100,7 +1121,31 @@ async function runInventoryUpdateChecks(
   ok("homebase.inventory.update rejects both quantity and delta");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function run() {
+  let smokeError: unknown;
+  try {
+    await main();
+  } catch (err) {
+    smokeError = err;
+    console.error(err instanceof Error ? err.message : err);
+  }
+
+  try {
+    await cleanupSmokeLeftovers();
+  } catch (cleanupErr) {
+    console.error(
+      cleanupErr instanceof Error ? cleanupErr.message : cleanupErr,
+    );
+    if (!smokeError) {
+      smokeError = cleanupErr;
+    }
+  }
+
+  if (smokeError) {
+    process.exit(1);
+  }
+
+  console.log("\nAll MCP smoke checks passed.");
+}
+
+run();
