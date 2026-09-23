@@ -142,7 +142,13 @@ The script:
 2. SSH → `docker compose up --build -d`
 3. `npx tsx scripts/migrate-shopping-slots.ts` then `npx tsx scripts/migrate-project-work-items.ts` then `prisma db push --accept-data-loss` inside the **worker** container (shopping backfill + ProjectStep → work items before push)
 4. Curl `/health` on port 3000
+5. **Smoke purge (pre)** — household-scoped `purge-smoke-data.ts --apply` on the worker (clears historical `mcp-smoke*` / `Smoke Add *` junk). Skipped if `HOMEBASE_SMOKE_KEEP_DATA=1`.
+6. **Post-deploy `mcp:smoke`** against `http://<NAS>:3000` (unless `-SkipSmoke` / `--skip-smoke`). Lights stay list-only on remote.
+7. **Smoke purge (post)** — same purge again (and smoke self-cleans after success/failure). Residual rows fail the purge CLI and thus the deploy.
 
+Credentials come from the **running app container** (`SERVICE_TOKEN` / `MCP_HOUSEHOLD_ID`), falling back to the NAS share `.env` only. Local Windows `.env` is not used for remote smoke (avoids purging the wrong household).
+
+`./scripts/deploy.sh` on the NAS itself rebuilds only — no smoke/purge. Use PC `deploy:nas` / `deploy-nas.sh` for that.
 Legacy alternative (SSH + on-NAS `deploy.sh` only):
 
 ```powershell
@@ -166,6 +172,8 @@ git pull
 4. `prisma db push --accept-data-loss` — apply schema changes
 5. `ensure-product-ci-index.ts` — case-insensitive unique product names per household
 
+**Does not** run `mcp:smoke` or smoke purge. For those, redeploy from a PC with `npm run deploy:nas` / `./scripts/deploy-nas.sh`.
+
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 
 ### Purge MCP smoke leftovers
@@ -173,29 +181,39 @@ Your **database and uploads are preserved** in Docker volumes across redeploys.
 `mcp:smoke` creates shopping items, products, chores, and recipes named with
 `mcp-smoke*` / `Smoke Add *`, plus Home Feed notifications titled
 `Low stock: mcp-smoke-…` / `Chore due: mcp-smoke-…` while those rows exist.
+Remote inventory smoke may briefly mutate a **real** stocked product and revert it
+(mid-run failure can leave wrong qty — not prefix-purgable).
 
-**Auto-cleanup (T-081):**
+**Auto-cleanup (T-081 + T-094):**
 
 - **Local** MCP target (`localhost` / `127.0.0.1`) — Prisma purge against `DATABASE_URL`.
 - **Remote** MCP target (e.g. post-deploy against the NAS) — **always** SSH into the
   NAS worker and run the purge there. Local Prisma is never used for remote smoke
-  (it would clean the wrong database). `deploy:nas` exports `NAS_HOST` /
+  (it would clean the wrong database). `deploy:nas` / `deploy-nas.sh` export `NAS_HOST` /
   `NAS_USER` / `NAS_PATH` / `NAS_SSH_PORT` for this path.
-- Cleanup runs after success **and** after failure (best-effort), so a mid-run
-  abort does not leave junk.
+- Deploy also runs household-scoped purge **before and after** smoke (and when
+  `-SkipSmoke`), so historical junk is cleared even if smoke is skipped.
+- Cleanup runs after smoke success **and** failure; `--apply` **verifies** zero
+  residuals and exits nonzero if any remain (or if `MCP_HOUSEHOLD_ID` is not a
+  real household row — scoped purge must not silently no-op).
+- McpChangeLog orphans after revert match `payloadJson` text containing
+  `mcp-smoke` / `Smoke Add`.
+- Skip purge with `HOMEBASE_SMOKE_KEEP_DATA=1`.
 - Remote cleanup failure **fails the smoke** (and thus `deploy:nas`).
-- Skip with `HOMEBASE_SMOKE_KEEP_DATA=1`.
+
+**Ops note:** never strip CR from household ids with busybox `tr -d "\r"` (double
+quotes) — some NAS shells treat that as “delete letter r” and corrupt the id.
 
 Manual purge inside the **worker** container:
 
 ```bash
 docker compose exec worker npx tsx scripts/purge-smoke-data.ts          # dry-run
-docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply  # delete
+docker compose exec -e MCP_HOUSEHOLD_ID="$MCP_HOUSEHOLD_ID" worker \
+  npx tsx scripts/purge-smoke-data.ts --apply
 ```
 
-Optional: set `MCP_HOUSEHOLD_ID` in the worker env to limit scope. Does not touch
-demo seed users or real household rows without those prefixes.
-
+Pass `MCP_HOUSEHOLD_ID` (app env / compose). Does not touch demo seed users or real
+household rows without those prefixes.
 ### Notification retention
 
 The worker purges Home Feed rows daily at 03:15 (`read` older than 30 days; any

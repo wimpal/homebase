@@ -4,13 +4,14 @@
 # PC setup (SSH key, docker group): docs/nas-pc-setup.md
 #
 # npm run deploy:nas runs deploy-preflight.ps1 (build) then this script with -SkipPreflight.
-# Post-deploy: mcp:smoke against http://<NAS>:3000 when SERVICE_TOKEN + MCP_HOUSEHOLD_ID are set.
+# Post-deploy: household-scoped smoke purge (pre + post), then mcp:smoke against
+# http://<NAS>:3000 when SERVICE_TOKEN + MCP_HOUSEHOLD_ID are available from the app.
 #
 #   npm run deploy:nas
 #   npm run deploy:nas -- -Push
 #   npm run deploy:nas -- -SkipPreflight -SkipSmoke
 #   npm run deploy:nas -- -UseScp
-
+#   HOMEBASE_SMOKE_KEEP_DATA=1  # skip purge (debug)
 param(
     [string]$NasHost,
     [string]$NasUser,
@@ -50,13 +51,17 @@ function Import-DotEnv {
 function Import-McpSmokeEnv {
     param(
         [string]$NasShare,
-        [string]$RepoRoot
+        [string]$RepoRoot,
+        [switch]$AllowLocalRepo
     )
-    # Docker on NAS reads .env from the deploy tree; smoke must use the same tokens.
+    # Prefer NAS share .env (same file docker compose reads). Local repo .env only
+    # when AllowLocalRepo (legacy) — can diverge from the running app.
     $candidates = @(
-        (Join-Path $NasShare ".env"),
-        (Join-Path $RepoRoot ".env")
+        (Join-Path $NasShare ".env")
     )
+    if ($AllowLocalRepo) {
+        $candidates += (Join-Path $RepoRoot ".env")
+    }
     foreach ($path in $candidates) {
         if (-not (Test-Path -LiteralPath $path)) { continue }
         Write-Host "Loading MCP smoke credentials from $path"
@@ -74,9 +79,10 @@ function Import-McpSmokeEnv {
             }
         }
         if ($env:SERVICE_TOKEN -and $env:MCP_HOUSEHOLD_ID) {
-            return
+            return $true
         }
     }
+    return $false
 }
 
 function Import-McpSmokeEnvFromContainer {
@@ -85,7 +91,8 @@ function Import-McpSmokeEnvFromContainer {
         [int]$SshPort,
         [string]$NasPath
     )
-    $cmd = "set -eu && cd '$NasPath' && docker compose exec -T app printenv SERVICE_TOKEN MCP_HOUSEHOLD_ID"
+    # Emit KEY=value lines (bare `printenv A B` prints values only — easy to mis-parse).
+    $cmd = "set -eu && cd '$NasPath' && docker compose exec -T app env | grep -E '^(SERVICE_TOKEN|MCP_HOUSEHOLD_ID)=' "
     Write-Host "Reading MCP smoke credentials from running app container on NAS..."
     $output = & ssh -p $SshPort $Remote $cmd 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -102,11 +109,39 @@ function Import-McpSmokeEnvFromContainer {
         }
     }
     if ($env:SERVICE_TOKEN -and $env:MCP_HOUSEHOLD_ID) {
-        Write-Host "MCP smoke credentials loaded from container (token length $($env:SERVICE_TOKEN.Length))"
+        Write-Host "MCP smoke credentials loaded from container (token length $($env:SERVICE_TOKEN.Length), household length $($env:MCP_HOUSEHOLD_ID.Length))"
         return $true
     }
     Write-Warning "Container did not return SERVICE_TOKEN and MCP_HOUSEHOLD_ID"
     return $false
+}
+
+function Invoke-NasSmokePurge {
+    param(
+        [string]$Remote,
+        [int]$SshPort,
+        [string]$NasPath,
+        [string]$HouseholdId,
+        [string]$Label
+    )
+    if ($env:HOMEBASE_SMOKE_KEEP_DATA -eq "1") {
+        Write-Host "Skipping NAS smoke purge ($Label) — HOMEBASE_SMOKE_KEEP_DATA=1"
+        return
+    }
+    if (-not $HouseholdId) {
+        Write-Error "NAS smoke purge ($Label) requires MCP_HOUSEHOLD_ID (refusing unscoped purge)."
+        exit 1
+    }
+    # Single-quote household for remote shell; do not use tr -d "\r" (busybox may strip letter r).
+    $hh = $HouseholdId.Replace("'", "'\''")
+    $remoteCmd = "set -eu && cd '$NasPath' && docker compose exec -T -e MCP_HOUSEHOLD_ID='$hh' worker npx tsx scripts/purge-smoke-data.ts --apply"
+    Write-Host "NAS smoke purge ($Label) via SSH $Remote ..."
+    & ssh -p $SshPort $Remote $remoteCmd
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "NAS smoke purge ($Label) failed."
+        exit $LASTEXITCODE
+    }
+    Write-Host "NAS smoke purge ($Label) OK."
 }
 
 function Get-DeployTempFile {
@@ -259,17 +294,24 @@ else {
     }
 }
 
-if (-not $SkipSmoke) {
-    $smokeCredsOk = Import-McpSmokeEnvFromContainer -Remote $remote -SshPort $SshPort -NasPath $NasPath
-    if (-not $smokeCredsOk) {
-        Import-McpSmokeEnv -NasShare $NasShare -RepoRoot $repoRoot
-    }
-    if (-not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
-        Write-Warning "Skipping mcp:smoke - set SERVICE_TOKEN and MCP_HOUSEHOLD_ID in NAS .env (or local .env)."
-    }
-    else {
+# Load MCP credentials from the running app (required for smoke + household-scoped purge).
+$smokeCredsOk = Import-McpSmokeEnvFromContainer -Remote $remote -SshPort $SshPort -NasPath $NasPath
+if (-not $smokeCredsOk) {
+    Write-Host "Container credential load failed; trying NAS share .env (same file compose reads)..."
+    $smokeCredsOk = Import-McpSmokeEnv -NasShare $NasShare -RepoRoot $repoRoot
+}
+if (-not $smokeCredsOk -or -not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
+    Write-Warning "No SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app container or NAS share .env — skipping smoke and scoped purge."
+}
+else {
+    # Clear historical smoke junk before (and after) smoke; also when -SkipSmoke.
+    Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
+        -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "pre-smoke"
+
+    if (-not $SkipSmoke) {
         Write-Host "Post-deploy MCP smoke (http://${NasHost}:3000)..."
         Push-Location $repoRoot
+        $smokeFailed = $false
         try {
             $prevBase = $env:MCP_BASE_URL
             $env:MCP_BASE_URL = "http://${NasHost}:3000"
@@ -282,21 +324,27 @@ if (-not $SkipSmoke) {
             # lights smoke is list-only on remote (T-038)
             & npm run mcp:smoke
             if ($LASTEXITCODE -ne 0) {
+                $smokeFailed = $true
                 Write-Error "Post-deploy mcp:smoke failed."
-                exit $LASTEXITCODE
             }
-            Write-Host "Post-deploy MCP smoke OK."
+            else {
+                Write-Host "Post-deploy MCP smoke OK."
+            }
         }
         finally {
             if ($null -ne $prevBase) { $env:MCP_BASE_URL = $prevBase }
             else { Remove-Item Env:MCP_BASE_URL -ErrorAction SilentlyContinue }
             Remove-Item Env:HOMEBASE_SMOKE_SKIP_DOTENV -ErrorAction SilentlyContinue
             Pop-Location
+            # Always purge after smoke attempt (smoke also self-cleans; this catches Skip failures).
+            Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
+                -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "post-smoke"
         }
+        if ($smokeFailed) { exit 1 }
     }
-}
-else {
-    Write-Host "Skipping post-deploy MCP smoke (-SkipSmoke)."
+    else {
+        Write-Host "Skipping post-deploy MCP smoke (-SkipSmoke); post-smoke purge already covered by pre-smoke."
+    }
 }
 
 Write-Host ""

@@ -5,18 +5,20 @@
  *   ShoppingItem / Product — name starts with "mcp-smoke"
  *   Chore                  — title starts with "mcp-smoke"
  *   Recipe                 — title starts with "Smoke Add "
- *   Notification           — title or message contains "mcp-smoke" (e.g. "Chore due: mcp-smoke-…")
- *   McpChangeLog           — entityId in the deleted set
+ *   Notification           — title or message contains "mcp-smoke"
+ *   McpChangeLog           — entityId in deleted set OR payload contains
+ *                            "mcp-smoke" / "Smoke Add" (orphan reverts)
  *
  * Usage:
  *   npx tsx scripts/purge-smoke-data.ts          # dry-run (default)
- *   npx tsx scripts/purge-smoke-data.ts --apply  # delete
+ *   npx tsx scripts/purge-smoke-data.ts --apply  # delete + residual verify
  *
  * NAS (Postgres not on LAN — run inside worker):
  *   docker compose exec worker npx tsx scripts/purge-smoke-data.ts
- *   docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply
+ *   docker compose exec -e MCP_HOUSEHOLD_ID=… worker npx tsx scripts/purge-smoke-data.ts --apply
  *
  * Optional: MCP_HOUSEHOLD_ID scopes to one household; otherwise all households.
+ * After --apply, exits nonzero if any matching rows remain.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -24,7 +26,9 @@ import { PrismaClient } from "@prisma/client";
 import {
   applySmokePurge,
   collectSmokeMatches,
+  countSmokeMatchRows,
   formatPurgeCounts,
+  residualSmokeCount,
 } from "./lib/purge-smoke";
 
 function loadDotEnv() {
@@ -74,25 +78,24 @@ function printSection(
 }
 
 async function main() {
+  if (HOUSEHOLD_ID) {
+    const household = await prisma.household.findUnique({
+      where: { id: HOUSEHOLD_ID },
+      select: { id: true },
+    });
+    if (!household) {
+      console.error(
+        `ERROR: MCP_HOUSEHOLD_ID=${HOUSEHOLD_ID} does not exist in this database. ` +
+          "Fix NAS .env / app env before purging (scoped purge would silently delete nothing).",
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   const matches = await collectSmokeMatches(prisma, {
     householdId: HOUSEHOLD_ID,
   });
-  const allEntityIds = [
-    ...matches.shoppingItems.map((r) => r.id),
-    ...matches.products.map((r) => r.id),
-    ...matches.chores.map((r) => r.id),
-    ...matches.recipes.map((r) => r.id),
-  ];
-
-  const changeLogCount =
-    allEntityIds.length === 0
-      ? 0
-      : await prisma.mcpChangeLog.count({
-          where: {
-            entityId: { in: allEntityIds },
-            ...(HOUSEHOLD_ID ? { householdId: HOUSEHOLD_ID } : {}),
-          },
-        });
 
   console.log(
     APPLY
@@ -113,15 +116,12 @@ async function main() {
     "Notification (title or message contains mcp-smoke)",
     matches.notifications,
   );
-  console.log(`\nMcpChangeLog (entityId in above): ${changeLogCount}`);
+  printSection(
+    "McpChangeLog (entityId or payload mcp-smoke / Smoke Add)",
+    matches.changeLogs,
+  );
 
-  const total =
-    matches.shoppingItems.length +
-    matches.products.length +
-    matches.chores.length +
-    matches.recipes.length +
-    matches.notifications.length +
-    changeLogCount;
+  const total = countSmokeMatchRows(matches);
 
   if (total === 0) {
     console.log("\nNothing to purge.");
@@ -137,6 +137,18 @@ async function main() {
 
   const counts = await applySmokePurge(prisma, { householdId: HOUSEHOLD_ID });
   console.log(`\nDeleted: ${formatPurgeCounts(counts)}`);
+
+  const residual = await residualSmokeCount(prisma, {
+    householdId: HOUSEHOLD_ID,
+  });
+  if (residual > 0) {
+    console.error(
+      `\nERROR: ${residual} smoke row(s) remain after purge (residual verify failed).`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  console.log("Residual verify: clean (0 matching rows).");
 }
 
 main()

@@ -11,10 +11,10 @@
  * Lights write smoke (local only): HOMEBASE_SMOKE_LIGHTS_WRITE=1 + DIRIGERA_TEST_DEVICE_ID
  *
  * After each run (success or failure), deletes smoke leftovers:
- *   local MCP target  → Prisma against DATABASE_URL
- *   remote MCP target → SSH into NAS worker purge (requires NAS_HOST)
+ *   local MCP target  → Prisma against DATABASE_URL (+ residual verify)
+ *   remote MCP target → SSH into NAS worker purge (requires NAS_HOST; residual verify in CLI)
  * Skip with HOMEBASE_SMOKE_KEEP_DATA=1. Remote cleanup failure fails the smoke.
- */
+ * Unknown MCP_HOUSEHOLD_ID (not in DB) fails purge — never silent no-op. */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -22,6 +22,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   applySmokePurge,
   formatPurgeCounts,
+  residualSmokeCount,
   totalPurgeCounts,
 } from "./lib/purge-smoke";
 
@@ -711,6 +712,15 @@ async function cleanupSmokeLeftovers() {
 async function cleanupSmokeLeftoversLocal() {
   const prisma = new PrismaClient();
   try {
+    const household = await prisma.household.findUnique({
+      where: { id: HOUSEHOLD_ID! },
+      select: { id: true },
+    });
+    if (!household) {
+      fail(
+        `smoke cleanup: MCP_HOUSEHOLD_ID=${HOUSEHOLD_ID} does not exist in DATABASE_URL`,
+      );
+    }
     const counts = await applySmokePurge(prisma, {
       householdId: HOUSEHOLD_ID!,
     });
@@ -718,6 +728,14 @@ async function cleanupSmokeLeftoversLocal() {
       ok("smoke cleanup (nothing to delete)");
     } else {
       ok(`smoke cleanup (${formatPurgeCounts(counts)})`);
+    }
+    const residual = await residualSmokeCount(prisma, {
+      householdId: HOUSEHOLD_ID!,
+    });
+    if (residual > 0) {
+      fail(
+        `smoke cleanup residual verify failed: ${residual} matching row(s) remain`,
+      );
     }
   } finally {
     await prisma.$disconnect();
@@ -759,7 +777,9 @@ async function cleanupSmokeLeftoversRemote() {
         "On NAS: docker compose exec worker npx tsx scripts/purge-smoke-data.ts --apply",
     );
   }
-  ok("smoke cleanup (via NAS worker)");
+  // Purge CLI exits nonzero on missing household or residual rows — SSH inherit
+  // already failed above. Success means residual verify passed on the worker.
+  ok("smoke cleanup (via NAS worker, residual verify OK)");
 }
 
 /** Quote a value for safe embedding in a remote single-quoted shell fragment. */

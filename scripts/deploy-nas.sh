@@ -4,6 +4,10 @@
 #   ./scripts/deploy-nas.sh
 #   ./scripts/deploy-nas.sh --push
 #   ./scripts/deploy-nas.sh --scp    # fallback without share
+#   ./scripts/deploy-nas.sh --skip-smoke
+#
+# After rebuild: household-scoped smoke purge (pre + post), then optional mcp:smoke
+# when Node is available locally. Set HOMEBASE_SMOKE_KEEP_DATA=1 to skip purge.
 
 set -eu
 
@@ -15,14 +19,17 @@ NAS_BRANCH="${NAS_BRANCH:-main}"
 NAS_SSH_PORT="${NAS_SSH_PORT:-22}"
 PUSH=0
 USE_SCP=0
+SKIP_SMOKE=0
 
 for arg in "$@"; do
   case "$arg" in
     --push) PUSH=1 ;;
     --scp) USE_SCP=1 ;;
+    --skip-smoke) SKIP_SMOKE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--push] [--scp]"
+      echo "Usage: $0 [--push] [--scp] [--skip-smoke]"
       echo "Env: NAS_HOST NAS_USER NAS_PATH NAS_SHARE NAS_BRANCH NAS_SSH_PORT"
+      echo "     HOMEBASE_SMOKE_KEEP_DATA=1 skips purge"
       exit 0
       ;;
     *)
@@ -43,6 +50,41 @@ fi
 
 REMOTE="${NAS_USER}@${NAS_HOST}"
 DOCKER_CMD="set -eu && cd '$NAS_PATH' && docker compose up --build -d && docker compose exec -T worker npx tsx scripts/migrate-shopping-slots.ts && docker compose exec -T worker npx tsx scripts/migrate-project-work-items.ts && docker compose exec -T worker npx prisma db push --accept-data-loss && docker compose exec -T worker npx tsx scripts/ensure-product-ci-index.ts && docker compose logs --tail=30 && sleep 2 && curl -sf http://127.0.0.1:3000/health"
+
+shell_quote() {
+  # Single-quote for remote sh.
+  printf "%s" "$1" | sed "s/'/'\\\\''/g; s/^/'/; s/$/'/"
+}
+
+load_mcp_creds_from_app() {
+  # KEY=value lines from running app (do not use bare printenv A B).
+  CREDS="$(ssh -p "$NAS_SSH_PORT" "$REMOTE" "set -eu && cd '$NAS_PATH' && docker compose exec -T app env | grep -E '^(SERVICE_TOKEN|MCP_HOUSEHOLD_ID)='")" || return 1
+  SERVICE_TOKEN="$(printf '%s\n' "$CREDS" | sed -n 's/^SERVICE_TOKEN=//p' | head -n1 | tr -d '\r')"
+  MCP_HOUSEHOLD_ID="$(printf '%s\n' "$CREDS" | sed -n 's/^MCP_HOUSEHOLD_ID=//p' | head -n1 | tr -d '\r')"
+  # Note: tr -d '\r' with single-quoted \r (carriage return), not "\r" (busybox may strip letter r).
+  if [ -z "${SERVICE_TOKEN:-}" ] || [ -z "${MCP_HOUSEHOLD_ID:-}" ]; then
+    return 1
+  fi
+  export SERVICE_TOKEN MCP_HOUSEHOLD_ID
+  echo "MCP credentials loaded from app (token length ${#SERVICE_TOKEN}, household length ${#MCP_HOUSEHOLD_ID})"
+}
+
+nas_smoke_purge() {
+  label="$1"
+  if [ "${HOMEBASE_SMOKE_KEEP_DATA:-}" = "1" ]; then
+    echo "Skipping NAS smoke purge ($label) — HOMEBASE_SMOKE_KEEP_DATA=1"
+    return 0
+  fi
+  if [ -z "${MCP_HOUSEHOLD_ID:-}" ]; then
+    echo "NAS smoke purge ($label) requires MCP_HOUSEHOLD_ID" >&2
+    exit 1
+  fi
+  hh_q="$(shell_quote "$MCP_HOUSEHOLD_ID")"
+  echo "NAS smoke purge ($label) via SSH $REMOTE ..."
+  ssh -p "$NAS_SSH_PORT" "$REMOTE" \
+    "set -eu && cd '$NAS_PATH' && docker compose exec -T -e MCP_HOUSEHOLD_ID=$hh_q worker npx tsx scripts/purge-smoke-data.ts --apply"
+  echo "NAS smoke purge ($label) OK."
+}
 
 if [ "$PUSH" -eq 1 ]; then
   echo "Pushing $NAS_BRANCH to origin from $ROOT ..."
@@ -75,6 +117,32 @@ else
   git -C "$NAS_SHARE" pull --ff-only origin "$NAS_BRANCH"
   echo "Building on NAS (${REMOTE}:${NAS_PATH})..."
   ssh -p "$NAS_SSH_PORT" "$REMOTE" "$DOCKER_CMD"
+fi
+
+if load_mcp_creds_from_app; then
+  nas_smoke_purge "pre-smoke"
+  if [ "$SKIP_SMOKE" -eq 0 ]; then
+    if command -v npm >/dev/null 2>&1; then
+      echo "Post-deploy MCP smoke (http://${NAS_HOST}:3000)..."
+      export MCP_BASE_URL="http://${NAS_HOST}:3000"
+      export HOMEBASE_SMOKE_SKIP_DOTENV=1
+      export NAS_HOST NAS_USER NAS_PATH NAS_SSH_PORT
+      smoke_rc=0
+      (cd "$ROOT" && npm run mcp:smoke) || smoke_rc=$?
+      nas_smoke_purge "post-smoke"
+      if [ "$smoke_rc" -ne 0 ]; then
+        echo "Post-deploy mcp:smoke failed." >&2
+        exit "$smoke_rc"
+      fi
+      echo "Post-deploy MCP smoke OK."
+    else
+      echo "npm not found — skipping mcp:smoke; ran pre-smoke purge only."
+    fi
+  else
+    echo "Skipping post-deploy MCP smoke (--skip-smoke)."
+  fi
+else
+  echo "Warning: could not load SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app — skipping smoke and purge." >&2
 fi
 
 echo ""
