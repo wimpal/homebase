@@ -1,9 +1,14 @@
 /**
- * Dirigera WebSocket observer for SENSOR_EDGE automations (T-068).
- * Seed-gated, generation-scoped, no boot replay.
+ * Dirigera WebSocket observer for SENSOR_EDGE + BUTTON automations (T-068 / T-076).
+ * Seed-gated for sensors, generation-scoped, no boot replay.
+ * Single listener — do not start a second startListeningForUpdates.
  */
 import type { DirigeraClient, Event } from "dirigera";
 import { isDomainError } from "@/domain/error";
+import {
+  clearButtonDebounceState,
+  handleButtonPress,
+} from "@/domain/automations/button";
 import {
   clearSensorDebounceState,
   handleSensorEdge,
@@ -63,7 +68,53 @@ async function seedEdgeMap(): Promise<boolean> {
   return true;
 }
 
-function handleEvent(listenGeneration: number, updateEvent: Event): void {
+function handleRemotePress(listenGeneration: number, updateEvent: Event): void {
+  if (
+    state.stopping ||
+    !state.ready ||
+    listenGeneration !== state.generation
+  ) {
+    return;
+  }
+  if (updateEvent.type !== "remotePressEvent") return;
+
+  const data = updateEvent.data as {
+    id?: string;
+    clickPattern?: string;
+  };
+  const deviceId = typeof data.id === "string" ? data.id : "";
+  const identity =
+    typeof data.clickPattern === "string" ? data.clickPattern.trim() : "";
+  if (!deviceId || !identity) return;
+
+  const receivedAt = new Date();
+  void handleButtonPress({ deviceId, identity, receivedAt })
+    .then((summary) => {
+      if (
+        summary.rulesMatched > 0 ||
+        summary.claimed > 0 ||
+        summary.applied > 0
+      ) {
+        console.log(
+          `[sensor-observer] button device=${deviceId.slice(0, 8)}… ` +
+            `identity=${identity} matched=${summary.rulesMatched} ` +
+            `claimed=${summary.claimed} applied=${summary.applied} ` +
+            `skipped=${summary.skipped} failed=${summary.failed}`,
+        );
+      }
+    })
+    .catch((err) => {
+      console.error(
+        "[sensor-observer] handleButtonPress failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+}
+
+function handleSensorStateChanged(
+  listenGeneration: number,
+  updateEvent: Event,
+): void {
   if (
     state.stopping ||
     !state.ready ||
@@ -128,6 +179,16 @@ function handleEvent(listenGeneration: number, updateEvent: Event): void {
     });
 }
 
+function handleEvent(listenGeneration: number, updateEvent: Event): void {
+  if (updateEvent.type === "remotePressEvent") {
+    handleRemotePress(listenGeneration, updateEvent);
+    return;
+  }
+  if (updateEvent.type === "deviceStateChanged") {
+    handleSensorStateChanged(listenGeneration, updateEvent);
+  }
+}
+
 function beginListening(client: DirigeraClient): void {
   state.generation += 1;
   const listenGeneration = state.generation;
@@ -150,7 +211,7 @@ function stopListening(client: DirigeraClient): void {
 }
 
 /**
- * Start the singleton Dirigera sensor observer. Idempotent.
+ * Start the singleton Dirigera sensor/button observer. Idempotent.
  */
 export async function startSensorObserver(): Promise<void> {
   if (started) return;
@@ -197,6 +258,7 @@ export async function startSensorObserver(): Promise<void> {
       const seeded = await seedEdgeMap();
       if (!seeded) return;
       clearSensorDebounceState();
+      clearButtonDebounceState();
       stopListening(c);
       beginListening(c);
       console.log(

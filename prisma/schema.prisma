@@ -69,6 +69,7 @@ enum DeviceType {
 enum LightAutomationTriggerKind {
   SCHEDULE
   SENSOR_EDGE
+  BUTTON
 }
 
 model User {
@@ -831,6 +832,11 @@ model LightAutomation {
   /// "rising" (opens/detects) or "falling" (closes/clears). Default rising.
   sensorEdgePolarity     String?  @default("rising")
 
+  /// Dirigera controller/button device id (BUTTON only). Bilresa = one id per physical button.
+  buttonDirigeraDeviceId String?
+  /// Press identity: clickPattern singlePress | doublePress | longPress (BUTTON only).
+  buttonIdentity         String?
+
   on              Boolean
   /// When true (SENSOR_EDGE): leave-session occupancy (not edge-flip).
   toggle          Boolean  @default(false)
@@ -859,6 +865,7 @@ model LightAutomation {
 
   @@index([householdId, enabled])
   @@index([sensorDirigeraDeviceId, enabled])
+  @@index([buttonDirigeraDeviceId, enabled])
 }
 
 model LightAutomationTarget {

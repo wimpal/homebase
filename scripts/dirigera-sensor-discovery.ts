@@ -1,5 +1,5 @@
 /**
- * T-067 — Dirigera sensor discovery (read-only).
+ * T-067 / T-076 — Dirigera sensor + controller discovery (read-only).
  * Requires: DIRIGERA_IP + DIRIGERA_TOKEN in .env
  *
  * Usage:
@@ -23,6 +23,14 @@ const SENSOR_DEVICE_TYPES = new Set([
   "waterSensor",
 ]);
 
+const CONTROLLER_DEVICE_TYPES = new Set([
+  "lightController",
+  "genericSwitch",
+  "blindsController",
+  "shortcutController",
+  "soundController",
+]);
+
 const ALLOWLIST_ATTR_KEYS = [
   "customName",
   "model",
@@ -37,7 +45,18 @@ const ALLOWLIST_ATTR_KEYS = [
   "vocIndex",
   "currentCO2",
   "waterLeakDetected",
+  "controlMode",
+  "buttons",
+  "switchLabel",
+  "relativePosition",
+  "switchGroup",
 ] as const;
+
+/** Prefer matching IKEA-app name "Homebase" in room kantoor (T-076). */
+const TARGET_NAME = "homebase";
+const TARGET_ROOM = "kantoor";
+/** Base UUID of the Homebase Bilresa pair (without _1/_2). */
+const HOMEBASE_RELATION_PREFIX = "f1833c72-58c7-46f1-978b-a56ad1fe26ae";
 
 type CliOptions = {
   fullLocal: boolean;
@@ -114,6 +133,25 @@ function shortId(id: string): string {
   return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
 
+function deviceName(device: Device): string {
+  return (
+    device.attributes.customName?.trim() ||
+    device.attributes.model ||
+    shortId(device.id)
+  );
+}
+
+function deviceRoom(device: Device): string {
+  return device.room?.name ?? "(no room)";
+}
+
+function isTargetController(device: Device): boolean {
+  if (device.id.startsWith(HOMEBASE_RELATION_PREFIX)) return true;
+  const name = deviceName(device).toLowerCase();
+  const room = deviceRoom(device).toLowerCase();
+  return name.includes(TARGET_NAME) || room.includes(TARGET_ROOM);
+}
+
 function pickAllowlistedAttrs(
   attrs: Device["attributes"] | undefined,
 ): Record<string, unknown> {
@@ -156,27 +194,93 @@ function redactUnknownKeys(obj: Record<string, unknown>): Record<string, unknown
 }
 
 function formatDeviceRow(device: Device, fullLocal: boolean): string {
-  const name =
-    device.attributes.customName?.trim() ||
-    device.attributes.model ||
-    shortId(device.id);
-  const room = device.room?.name ?? "(no room)";
+  const name = deviceName(device);
+  const room = deviceRoom(device);
   const idShown = fullLocal ? device.id : shortId(device.id);
   const attrs = fullLocal
     ? redactUnknownKeys({
         ...(device.attributes as unknown as Record<string, unknown>),
       })
     : pickAllowlistedAttrs(device.attributes);
+  const highlight = isTargetController(device) ? " ★" : "";
+  const caps = device.capabilities
+    ? {
+        canReceive: device.capabilities.canReceive ?? [],
+        canSend: device.capabilities.canSend ?? [],
+      }
+    : undefined;
   return (
-    `  - ${name} | room=${room} | deviceType=${device.deviceType} | ` +
+    `  - ${name}${highlight} | room=${room} | deviceType=${device.deviceType} | ` +
     `type=${device.type} | reachable=${device.isReachable} | id=${idShown}\n` +
-    `    attrs=${JSON.stringify(attrs)}`
+    `    attrs=${JSON.stringify(attrs)}` +
+    (caps ? `\n    capabilities=${JSON.stringify(caps)}` : "")
   );
 }
 
 function isSensorDevice(device: Device): boolean {
   return (
     SENSOR_DEVICE_TYPES.has(device.deviceType) || device.type === "sensor"
+  );
+}
+
+function isControllerDevice(device: Device): boolean {
+  return (
+    CONTROLLER_DEVICE_TYPES.has(device.deviceType) ||
+    device.type === "controller"
+  );
+}
+
+function eventDeviceId(updateEvent: Event): string | null {
+  if (!("data" in updateEvent) || updateEvent.data == null) return null;
+  const data = updateEvent.data as { id?: unknown };
+  if (typeof data.id === "string" && data.id.length > 0) {
+    return data.id;
+  }
+  return null;
+}
+
+function summarizeEvent(
+  updateEvent: Event,
+  fullLocal: boolean,
+): string {
+  const receivedAt = new Date().toISOString();
+  const id = eventDeviceId(updateEvent);
+  const idShown =
+    id == null ? "(no-id)" : fullLocal ? id : shortId(id);
+
+  if (updateEvent.type === "remotePressEvent") {
+    const data = updateEvent.data as {
+      id: string;
+      clickPattern?: string;
+    };
+    return (
+      `hubTime=${updateEvent.time} receivedAt=${receivedAt} ` +
+      `type=remotePressEvent id=${idShown} ` +
+      `clickPattern=${data.clickPattern ?? "(none)"}`
+    );
+  }
+
+  if (updateEvent.type === "deviceStateChanged") {
+    const data = updateEvent.data as Device;
+    const attrs = fullLocal
+      ? redactUnknownKeys({
+          ...((data.attributes ?? {}) as unknown as Record<string, unknown>),
+        })
+      : pickAllowlistedAttrs(data.attributes);
+    const name =
+      (data.attributes as { customName?: string } | undefined)?.customName ||
+      (id ? shortId(id) : "(unknown)");
+    return (
+      `hubTime=${updateEvent.time} receivedAt=${receivedAt} ` +
+      `type=deviceStateChanged deviceType=${data.deviceType} name=${name} ` +
+      `id=${idShown} attrs=${JSON.stringify(attrs)}`
+    );
+  }
+
+  // Other event types: type + safe id only (no raw payload dump).
+  return (
+    `hubTime=${"time" in updateEvent ? updateEvent.time : "?"} ` +
+    `receivedAt=${receivedAt} type=${updateEvent.type} id=${idShown}`
   );
 }
 
@@ -190,12 +294,15 @@ async function main() {
   }
 
   const pkgVersion = dirigeraPackageVersion();
-  console.log("=== Dirigera sensor discovery (T-067) ===");
+  console.log("=== Dirigera sensor + controller discovery (T-067 / T-076) ===");
   console.log(`dirigera package: ${pkgVersion}`);
   console.log(`hub IP: ${process.env.DIRIGERA_IP}`);
   console.log(
     `mode: ${options.fullLocal ? "full-local" : "redacted"}; ` +
       `listen=${options.listen ? `${options.listenSecs}s` : "off"}`,
+  );
+  console.log(
+    `T-076 target hint: name≈"${TARGET_NAME}" room≈"${TARGET_ROOM}"`,
   );
   console.log("");
 
@@ -237,31 +344,96 @@ async function main() {
     console.log("  (none)");
   } else {
     for (const sensor of sensors.sort((a, b) =>
-      (a.attributes.customName || a.id).localeCompare(
-        b.attributes.customName || b.id,
-      ),
+      deviceName(a).localeCompare(deviceName(b)),
     )) {
       console.log(formatDeviceRow(sensor, options.fullLocal));
     }
   }
 
+  const controllers = devices.filter(isControllerDevice);
+  console.log(`\nControllers / remotes (${controllers.length}):`);
+  if (controllers.length === 0) {
+    console.log("  (none)");
+  } else {
+    for (const controller of controllers.sort((a, b) =>
+      deviceName(a).localeCompare(deviceName(b)),
+    )) {
+      console.log(formatDeviceRow(controller, options.fullLocal));
+    }
+  }
+
+  const targetControllers = controllers.filter(isTargetController);
+  console.log(
+    `\nT-076 preferred (name≈Homebase / room≈kantoor): ${targetControllers.length}`,
+  );
+  if (targetControllers.length === 0) {
+    console.log(
+      "  (none matched — check IKEA app naming or re-pair; ★ marks matches above)",
+    );
+  } else {
+    for (const c of targetControllers) {
+      console.log(
+        `  → ${deviceName(c)} | room=${deviceRoom(c)} | ` +
+          `deviceType=${c.deviceType} | id=${options.fullLocal ? c.id : shortId(c.id)}`,
+      );
+    }
+  }
+
+  // Optional control-mode peek via controllers API when available.
+  try {
+    const listed = await client.controllers.list();
+    console.log(`\ncontrollers.list() count: ${listed.length}`);
+    for (const c of listed) {
+      const name =
+        c.attributes?.customName?.trim() ||
+        c.attributes?.model ||
+        shortId(c.id);
+      const room = c.room?.name ?? "(no room)";
+      const mode =
+        (c.attributes as { controlMode?: string } | undefined)?.controlMode ??
+        "(n/a)";
+      const mark =
+        name.toLowerCase().includes(TARGET_NAME) ||
+        room.toLowerCase().includes(TARGET_ROOM)
+          ? " ★"
+          : "";
+      console.log(
+        `  - ${name}${mark} | room=${room} | deviceType=${c.deviceType} | ` +
+          `controlMode=${mode} | id=${options.fullLocal ? c.id : shortId(c.id)}`,
+      );
+    }
+  } catch (err) {
+    console.log(
+      `\ncontrollers.list() unavailable: ${
+        err instanceof Error ? err.message : err
+      }`,
+    );
+  }
+
   if (!options.listen) {
     console.log(
-      "\nDone (inventory only). Re-run with --listen to capture deviceStateChanged.",
+      "\nDone (inventory only). Re-run with --listen to capture " +
+        "deviceStateChanged + remotePressEvent (press Bilresa buttons).",
     );
     return;
   }
 
   const sensorIds = new Set(sensors.map((s) => s.id));
+  const controllerIds = new Set(controllers.map((c) => c.id));
   console.log(
-    `\nListening for deviceStateChanged on ${sensorIds.size} sensor id(s) ` +
-      `for ${options.listenSecs}s…`,
+    `\nListening for ALL event types (${options.listenSecs}s)…`,
   );
   console.log(
-    "Exercise motion / open-close sensors now (walk past, open doors).",
+    `Sensors tracked: ${sensorIds.size}; controllers tracked: ${controllerIds.size}.`,
+  );
+  console.log(
+    "Press each Bilresa (Homebase / kantoor) button now; also exercise sensors if desired.",
   );
 
   let eventCount = 0;
+  let remotePressCount = 0;
+  let sensorStateCount = 0;
+  let otherCount = 0;
   let stopped = false;
 
   const stop = () => {
@@ -289,30 +461,22 @@ async function main() {
     }, options.listenSecs * 1000);
 
     client.startListeningForUpdates((updateEvent: Event) => {
-      const receivedAt = new Date().toISOString();
-      if (updateEvent.type !== "deviceStateChanged") return;
-      if (!sensorIds.has(updateEvent.data.id)) return;
-
       eventCount += 1;
-      const attrs = options.fullLocal
-        ? redactUnknownKeys({
-            ...((updateEvent.data.attributes ?? {}) as Record<string, unknown>),
-          })
-        : pickAllowlistedAttrs(
-            updateEvent.data.attributes as Device["attributes"] | undefined,
-          );
-      const name =
-        (updateEvent.data.attributes as { customName?: string } | undefined)
-          ?.customName || shortId(updateEvent.data.id);
+      if (updateEvent.type === "remotePressEvent") {
+        remotePressCount += 1;
+      } else if (updateEvent.type === "deviceStateChanged") {
+        const id = eventDeviceId(updateEvent);
+        if (id && sensorIds.has(id)) sensorStateCount += 1;
+        else otherCount += 1;
+      } else {
+        otherCount += 1;
+      }
+
       console.log(
-        `[event #${eventCount}] hubTime=${updateEvent.time} receivedAt=${receivedAt} ` +
-          `deviceType=${updateEvent.data.deviceType} name=${name} ` +
-          `id=${options.fullLocal ? updateEvent.data.id : shortId(updateEvent.data.id)} ` +
-          `attrs=${JSON.stringify(attrs)}`,
+        `[event #${eventCount}] ${summarizeEvent(updateEvent, options.fullLocal)}`,
       );
     });
 
-    // Keep reference so timer isn't GC'd oddly; clear on stop path above.
     void timer;
   });
 
@@ -320,11 +484,14 @@ async function main() {
   process.off("SIGTERM", onSignal);
   stop();
 
-  console.log(`\nListen finished. Sensor state-change events: ${eventCount}`);
-  if (eventCount === 0) {
+  console.log(
+    `\nListen finished. total=${eventCount} remotePress=${remotePressCount} ` +
+      `sensorStateChanged=${sensorStateCount} other=${otherCount}`,
+  );
+  if (remotePressCount === 0) {
     console.log(
-      "NOTE: no live edges observed this run — inventory still valid; " +
-        "re-run --listen while exercising sensors, or accept inventory-only risk for T-068 gate.",
+      "NOTE: no remotePressEvent this run — press Bilresa while listening, " +
+        "or try controlMode=shortcut via controllers.setControlMode, then re-listen.",
     );
   }
 }

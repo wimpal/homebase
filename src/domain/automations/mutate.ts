@@ -27,6 +27,8 @@ export async function createAutomation(
       sensorDirigeraDeviceId: validated.sensorDirigeraDeviceId,
       sensorEdgeAttribute: validated.sensorEdgeAttribute,
       sensorEdgePolarity: validated.sensorEdgePolarity,
+      buttonDirigeraDeviceId: validated.buttonDirigeraDeviceId,
+      buttonIdentity: validated.buttonIdentity,
       on: validated.on,
       toggle: validated.toggle,
       brightness: validated.brightness,
@@ -52,7 +54,13 @@ export async function updateAutomation(
 ): Promise<DomainResult<LightAutomationDto>> {
   const existing = await prisma.lightAutomation.findFirst({
     where: { id, householdId },
-    select: { id: true, enabled: true },
+    select: {
+      id: true,
+      enabled: true,
+      buttonDirigeraDeviceId: true,
+      buttonIdentity: true,
+      triggerKind: true,
+    },
   });
   if (!existing) {
     return DomainError.notFound(`No automation with id ${id}.`);
@@ -65,6 +73,12 @@ export async function updateAutomation(
   if (isDomainError(validated)) {
     return validated;
   }
+
+  const buttonBindingChanged =
+    validated.triggerKind === "BUTTON" &&
+    (existing.triggerKind !== "BUTTON" ||
+      existing.buttonDirigeraDeviceId !== validated.buttonDirigeraDeviceId ||
+      existing.buttonIdentity !== validated.buttonIdentity);
 
   const row = await prisma.$transaction(async (tx) => {
     await tx.lightAutomationTarget.deleteMany({ where: { automationId: id } });
@@ -82,6 +96,8 @@ export async function updateAutomation(
         sensorDirigeraDeviceId: validated.sensorDirigeraDeviceId,
         sensorEdgeAttribute: validated.sensorEdgeAttribute,
         sensorEdgePolarity: validated.sensorEdgePolarity,
+        buttonDirigeraDeviceId: validated.buttonDirigeraDeviceId,
+        buttonIdentity: validated.buttonIdentity,
         on: validated.on,
         toggle: validated.toggle,
         // Always clear session on edit (sensor/action changes must not keep stale state).
@@ -97,6 +113,10 @@ export async function updateAutomation(
               sunsetLastAdjustAt: null,
               sunsetLastAdjustResult: null,
             }),
+        // Clear cooldown when button binding changes so first press is not suppressed.
+        ...(buttonBindingChanged
+          ? { lastRunAt: null, lastRunResult: null }
+          : {}),
       },
     });
     if (updated.count === 0) {

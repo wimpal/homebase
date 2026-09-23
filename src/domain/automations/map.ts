@@ -23,6 +23,8 @@ export function mapAutomation(row: Row): LightAutomationDto {
         : row.sensorEdgePolarity === "falling"
           ? "falling"
           : "rising",
+    buttonDirigeraDeviceId: row.buttonDirigeraDeviceId,
+    buttonIdentity: row.buttonIdentity,
     on: row.on,
     toggle: row.toggle,
     toggleSession: normalizeToggleSession(row.toggleSession),

@@ -30,6 +30,13 @@ export type {
   HandleSensorRisingEdgeResult,
 } from "./sensor";
 export {
+  claimButtonCooldown,
+  clearButtonDebounceState,
+  handleButtonPress,
+  shouldDebounceButtonPress,
+} from "./button";
+export type { HandleButtonPressResult } from "./button";
+export {
   applyMinutesBefore,
   getLocalSunsetHhMm,
   isValidLatLon,
@@ -44,6 +51,7 @@ export type {
 } from "./sunset-adjust";
 export {
   AUTOMATION_TIMEZONE_V1,
+  BUTTON_CLICK_PATTERNS,
   LAST_RUN_RESULT_MAX,
   SENSOR_COOLDOWN_MS,
   SENSOR_DEBOUNCE_MS,
@@ -56,6 +64,7 @@ export type {
   ApplyAutomationOptions,
   ApplyAutomationResult,
   AutomationWriteInput,
+  ButtonClickPattern,
   LightAutomationDto,
   LightAutomationTargetDto,
   LightAutomationTriggerKind,

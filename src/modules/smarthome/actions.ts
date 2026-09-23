@@ -180,7 +180,7 @@ export type AutomationListItem = {
   id: string;
   name: string;
   enabled: boolean;
-  triggerKind: "SCHEDULE" | "SENSOR_EDGE";
+  triggerKind: "SCHEDULE" | "SENSOR_EDGE" | "BUTTON";
   timeLocal: string | null;
   daysOfWeek: number[];
   activeFromLocal: string | null;
@@ -188,6 +188,8 @@ export type AutomationListItem = {
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: "rising" | "falling" | null;
+  buttonDirigeraDeviceId: string | null;
+  buttonIdentity: string | null;
   on: boolean;
   toggle: boolean;
   toggleSession: "idle" | "occupied" | "leaving";
@@ -219,6 +221,8 @@ function toAutomationListItem(row: LightAutomationDto): AutomationListItem {
     sensorDirigeraDeviceId: row.sensorDirigeraDeviceId,
     sensorEdgeAttribute: row.sensorEdgeAttribute,
     sensorEdgePolarity: row.sensorEdgePolarity,
+    buttonDirigeraDeviceId: row.buttonDirigeraDeviceId,
+    buttonIdentity: row.buttonIdentity,
     on: row.on,
     toggle: row.toggle,
     toggleSession: row.toggleSession,
@@ -396,6 +400,22 @@ export async function updateAutomationAction(
   if (!id) {
     return { ok: false, message: "Automation id is required." };
   }
+  const existing = await getAutomation(householdId, id);
+  if (isDomainError(existing)) {
+    return {
+      ok: false,
+      reason: existing.reason,
+      message: existing.message,
+    };
+  }
+  // BUTTON rules are script/dev-created; UI edit would coerce to SCHEDULE.
+  if (existing.triggerKind === "BUTTON") {
+    return {
+      ok: false,
+      message:
+        "Button automations cannot be edited in the UI yet. Disable or delete instead.",
+    };
+  }
   const input = parseAutomationWriteInput(formData);
   const result = await updateAutomation(householdId, id, input);
   if (isDomainError(result)) {
@@ -436,9 +456,10 @@ export async function applyAutomationActionUi(id: string) {
     return { success: false as const, error: row.message };
   }
 
-  // Run now must not consume SENSOR_EDGE cooldown (lastRunAt).
+  // Run now must not consume SENSOR_EDGE / BUTTON cooldown (lastRunAt).
   const result = await applyAutomationAction(householdId, id, {
-    updateLastRunAt: row.triggerKind !== "SENSOR_EDGE",
+    updateLastRunAt:
+      row.triggerKind !== "SENSOR_EDGE" && row.triggerKind !== "BUTTON",
   });
   if (isDomainError(result)) {
     return { success: false as const, error: result.message };

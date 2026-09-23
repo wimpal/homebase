@@ -1,6 +1,9 @@
 import { prisma } from "@/core/db";
-import { DomainError, type DomainResult } from "@/domain/error";
-import { setDirigeraLightState } from "@/domain/smarthome";
+import { DomainError, isDomainError, type DomainResult } from "@/domain/error";
+import {
+  listDirigeraLightOnStates,
+  setDirigeraLightState,
+} from "@/domain/smarthome";
 import type { ApplyAutomationOptions, ApplyAutomationResult } from "./types";
 import { truncateLastRunResult } from "./validate";
 
@@ -13,8 +16,9 @@ import { truncateLastRunResult } from "./validate";
  * Sensor path: claim cooldown before calling; pass onlyDeviceIds for eligible
  * lights; set updateLastRunAt: false so the claim timestamp sticks.
  *
- * Toggle leave-session: pass `forceOn` for explicit on/off (no flip).
- * Run now on a toggle rule without forceOn turns lights on (enter path).
+ * SENSOR_EDGE Toggle leave-session: pass `forceOn` for explicit on/off (no flip).
+ * BUTTON Toggle: flip each target's current isOn (forceOn ignored).
+ * Run now on a SENSOR_EDGE toggle rule without forceOn turns lights on (enter path).
  */
 export async function applyAutomationAction(
   householdId: string,
@@ -53,9 +57,20 @@ export async function applyAutomationAction(
       : {}),
   };
 
+  const buttonFlip = row.toggle && row.triggerKind === "BUTTON";
+  let onStates: Map<string, boolean> | null = null;
+  if (buttonFlip) {
+    const states = await listDirigeraLightOnStates();
+    if (isDomainError(states)) {
+      return states;
+    }
+    onStates = states;
+  }
+
   let succeeded = 0;
   let failed = 0;
   let firstError: string | undefined;
+  let lastDesiredOn: boolean | null = null;
 
   for (const target of targets) {
     const stillEnabled = await prisma.lightAutomation.findFirst({
@@ -69,8 +84,15 @@ export async function applyAutomationAction(
     let desiredOn = row.on;
     let optionsForWrite = stateOptions;
 
-    if (row.toggle) {
+    if (buttonFlip && onStates) {
+      const current = onStates.get(target.dirigeraDeviceId);
+      desiredOn = current !== true;
+      lastDesiredOn = desiredOn;
+      optionsForWrite = desiredOn ? stateOptions : {};
+    } else if (row.toggle) {
+      // SENSOR_EDGE leave-session (or legacy): forceOn or default on.
       desiredOn = options.forceOn !== undefined ? options.forceOn : true;
+      lastDesiredOn = desiredOn;
       optionsForWrite = desiredOn ? stateOptions : {};
     }
 
@@ -81,6 +103,9 @@ export async function applyAutomationAction(
     );
     if (result.success) {
       succeeded += 1;
+      if (buttonFlip && onStates) {
+        onStates.set(target.dirigeraDeviceId, desiredOn);
+      }
     } else {
       failed += 1;
       if (!firstError) {
@@ -94,11 +119,15 @@ export async function applyAutomationAction(
   if (attempted === 0) {
     lastRunResult = "skipped:no_targets";
   } else if (failed === 0) {
-    lastRunResult = row.toggle
-      ? options.forceOn === false
-        ? "ok:toggle_off"
-        : "ok:toggle_on"
-      : "ok";
+    if (buttonFlip) {
+      lastRunResult =
+        lastDesiredOn === false ? "ok:button_flip_off" : "ok:button_flip_on";
+    } else if (row.toggle) {
+      lastRunResult =
+        options.forceOn === false ? "ok:toggle_off" : "ok:toggle_on";
+    } else {
+      lastRunResult = "ok";
+    }
   } else if (succeeded === 0) {
     lastRunResult = truncateLastRunResult(`failed: ${firstError}`);
   } else {

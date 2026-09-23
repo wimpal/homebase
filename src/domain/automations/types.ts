@@ -16,7 +16,18 @@ export type SensorEdgePolarity = (typeof SENSOR_EDGE_POLARITIES)[number];
 export const TOGGLE_SESSIONS = ["idle", "occupied", "leaving"] as const;
 export type ToggleSession = (typeof TOGGLE_SESSIONS)[number];
 
-export type LightAutomationTriggerKind = "SCHEDULE" | "SENSOR_EDGE";
+export type LightAutomationTriggerKind =
+  | "SCHEDULE"
+  | "SENSOR_EDGE"
+  | "BUTTON";
+
+/** Dirigera remotePressEvent clickPattern values (BUTTON identity). */
+export const BUTTON_CLICK_PATTERNS = [
+  "singlePress",
+  "doublePress",
+  "longPress",
+] as const;
+export type ButtonClickPattern = (typeof BUTTON_CLICK_PATTERNS)[number];
 
 export interface LightAutomationTargetDto {
   id: string;
@@ -39,6 +50,10 @@ export interface LightAutomationDto {
   sensorDirigeraDeviceId: string | null;
   sensorEdgeAttribute: string | null;
   sensorEdgePolarity: SensorEdgePolarity | null;
+  /** BUTTON: Dirigera controller device id (one per physical button on Bilresa). */
+  buttonDirigeraDeviceId: string | null;
+  /** BUTTON: clickPattern singlePress | doublePress | longPress. */
+  buttonIdentity: string | null;
   on: boolean;
   /** SENSOR_EDGE leave-session: enter Open→on, leave Open+Close→off. */
   toggle: boolean;
@@ -77,8 +92,13 @@ export interface AutomationWriteInput {
   sensorEdgeAttribute?: string | null;
   /** Required for SENSOR_EDGE on/off rules: rising | falling. Unused when toggle. */
   sensorEdgePolarity?: string | null;
+  /** Required for BUTTON. */
+  buttonDirigeraDeviceId?: string | null;
+  /** Required for BUTTON: singlePress | doublePress | longPress. */
+  buttonIdentity?: string | null;
   on: boolean;
-  /** SENSOR_EDGE leave-session. When true, `on` is ignored at apply. */
+  /** SENSOR_EDGE leave-session. When true, `on` is ignored at apply.
+   *  BUTTON: when true, flip each target's current isOn on each press. */
   toggle?: boolean;
   brightness?: number | null;
   colorTempKelvin?: number | null;

@@ -134,6 +134,71 @@ Numbers are starting sketches; make them configurable in T-068 if built.
 Create/edit rules in Smart Home → Automations (trigger: Sensor).
 Smoke: `npm run automations:sensor-smoke`.
 
+## Button trigger (T-076) — Bilresa
+
+**Status:** trigger path implemented (domain + worker observer). Remotes are still
+**not** a full product UI surface — create BUTTON rules via script/domain smoke.
+
+### Dual button vs scroll wheel
+
+| Product | Model (attrs) | Hub shape | Press events via Dirigera? |
+|---|---|---|---|
+| Dual button (this spare) | `BILRESA dual button` | `genericSwitch`, **two** device ids (`…_1` / `…_2`) | Yes — `remotePressEvent` |
+| Scroll wheel | `BILRESA scroll wheel` | `genericSwitch`, often 3 groups | **No** action events |
+
+**BUTTON `toggle`:** flip each target light’s current on/off (not SENSOR_EDGE
+leave-session). Demo rule: `npm run automations:bilresa-demo` (Homebase top →
+Ballon flip). Delete with `-- --delete`. Worker must be running for live presses.
+
+### Household spare (IKEA app: name **Homebase**, room **Kantoor**)
+
+Discovered 2026-09-23:
+
+| Physical | `switchLabel` | Dirigera id (suffix) | Notes |
+|---|---|---|---|
+| Top | button 1 | `…fe26ae_1` (customName **Homebase**) | Prefer this for smoke |
+| Bottom | button 2 | `…fe26ae_2` (customName still “BILRESA dual button”) | Sibling of same remote |
+
+**Identity encoding (locked):**
+
+- `buttonDirigeraDeviceId` = full Dirigera controller id (distinguishes top vs bottom).
+- `buttonIdentity` = `remotePressEvent.clickPattern`: `singlePress` | `doublePress` | `longPress`.
+
+**controlMode:** spare was `notConfigured` until set to **`shortcut`** via
+`scripts/dirigera-set-shortcut.ts` (API accepted; list then showed `shortcut`).
+If presses never appear on WS listen, re-check controlMode and re-run
+`npm run dirigera:sensors -- --listen`.
+
+### Button vs SENSOR_EDGE
+
+| | SENSOR_EDGE | BUTTON |
+|---|---|---|
+| Source | `deviceStateChanged` on door/motion | `remotePressEvent` on controller |
+| Match | sensor id + attribute + polarity | device id + clickPattern |
+| Debounce / cooldown | 2s / 10s | same constants |
+| Boot replay | seed then edges only | none (discrete presses) |
+| UI create | Smart Home Automations | script/domain only (UI read-only) |
+
+### Discovery / smoke
+
+```bash
+npm run dirigera:sensors
+npm run dirigera:sensors -- --listen --listen-secs 120
+npx tsx scripts/dirigera-set-shortcut.ts   # Homebase pair → shortcut
+npm run automations:button-smoke -- --synthetic
+npm run automations:button-smoke -- --live   # press Bilresa while listening
+```
+
+Env: `DIRIGERA_TEST_DEVICE_ID` (light), optional `DIRIGERA_TEST_BUTTON_DEVICE_ID` /
+`DIRIGERA_TEST_BUTTON_IDENTITY`.
+
+### Non-goals (unchanged for remotes)
+
+- Permanent household jobs for the two buttons.
+- Automations UI create/edit for Button.
+- MCP / Mimir chat path for presses.
+- Scroll-wheel action events (not exposed by Dirigera).
+
 ## Non-goals
 
 - Env-threshold rules (separate task if needed).

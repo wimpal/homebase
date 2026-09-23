@@ -88,7 +88,7 @@ function AutomationFormFields({
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
   const [triggerKind, setTriggerKind] = useState<"SCHEDULE" | "SENSOR_EDGE">(
-    defaults?.triggerKind ?? "SCHEDULE",
+    defaults?.triggerKind === "SENSOR_EDGE" ? "SENSOR_EDGE" : "SCHEDULE",
   );
   const [action, setAction] = useState<"on" | "off" | "toggle">(() => {
     if (defaults?.toggle) return "toggle";
@@ -527,6 +527,22 @@ export function AutomationsPanel({
       });
       return activeHours ? `${base} · ${activeHours}` : base;
     }
+    if (rule.triggerKind === "BUTTON") {
+      const action = rule.toggle
+        ? t("buttonFlipSummary")
+        : rule.on
+          ? t("turnOn")
+          : t("turnOff");
+      const base = t("buttonRuleSummary", {
+        button: rule.buttonDirigeraDeviceId
+          ? `${rule.buttonDirigeraDeviceId.slice(0, 8)}…`
+          : t("unavailable"),
+        identity: rule.buttonIdentity ?? "—",
+        action,
+        targets: targets || t("noTargets"),
+      });
+      return activeHours ? `${base} · ${activeHours}` : base;
+    }
     const action = rule.on ? t("turnOn") : t("turnOff");
     let base = t("ruleSummary", {
       time: rule.timeLocal ?? "—",
@@ -740,6 +756,12 @@ export function AutomationsPanel({
                     size="sm"
                     variant="outline"
                     onClick={() => setEditingId(editing ? null : rule.id)}
+                    disabled={rule.triggerKind === "BUTTON"}
+                    title={
+                      rule.triggerKind === "BUTTON"
+                        ? t("buttonReadOnlyHint")
+                        : undefined
+                    }
                   >
                     {editing ? tc("cancel") : tc("edit")}
                   </Button>

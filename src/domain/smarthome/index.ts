@@ -45,6 +45,11 @@ export type {
   DirigeraEdgeSensor,
   DirigeraEdgeSensorDeviceType,
 } from "./list-edge-sensors";
+export {
+  isControllerDevice,
+  listDirigeraControllers,
+} from "./list-controllers";
+export type { DirigeraController } from "./list-controllers";
 export { startSensorObserver } from "./sensor-observer";
 export { runDirigeraPartyMode } from "./party-mode";
 export { setDirigeraLightState } from "./set-light-state";
