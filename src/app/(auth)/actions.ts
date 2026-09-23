@@ -10,6 +10,7 @@ import {
   resetPasswordWithToken,
 } from "@/domain/accounts";
 import { canonicalizeEmail } from "@/domain/accounts/email";
+import { isNextRedirect } from "@/lib/is-next-redirect";
 
 function errorRedirect(path: string, reason: string, message?: string) {
   const q = new URLSearchParams();
@@ -23,9 +24,17 @@ export async function loginAction(formData: FormData) {
   const password = (formData.get("password") as string) || "";
 
   try {
-    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    if (!result || result.error) {
+      redirect("/login?error=invalid_credentials");
+    }
+    redirect("/dashboard");
   } catch (e) {
-    if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+    if (isNextRedirect(e)) throw e;
     redirect("/login?error=invalid_credentials");
   }
 }
@@ -43,14 +52,17 @@ export async function createHouseholdAction(formData: FormData) {
   }
 
   try {
-    await signIn("credentials", {
+    const signedIn = await signIn("credentials", {
       email: result.email,
       password,
       redirect: false,
     });
+    if (!signedIn || signedIn.error) {
+      redirect("/login?error=signin_after_create");
+    }
     redirect("/dashboard");
   } catch (e) {
-    if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+    if (isNextRedirect(e)) throw e;
     redirect("/login?error=signin_after_create");
   }
 }
@@ -67,14 +79,17 @@ export async function joinAccountAction(formData: FormData) {
   }
 
   try {
-    await signIn("credentials", {
+    const signedIn = await signIn("credentials", {
       email: result.email,
       password,
       redirect: false,
     });
+    if (!signedIn || signedIn.error) {
+      redirect("/login?error=signin_after_join");
+    }
     redirect("/dashboard");
   } catch (e) {
-    if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+    if (isNextRedirect(e)) throw e;
     redirect("/login?error=signin_after_join");
   }
 }

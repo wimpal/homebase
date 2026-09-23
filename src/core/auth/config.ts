@@ -23,8 +23,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const email = canonicalizeEmail(credentials.email as string);
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
           include: {
             memberships: {
               include: { household: true },
@@ -66,30 +66,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (!token.id) return token;
 
-      const dbUser = await prisma.user.findUnique({
-        where: { id: token.id as string },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          sessionVersion: true,
-          memberships: {
-            take: 1,
-            select: { householdId: true, role: true },
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            sessionVersion: true,
+            memberships: {
+              take: 1,
+              select: { householdId: true, role: true },
+            },
           },
-        },
-      });
+        });
 
-      if (!dbUser || dbUser.sessionVersion !== (token.sessionVersion as number)) {
-        // Force re-login after password change / account removal.
-        return {};
+        const tokenVersion = (token.sessionVersion as number | undefined) ?? 0;
+        if (!dbUser || dbUser.sessionVersion !== tokenVersion) {
+          // Force re-login after password change / account removal.
+          return {};
+        }
+
+        token.email = dbUser.email;
+        token.name = dbUser.name;
+        token.householdId = dbUser.memberships[0]?.householdId;
+        token.role = dbUser.memberships[0]?.role;
+        return token;
+      } catch {
+        // Schema not pushed yet (missing sessionVersion) — keep existing token.
+        return token;
       }
-
-      token.email = dbUser.email;
-      token.name = dbUser.name;
-      token.householdId = dbUser.memberships[0]?.householdId;
-      token.role = dbUser.memberships[0]?.role;
-      return token;
     },
     async session({ session, token }) {
       if (!token.id) {

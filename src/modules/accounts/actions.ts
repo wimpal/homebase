@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
 import { signIn } from "@/core/auth/config";
@@ -10,6 +9,8 @@ import {
   isDomainError,
   updateAccount,
 } from "@/domain/accounts";
+import { isNextRedirect } from "@/lib/is-next-redirect";
+import { revalidatePath } from "next/cache";
 
 function settingsError(reason: string, message: string) {
   const q = new URLSearchParams();
@@ -50,7 +51,7 @@ export async function updateAccountAction(formData: FormData) {
         redirect: false,
       });
     } catch (e) {
-      if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+      if (isNextRedirect(e)) throw e;
       redirect("/login?status=password_reset");
     }
   } else if (result.emailChanged) {
@@ -62,7 +63,7 @@ export async function updateAccountAction(formData: FormData) {
         redirect: false,
       });
     } catch (e) {
-      if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+      if (isNextRedirect(e)) throw e;
       redirect("/login");
     }
   }
