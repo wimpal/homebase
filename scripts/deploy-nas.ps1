@@ -55,7 +55,7 @@ function Import-McpSmokeEnv {
         [switch]$AllowLocalRepo
     )
     # Prefer NAS share .env (same file docker compose reads). Local repo .env only
-    # when AllowLocalRepo (legacy) — can diverge from the running app.
+    # when AllowLocalRepo (legacy) - can diverge from the running app.
     $candidates = @(
         (Join-Path $NasShare ".env")
     )
@@ -91,8 +91,9 @@ function Import-McpSmokeEnvFromContainer {
         [int]$SshPort,
         [string]$NasPath
     )
-    # Emit KEY=value lines (bare `printenv A B` prints values only — easy to mis-parse).
-    $cmd = "set -eu && cd '$NasPath' && docker compose exec -T app env | grep -E '^(SERVICE_TOKEN|MCP_HOUSEHOLD_ID)=' "
+    # Emit KEY=value lines (bare printenv A B prints values only - easy to mis-parse).
+    $cmd = 'set -eu && cd ' + (ConvertTo-BashSingleQuoted $NasPath) +
+        ' && docker compose exec -T app env | grep -E ''^(SERVICE_TOKEN|MCP_HOUSEHOLD_ID)='''
     Write-Host "Reading MCP smoke credentials from running app container on NAS..."
     $output = & ssh -p $SshPort $Remote $cmd 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -116,6 +117,14 @@ function Import-McpSmokeEnvFromContainer {
     return $false
 }
 
+function ConvertTo-BashSingleQuoted {
+    param([string]$Value)
+    # Wrap in single quotes; embed a literal ' as: '\''
+    $q = [char]39
+    $escaped = $Value.Replace([string]$q, ($q + '\' + $q + $q))
+    return ($q + $escaped + $q)
+}
+
 function Invoke-NasSmokePurge {
     param(
         [string]$Remote,
@@ -125,16 +134,17 @@ function Invoke-NasSmokePurge {
         [string]$Label
     )
     if ($env:HOMEBASE_SMOKE_KEEP_DATA -eq "1") {
-        Write-Host "Skipping NAS smoke purge ($Label) — HOMEBASE_SMOKE_KEEP_DATA=1"
+        Write-Host "Skipping NAS smoke purge ($Label) - HOMEBASE_SMOKE_KEEP_DATA=1"
         return
     }
     if (-not $HouseholdId) {
         Write-Error "NAS smoke purge ($Label) requires MCP_HOUSEHOLD_ID (refusing unscoped purge)."
         exit 1
     }
-    # Single-quote household for remote shell; do not use tr -d "\r" (busybox may strip letter r).
-    $hh = $HouseholdId.Replace("'", "'\''")
-    $remoteCmd = "set -eu && cd '$NasPath' && docker compose exec -T -e MCP_HOUSEHOLD_ID='$hh' worker npx tsx scripts/purge-smoke-data.ts --apply"
+    # Build remote sh command with PowerShell single-quoted fragments so && is never parsed here.
+    $remoteCmd = 'set -eu && cd ' + (ConvertTo-BashSingleQuoted $NasPath) +
+        ' && docker compose exec -T -e MCP_HOUSEHOLD_ID=' + (ConvertTo-BashSingleQuoted $HouseholdId) +
+        ' worker npx tsx scripts/purge-smoke-data.ts --apply'
     Write-Host "NAS smoke purge ($Label) via SSH $Remote ..."
     & ssh -p $SshPort $Remote $remoteCmd
     if ($LASTEXITCODE -ne 0) {
@@ -301,7 +311,7 @@ if (-not $smokeCredsOk) {
     $smokeCredsOk = Import-McpSmokeEnv -NasShare $NasShare -RepoRoot $repoRoot
 }
 if (-not $smokeCredsOk -or -not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
-    Write-Warning "No SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app container or NAS share .env — skipping smoke and scoped purge."
+    Write-Warning "No SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app container or NAS share .env - skipping smoke and scoped purge."
 }
 else {
     # Clear historical smoke junk before (and after) smoke; also when -SkipSmoke.
