@@ -58,7 +58,7 @@ export async function applyAutomationAction(
   };
 
   const buttonFlip = row.toggle && row.triggerKind === "BUTTON";
-  let onStates: Map<string, boolean> | null = null;
+  let onStates: Map<string, boolean | null> | null = null;
   if (buttonFlip) {
     const states = await listDirigeraLightOnStates();
     if (isDomainError(states)) {
