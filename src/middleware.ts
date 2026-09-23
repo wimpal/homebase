@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/core/auth/config";
 
-const publicPaths = ["/login", "/register", "/api/auth"];
+const publicPaths = [
+  "/login",
+  "/register",
+  "/join",
+  "/forgot-password",
+  "/reset-password",
+  "/api/auth",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,7 +27,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const session = await auth();
-  if (!session?.user && !pathname.startsWith("/api/push")) {
+  if (!session?.user?.id && !pathname.startsWith("/api/push")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

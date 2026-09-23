@@ -6,18 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getHouseholdCountMode } from "@/domain/accounts";
-import { createHouseholdAction } from "../actions";
+import { joinAccountAction } from "../actions";
 
-export default async function RegisterPage({
+export default async function JoinPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const { mode } = await getHouseholdCountMode();
-  if (mode === "one") redirect("/join");
+  if (mode === "zero") redirect("/register");
   if (mode === "many") redirect("/login");
 
-  const t = await getTranslations("auth.register");
+  const t = await getTranslations("auth.join");
   const tc = await getTranslations("common");
   const params = await searchParams;
 
@@ -34,7 +34,7 @@ export default async function RegisterPage({
               {params.message || params.error}
             </p>
           )}
-          <form action={createHouseholdAction} className="space-y-4">
+          <form action={joinAccountAction} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">{t("yourName")}</Label>
               <Input id="name" name="name" required autoComplete="name" />
@@ -52,15 +52,6 @@ export default async function RegisterPage({
                 minLength={8}
                 required
                 autoComplete="new-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="householdName">{t("householdName")}</Label>
-              <Input
-                id="householdName"
-                name="householdName"
-                placeholder={t("householdPlaceholder")}
-                required
               />
             </div>
             <Button type="submit" className="w-full">

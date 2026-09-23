@@ -73,31 +73,50 @@ enum LightAutomationTriggerKind {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  /// Calendar date only (T-092 Account birthday). Display as DD-MM-YYYY in UTC.
+  birthday       DateTime? @db.Date
+  /// Bumped on password change to revoke JWTs (T-092).
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  accounts          Account[]
-  sessions          Session[]
-  memberships       Membership[]
-  notifications     Notification[]
-  preferences       Preference[]
-  choreCompletions  ChoreCompletion[]
-  projectUpdates    ProjectUpdate[]
-  projectFiles      ProjectFile[]
-  plantLogs         PlantLog[]
-  routineMembers    RoutineMember[]
-  routineCompletions RoutineTaskCompletion[]
-  messages          Message[]
-  requests          Request[]
-  points            UserPoints?
-  badges            UserBadge[]
-  pushSubscriptions PushSubscription[]
+  accounts            Account[]
+  sessions            Session[]
+  memberships         Membership[]
+  notifications       Notification[]
+  preferences         Preference[]
+  choreCompletions    ChoreCompletion[]
+  projectUpdates      ProjectUpdate[]
+  projectFiles        ProjectFile[]
+  plantLogs           PlantLog[]
+  routineMembers      RoutineMember[]
+  routineCompletions  RoutineTaskCompletion[]
+  messages            Message[]
+  requests            Request[]
+  points              UserPoints?
+  badges              UserBadge[]
+  pushSubscriptions   PushSubscription[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+/// Opaque password-reset tokens hashed at rest (T-092). Bound to userId, not email.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 model Account {

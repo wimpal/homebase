@@ -116,6 +116,30 @@
   },
   "settings": {
     "title": "Settings",
+    "account": {
+      "title": "Account",
+      "description": "Your display name, email, password, and birthday",
+      "displayName": "Display name",
+      "birthday": "Birthday",
+      "birthdayHint": "Use the date picker (shown as DD-MM-YYYY)",
+      "currentPassword": "Current password",
+      "currentPasswordHint": "Required to change email or password",
+      "newPassword": "New password",
+      "saved": "Account saved."
+    },
+    "members": {
+      "title": "Members",
+      "description": "Household Accounts. Reset a password or remove a member (ADMIN only).",
+      "empty": "No members found.",
+      "you": "you",
+      "newPassword": "New password",
+      "resetPassword": "Reset password",
+      "remove": "Remove",
+      "confirmRemove": "Remove this Account from the household? Their login will be deleted.",
+      "cannotRemoveLastAdmin": "Cannot remove the last ADMIN.",
+      "passwordResetDone": "Member password updated.",
+      "removed": "Member removed."
+    },
     "language": {
       "title": "Language",
       "description": "Choose the language for the app interface",
@@ -175,17 +199,48 @@
       "description": "Sign in to your household",
       "submit": "Sign in",
       "noAccount": "No account?",
-      "createHousehold": "Create household"
+      "needAccount": "Need an account?",
+      "createHousehold": "Create household",
+      "joinAccount": "Join account",
+      "forgotPassword": "Forgot password?",
+      "invalidCredentials": "Invalid email or password.",
+      "passwordResetDone": "Password updated. Sign in with your new password.",
+      "installMisconfigured": "This install has more than one household. Create/Join are disabled — ask an operator."
     },
     "register": {
-      "title": "Create Household",
-      "description": "Set up your HomeBase account",
+      "title": "Create household",
+      "description": "First-time setup: create your Account and Household (you become ADMIN)",
       "yourName": "Your name",
       "householdName": "Household name",
       "householdPlaceholder": "The Smith Home",
-      "submit": "Create account",
+      "submit": "Create household",
       "hasAccount": "Already have an account?",
       "signIn": "Sign in"
+    },
+    "join": {
+      "title": "Join account",
+      "description": "Create an Account on this household (you join as MEMBER)",
+      "yourName": "Your name",
+      "submit": "Join account",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "descriptionSmtp": "Enter your email and we will send a reset link.",
+      "descriptionNoSmtp": "Email reset is not configured on this install.",
+      "askAdmin": "Ask a household ADMIN to reset your password in Settings → Members.",
+      "submit": "Send reset link",
+      "sentGeneric": "If an account exists for that email, a reset link has been sent.",
+      "backToSignIn": "Back to sign in"
+    },
+    "reset": {
+      "title": "Reset password",
+      "description": "Choose a new password for your Account.",
+      "newPassword": "New password",
+      "submit": "Update password",
+      "missingToken": "This reset link is missing or invalid.",
+      "backToSignIn": "Back to sign in"
     }
   },
   "dashboard": {

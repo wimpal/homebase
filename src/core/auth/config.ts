@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/core/db";
-import { initializeModuleSettings } from "@/core/modules/settings";
+import { canonicalizeEmail } from "@/domain/accounts/email";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -21,8 +21,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = canonicalizeEmail(credentials.email as string);
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
           include: {
             memberships: {
               include: { household: true },
@@ -45,6 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           householdId: user.memberships[0]?.householdId,
           role: user.memberships[0]?.role,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -55,12 +58,48 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.householdId = (user as { householdId?: string }).householdId;
         token.role = (user as { role?: string }).role;
+        token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 0;
+        token.email = user.email;
+        token.name = user.name;
+        return token;
       }
+
+      if (!token.id) return token;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          sessionVersion: true,
+          memberships: {
+            take: 1,
+            select: { householdId: true, role: true },
+          },
+        },
+      });
+
+      if (!dbUser || dbUser.sessionVersion !== (token.sessionVersion as number)) {
+        // Force re-login after password change / account removal.
+        return {};
+      }
+
+      token.email = dbUser.email;
+      token.name = dbUser.name;
+      token.householdId = dbUser.memberships[0]?.householdId;
+      token.role = dbUser.memberships[0]?.role;
       return token;
     },
     async session({ session, token }) {
+      if (!token.id) {
+        // Empty token after revocation — treat as unauthenticated.
+        return { ...session, user: { ...session.user, id: "" } };
+      }
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.email = (token.email as string | undefined) ?? session.user.email;
+        session.user.name = (token.name as string | null | undefined) ?? session.user.name;
         session.user.householdId = token.householdId as string | undefined;
         session.user.role = token.role as string | undefined;
       }
@@ -68,54 +107,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
-
-export async function registerUser(input: {
-  name: string;
-  email: string;
-  password: string;
-  householdName: string;
-}) {
-  const existing = await prisma.user.findUnique({
-    where: { email: input.email },
-  });
-  if (existing) throw new Error("Email already registered");
-
-  const passwordHash = await bcrypt.hash(input.password, 12);
-
-  const user = await prisma.user.create({
-    data: {
-      name: input.name,
-      email: input.email,
-      passwordHash,
-      memberships: {
-        create: {
-          role: "ADMIN",
-          household: {
-            create: { name: input.householdName },
-          },
-        },
-      },
-    },
-    include: {
-      memberships: { include: { household: true } },
-    },
-  });
-
-  const householdId = user.memberships[0].householdId;
-  await initializeModuleSettings(householdId);
-
-  const defaultList = await prisma.shoppingList.create({
-    data: { householdId, name: "Main Shopping List" },
-  });
-
-  await prisma.badge.createMany({
-    data: [
-      { name: "First Task", description: "Complete your first routine task", icon: "star" },
-      { name: "Week Streak", description: "Maintain a 7-day streak", icon: "flame" },
-      { name: "Green Thumb", description: "Water 10 plants", icon: "leaf" },
-    ],
-    skipDuplicates: true,
-  });
-
-  return { user, householdId, defaultListId: defaultList.id };
-}

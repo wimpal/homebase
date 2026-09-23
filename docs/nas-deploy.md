@@ -76,9 +76,31 @@ docker compose exec app npm run db:seed   # optional demo data
 
 ### 4. Open the app
 
-Visit `http://<NAS-IP>:3000` from a device on your home network.
+Visit `http://<NAS-IP>:3000` from a device on your **home LAN** (trusted network).
 
-Register a household or use demo credentials if you ran seed: `demo@homebase.local` / `demo1234`.
+**Accounts (T-092 / ADR-020):** one Household per install.
+
+- **Zero households:** use **Create household** (first Account becomes ADMIN).
+- **One household:** use **Join account** (new Account joins as MEMBER). Open join is intentional for a trusted LAN — do **not** port-forward Homebase to the public internet.
+- **Forgot password:** optional SMTP (below). If SMTP is unset, the UI tells people to ask an ADMIN; ADMINs reset member passwords in **Settings → Members**.
+
+Demo credentials if you ran seed: `demo@homebase.local` / `demo1234`.
+
+### Optional — SMTP for password reset emails
+
+Set these in `.env` (passed through to the **app** container). There is no mail-settings UI.
+
+| Variable | Purpose |
+|----------|---------|
+| `SMTP_HOST` | SMTP server hostname (required to enable email reset) |
+| `SMTP_FROM` | From address, e.g. `HomeBase <homebase@example.com>` (required) |
+| `SMTP_PORT` | Default `587` |
+| `SMTP_USER` / `SMTP_PASS` | Auth if your relay needs it |
+| `SMTP_SECURE` | `true` / `1` for TLS on connect (port 465); otherwise STARTTLS on 587 |
+
+Reset emails contain a **link only** — never a plaintext password. Links are built from `AUTH_URL`.
+
+After changing SMTP env vars: `docker compose up -d` (or redeploy) so the app container picks them up.
 
 ---
 

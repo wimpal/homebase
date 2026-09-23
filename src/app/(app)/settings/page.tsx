@@ -17,6 +17,16 @@ import {
   getVisitorPreferences,
   saveVisitorPreference,
 } from "@/modules/social/actions";
+import {
+  adminRemoveMemberAction,
+  adminResetMemberPasswordAction,
+  updateAccountAction,
+} from "@/modules/accounts/actions";
+import {
+  getAccountProfile,
+  isDomainError,
+  listMembers,
+} from "@/domain/accounts";
 import { ModuleId, NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -47,18 +57,33 @@ async function handleToggleNotificationType(formData: FormData) {
   revalidatePath("/settings");
 }
 
-export default async function SettingsPage() {
-  const { householdId, household, role } = await requireHousehold();
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; error?: string; message?: string }>;
+}) {
+  const { householdId, household, role, userId } = await requireHousehold();
   const isAdmin = role === "ADMIN";
   const enabledModules = await getEnabledModules(householdId);
   const enabledIds = new Set(enabledModules.map((m) => m.id));
   const visitorPrefs = await getVisitorPreferences();
   const notifSettings = await getNotificationTypeSettings(householdId);
+  const profileResult = await getAccountProfile(userId);
+  const profile = isDomainError(profileResult) ? null : profileResult;
+  const members = isAdmin ? await listMembers(householdId) : [];
   const t = await getTranslations("settings");
   const tm = await getTranslations("modules");
   const tc = await getTranslations("common");
   const localeRaw = await getLocale();
   const locale = isLocale(localeRaw) ? localeRaw : "en";
+  const params = await searchParams;
+
+  const birthdayDisplay = profile?.birthday
+    ? (() => {
+        const [y, m, d] = profile.birthday.split("-");
+        return `${d}-${m}-${y}`;
+      })()
+    : null;
 
   return (
     <div className="space-y-6">
@@ -68,6 +93,168 @@ export default async function SettingsPage() {
           {household.name} · {role}
         </p>
       </div>
+
+      {params.status === "account_saved" && (
+        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          {t("account.saved")}
+        </p>
+      )}
+      {params.status === "member_password_reset" && (
+        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          {t("members.passwordResetDone")}
+        </p>
+      )}
+      {params.status === "member_removed" && (
+        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          {t("members.removed")}
+        </p>
+      )}
+      {params.error && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">
+          {params.message || params.error}
+        </p>
+      )}
+
+      {profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("account.title")}</CardTitle>
+            <CardDescription>{t("account.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={updateAccountAction} className="space-y-3">
+              <div>
+                <Label htmlFor="account-name">{t("account.displayName")}</Label>
+                <Input
+                  id="account-name"
+                  name="name"
+                  defaultValue={profile.name ?? ""}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="account-email">{tc("email")}</Label>
+                <Input
+                  id="account-email"
+                  name="email"
+                  type="email"
+                  defaultValue={profile.email}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="account-birthday">{t("account.birthday")}</Label>
+                <Input
+                  id="account-birthday"
+                  name="birthday"
+                  type="date"
+                  defaultValue={profile.birthday ?? ""}
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  {t("account.birthdayHint")}
+                  {birthdayDisplay ? ` · ${birthdayDisplay}` : ""}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="account-current-password">
+                  {t("account.currentPassword")}
+                </Label>
+                <Input
+                  id="account-current-password"
+                  name="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  {t("account.currentPasswordHint")}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="account-new-password">{t("account.newPassword")}</Label>
+                <Input
+                  id="account-new-password"
+                  name="newPassword"
+                  type="password"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </div>
+              <Button type="submit">{tc("save")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("members.title")}</CardTitle>
+            <CardDescription>{t("members.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {members.length === 0 ? (
+              <p className="text-sm text-zinc-500">{t("members.empty")}</p>
+            ) : (
+              members.map((m) => (
+                <div
+                  key={m.membershipId}
+                  className="space-y-3 rounded-lg border p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{m.name || m.email}</p>
+                      <p className="text-sm text-zinc-500">
+                        {m.email} · {m.role}
+                        {m.userId === userId ? ` · ${t("members.you")}` : ""}
+                      </p>
+                    </div>
+                    {m.userId !== userId &&
+                      (m.isLastAdmin ? (
+                        <p className="text-xs text-zinc-500">
+                          {t("members.cannotRemoveLastAdmin")}
+                        </p>
+                      ) : (
+                        <ConfirmForm
+                          action={adminRemoveMemberAction}
+                          message={t("members.confirmRemove")}
+                        >
+                          <input type="hidden" name="userId" value={m.userId} />
+                          <Button type="submit" variant="destructive" size="sm">
+                            {t("members.remove")}
+                          </Button>
+                        </ConfirmForm>
+                      ))}
+                  </div>
+                  {m.userId !== userId && (
+                    <form
+                      action={adminResetMemberPasswordAction}
+                      className="flex flex-wrap items-end gap-2"
+                    >
+                      <input type="hidden" name="userId" value={m.userId} />
+                      <div className="min-w-[12rem] flex-1">
+                        <Label htmlFor={`reset-${m.userId}`}>
+                          {t("members.newPassword")}
+                        </Label>
+                        <Input
+                          id={`reset-${m.userId}`}
+                          name="newPassword"
+                          type="password"
+                          minLength={8}
+                          required
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <Button type="submit" size="sm" variant="outline">
+                        {t("members.resetPassword")}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

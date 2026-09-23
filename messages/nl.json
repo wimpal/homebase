@@ -116,6 +116,30 @@
   },
   "settings": {
     "title": "Instellingen",
+    "account": {
+      "title": "Account",
+      "description": "Je weergavenaam, e-mail, wachtwoord en verjaardag",
+      "displayName": "Weergavenaam",
+      "birthday": "Verjaardag",
+      "birthdayHint": "Gebruik de datumkiezer (weergegeven als DD-MM-JJJJ)",
+      "currentPassword": "Huidig wachtwoord",
+      "currentPasswordHint": "Vereist om e-mail of wachtwoord te wijzigen",
+      "newPassword": "Nieuw wachtwoord",
+      "saved": "Account opgeslagen."
+    },
+    "members": {
+      "title": "Leden",
+      "description": "Accounts in dit huishouden. Wachtwoord resetten of lid verwijderen (alleen ADMIN).",
+      "empty": "Geen leden gevonden.",
+      "you": "jij",
+      "newPassword": "Nieuw wachtwoord",
+      "resetPassword": "Wachtwoord resetten",
+      "remove": "Verwijderen",
+      "confirmRemove": "Dit Account uit het huishouden verwijderen? De login wordt verwijderd.",
+      "cannotRemoveLastAdmin": "De laatste ADMIN kan niet worden verwijderd.",
+      "passwordResetDone": "Wachtwoord van lid bijgewerkt.",
+      "removed": "Lid verwijderd."
+    },
     "language": {
       "title": "Taal",
       "description": "Kies de taal voor de app-interface",
@@ -175,17 +199,48 @@
       "description": "Log in op je huishouden",
       "submit": "Inloggen",
       "noAccount": "Geen account?",
-      "createHousehold": "Huishouden aanmaken"
+      "needAccount": "Account nodig?",
+      "createHousehold": "Huishouden aanmaken",
+      "joinAccount": "Account toevoegen",
+      "forgotPassword": "Wachtwoord vergeten?",
+      "invalidCredentials": "Ongeldig e-mailadres of wachtwoord.",
+      "passwordResetDone": "Wachtwoord bijgewerkt. Log in met je nieuwe wachtwoord.",
+      "installMisconfigured": "Deze installatie heeft meer dan één huishouden. Aanmaken/Joinen is uitgeschakeld — vraag een beheerder."
     },
     "register": {
       "title": "Huishouden aanmaken",
-      "description": "Stel je HomeBase-account in",
+      "description": "Eerste setup: maak je Account en Huishouden aan (jij wordt ADMIN)",
       "yourName": "Je naam",
       "householdName": "Naam huishouden",
       "householdPlaceholder": "Het Jansen Gezin",
-      "submit": "Account aanmaken",
+      "submit": "Huishouden aanmaken",
       "hasAccount": "Heb je al een account?",
       "signIn": "Inloggen"
+    },
+    "join": {
+      "title": "Account toevoegen",
+      "description": "Maak een Account aan bij dit huishouden (je komt erbij als MEMBER)",
+      "yourName": "Je naam",
+      "submit": "Account toevoegen",
+      "hasAccount": "Heb je al een account?",
+      "signIn": "Inloggen"
+    },
+    "forgot": {
+      "title": "Wachtwoord vergeten",
+      "descriptionSmtp": "Vul je e-mailadres in; we sturen een resetlink.",
+      "descriptionNoSmtp": "E-mailreset is niet geconfigureerd op deze installatie.",
+      "askAdmin": "Vraag een ADMIN van het huishouden om je wachtwoord te resetten via Instellingen → Leden.",
+      "submit": "Resetlink sturen",
+      "sentGeneric": "Als er een account bestaat voor dat e-mailadres, is er een resetlink verstuurd.",
+      "backToSignIn": "Terug naar inloggen"
+    },
+    "reset": {
+      "title": "Wachtwoord resetten",
+      "description": "Kies een nieuw wachtwoord voor je Account.",
+      "newPassword": "Nieuw wachtwoord",
+      "submit": "Wachtwoord bijwerken",
+      "missingToken": "Deze resetlink ontbreekt of is ongeldig.",
+      "backToSignIn": "Terug naar inloggen"
     }
   },
   "dashboard": {

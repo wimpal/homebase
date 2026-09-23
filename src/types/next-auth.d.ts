@@ -15,6 +15,7 @@ declare module "next-auth" {
   interface User {
     householdId?: string;
     role?: string;
+    sessionVersion?: number;
   }
 }
 
@@ -23,5 +24,6 @@ declare module "next-auth/jwt" {
     id?: string;
     householdId?: string;
     role?: string;
+    sessionVersion?: number;
   }
 }
