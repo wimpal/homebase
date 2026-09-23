@@ -18,7 +18,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 import {
   applySmokePurge,
   formatPurgeCounts,
@@ -146,7 +146,7 @@ async function callTool(
 }
 
 async function ensureLocalShoppingPrereqs() {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const household = await prisma.household.findUnique({
       where: { id: HOUSEHOLD_ID! },
@@ -710,7 +710,7 @@ async function cleanupSmokeLeftovers() {
 }
 
 async function cleanupSmokeLeftoversLocal() {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const household = await prisma.household.findUnique({
       where: { id: HOUSEHOLD_ID! },
@@ -983,7 +983,7 @@ async function runLightsSmoke(callTool: CallTool) {
 }
 
 async function runInventoryUpdateSmokeLocal(callTool: CallTool) {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   const productName = `mcp-smoke-product-${Date.now()}`;
   let productId: string | undefined;
 

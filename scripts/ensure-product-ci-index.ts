@@ -1,7 +1,7 @@
 /** Run after `prisma db push` — creates case-insensitive product name index. */
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   await prisma.$executeRawUnsafe(`

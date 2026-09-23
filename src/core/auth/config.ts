@@ -4,13 +4,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/core/db";
 import { canonicalizeEmail } from "@/domain/accounts/email";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
   providers: [
     Credentials({
       name: "credentials",
@@ -53,12 +51,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.householdId = (user as { householdId?: string }).householdId;
         token.role = (user as { role?: string }).role;
-        token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 0;
+        token.sessionVersion =
+          (user as { sessionVersion?: number }).sessionVersion ?? 0;
         token.email = user.email;
         token.name = user.name;
         return token;
@@ -96,20 +96,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Schema not pushed yet (missing sessionVersion) — keep existing token.
         return token;
       }
-    },
-    async session({ session, token }) {
-      if (!token.id) {
-        // Empty token after revocation — treat as unauthenticated.
-        return { ...session, user: { ...session.user, id: "" } };
-      }
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = (token.email as string | undefined) ?? session.user.email;
-        session.user.name = (token.name as string | null | undefined) ?? session.user.name;
-        session.user.householdId = token.householdId as string | undefined;
-        session.user.role = token.role as string | undefined;
-      }
-      return session;
     },
   },
 });

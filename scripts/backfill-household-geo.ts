@@ -4,14 +4,14 @@
  *
  * Usage: npx tsx scripts/backfill-household-geo.ts
  */
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 
 const DEFAULT_LAT = 52.51;
 const DEFAULT_LON = 6.09;
 const DEFAULT_TZ = "Europe/Amsterdam";
 
 async function main() {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const result = await prisma.household.updateMany({
       where: {

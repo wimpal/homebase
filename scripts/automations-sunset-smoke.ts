@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 import {
   adjustSunsetLinkedAutomations,
   applyMinutesBefore,
@@ -49,7 +49,7 @@ function assert(cond: unknown, msg: string): asserts cond {
 
 async function main() {
   loadDotEnv();
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
 
   const householdId =
     process.env.AUTOMATION_SMOKE_HOUSEHOLD_ID?.trim() ||

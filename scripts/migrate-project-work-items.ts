@@ -10,9 +10,9 @@
  * then drops ProjectStep only after a verified copy.
  */
 import { randomBytes } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function newId(): string {
   const time = Date.now().toString(36);

@@ -9,7 +9,7 @@
  *   McpChangeLog           — entityId in deleted set OR payloadJson text
  *                            contains "mcp-smoke" / "Smoke Add" (orphan reverts)
  */
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 
 export type PurgeSmokeOptions = {
   householdId?: string;

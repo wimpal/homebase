@@ -99,7 +99,7 @@ Demo credentials (after seed): `demo@homebase.local` / `demo1234`
 | Framework | Next.js 16 App Router (React 19) |
 | Styling | Tailwind CSS v4 + hand-rolled shadcn-style components in `src/components/ui/` |
 | Database | PostgreSQL 16 |
-| ORM | Prisma **6.x** (do not upgrade to Prisma 7 without a migration plan) |
+| ORM | Prisma **7.x** (pin `prisma@7` + `@prisma/client@7`; do not use `@latest` — that is Prisma 8 RC) |
 | Auth | Auth.js v5 (`next-auth@5.0.0-beta.28`) — credentials provider, JWT sessions |
 | Jobs | `node-cron` in `worker/` (BullMQ/Redis installed but not wired yet) |
 | Push | `web-push` + VAPID keys |
@@ -285,7 +285,10 @@ npm run db:migrate   # prefer for production-tracked changes
 npm run db:generate  # regenerate client (also runs on postinstall/build)
 ```
 
-**Pin Prisma to 6.x.** Prisma 7 removes `url` from schema files and will break this project.
+**Pin Prisma to 7.x** (`prisma@7` / `@prisma/client@7`). Connection URL lives in
+`prisma.config.ts` (not `schema.prisma`). Runtime uses `@prisma/adapter-pg`.
+`npm install prisma@latest` installs Prisma **8 RC**, which does not support
+`generate` / `db push` — never do that on this repo.
 
 ---
 
@@ -414,7 +417,9 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 
 5. **Module disabled** — Page redirects to dashboard; sidebar hides link. Don't assume all modules are enabled in tests.
 
-6. **Prisma 7** — Do not `npm install prisma@latest` without migrating to `prisma.config.ts`.
+6. **Prisma 8 RC** — Do not `npm install prisma@latest`. Stay on `prisma@7`.
+   Config: `prisma.config.ts` + `generated/prisma` + `@prisma/adapter-pg`.
+   After manual `db push`, run `prisma generate` (v7 no longer auto-generates).
 
 7. **next-auth peer deps** — May need `--legacy-peer-deps` on install.
 
@@ -424,6 +429,15 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 
 10. **Smart home** — IKEA / Dirigera for lights and automations; Reolink cameras via
     UI + FFmpeg snapshot (NAS must reach camera RTSP). See `docs/reolink-camera.md`.
+
+11. **MCP smoke leftovers (T-094)** — Post-deploy `mcp:smoke` writes live household
+    rows (`mcp-smoke*`, `Smoke Add *`). Cleanup is **not** optional: `deploy:nas` /
+    `deploy-nas.sh` purge before and after smoke; `mcp-smoke.ts` self-cleans; purge
+    CLI exits nonzero on residual rows or a nonexistent `MCP_HOUSEHOLD_ID`. Do not
+    weaken residual verify, skip household existence checks, or fall back to a local
+    Windows `.env` household id for remote smoke. Never Synology `tr -d "\r"` (double
+    quotes) — it can strip `r` from cuids. Manual: `docs/nas-deploy.md` § Purge MCP
+    smoke leftovers. Skip only with `HOMEBASE_SMOKE_KEEP_DATA=1` (debug).
 
 ---
 
@@ -445,6 +459,9 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 - Do not add features without considering the module registry
 - Do not replace hand-rolled UI components with a full shadcn CLI init without discussion — components are intentionally vendored in `src/components/ui/`
 - Do not force-push or amend commits unless the user explicitly requests it
+- Do not remove or soft-fail MCP smoke residual verify / household-id checks in
+  `scripts/lib/purge-smoke.ts`, `purge-smoke-data.ts`, or `deploy-nas.*` — that is
+  how `mcp-smoke*` rows leaked into the live UI (T-078 → T-081 → T-094)
 
 ---
 

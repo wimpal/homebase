@@ -1,7 +1,7 @@
 /** Print demo household id for MCP_HOUSEHOLD_ID setup. */
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   const household = await prisma.household.findFirst({

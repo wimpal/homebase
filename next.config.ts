@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/**": ["./generated/prisma/**/*"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "12mb",

@@ -1,9 +1,11 @@
-FROM node:20-alpine
+FROM node:20.19-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --legacy-peer-deps
+COPY prisma.config.ts ./
+RUN npm ci --legacy-peer-deps --ignore-scripts
+RUN npx prisma generate
 
 COPY worker ./worker
 COPY src ./src

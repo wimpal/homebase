@@ -1,6 +1,8 @@
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { auth } from "@/core/auth/config";
+import { authConfig } from "@/core/auth/auth.config";
+
+const { auth } = NextAuth(authConfig);
 
 const publicPaths = [
   "/login",
@@ -11,7 +13,7 @@ const publicPaths = [
   "/api/auth",
 ];
 
-export async function middleware(request: NextRequest) {
+export default auth((request) => {
   const { pathname } = request.nextUrl;
 
   if (
@@ -26,13 +28,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = await auth();
-  if (!session?.user?.id && !pathname.startsWith("/api/push")) {
+  if (!request.auth?.user?.id && !pathname.startsWith("/api/push")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

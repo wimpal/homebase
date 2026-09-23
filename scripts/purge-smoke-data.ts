@@ -22,7 +22,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/core/db";
 import {
   applySmokePurge,
   collectSmokeMatches,
@@ -62,7 +62,7 @@ const APPLY = process.argv.includes("--apply");
 const HOUSEHOLD_ID = process.env.MCP_HOUSEHOLD_ID?.trim() || undefined;
 const SAMPLE_LIMIT = 15;
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function printSection(
   title: string,
