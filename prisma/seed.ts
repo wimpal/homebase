@@ -5,6 +5,15 @@ import { createPrismaClient } from "../src/core/db";
 const prisma = createPrismaClient();
 
 async function main() {
+  const existingCount = await prisma.household.count();
+  if (existingCount > 0) {
+    throw new Error(
+      `db:seed refused: ${existingCount} household(s) already exist (ADR-020 one-Household-per-install). ` +
+        `Use Create household / Join account in the UI, or wipe the empty-dev database first. ` +
+        `Never seed a live install.`,
+    );
+  }
+
   const passwordHash = await bcrypt.hash("demo1234", 12);
 
   const user = await prisma.user.upsert({
@@ -92,5 +101,8 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    console.error(e instanceof Error ? e.message : e);
+    process.exitCode = 1;
+  })
   .finally(() => prisma.$disconnect());

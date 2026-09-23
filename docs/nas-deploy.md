@@ -71,7 +71,10 @@ Or manually:
 docker compose up -d --build
 docker compose exec worker npx tsx scripts/migrate-shopping-slots.ts
 docker compose exec worker npx prisma db push --accept-data-loss
-docker compose exec app npm run db:seed   # optional demo data
+# db:seed — EMPTY DB / local-dev ONLY. Hard-refuses when any Household exists
+# (ADR-020). Never run after Create household on a live install — that creates
+# a second "Demo Household" and disables Join on the login page.
+# docker compose exec app npm run db:seed
 ```
 
 ### 4. Open the app
@@ -80,11 +83,12 @@ Visit `http://<NAS-IP>:3000` from a device on your **home LAN** (trusted network
 
 **Accounts (T-092 / ADR-020):** one Household per install.
 
-- **Zero households:** use **Create household** (first Account becomes ADMIN).
+- **Zero households:** use **Create household** (first Account becomes ADMIN), or `db:seed` only on an empty database.
 - **One household:** use **Join account** (new Account joins as MEMBER). Open join is intentional for a trusted LAN — do **not** port-forward Homebase to the public internet.
+- **More than one household:** Create/Join are disabled — run `npm run household:list` and remove the extras (usually a leftover Demo Household from seeding a live DB).
 - **Forgot password:** optional SMTP (below). If SMTP is unset, the UI tells people to ask an ADMIN; ADMINs reset member passwords in **Settings → Members**.
 
-Demo credentials if you ran seed: `demo@homebase.local` / `demo1234`.
+Demo credentials (`demo@homebase.local` / `demo1234`) apply only after seeding an **empty** DB — not for a live household install.
 
 ### Optional — SMTP for password reset emails
 

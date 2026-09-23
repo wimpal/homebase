@@ -49,7 +49,7 @@ docker compose up postgres -d
 # Push schema to database
 npm run db:push
 
-# Seed demo data
+# Seed demo data (empty DB only — refuses if a Household already exists)
 npm run db:seed
 
 # Start dev server
@@ -61,7 +61,7 @@ npm run worker
 
 Open [http://localhost:3000](http://localhost:3000)
 
-**Demo login:** `demo@homebase.local` / `demo1234`
+**Demo login** (after empty-DB seed): `demo@homebase.local` / `demo1234`
 
 ## Production (Docker / NAS)
 
@@ -76,7 +76,9 @@ cp .env.example .env
 
 docker compose up -d --build
 docker compose exec worker npx prisma db push
-docker compose exec app npm run db:seed   # optional
+# Prefer Create household in the UI on a live install (ADR-020).
+# db:seed only on an empty DB — it refuses if any Household already exists.
+# docker compose exec app npm run db:seed
 
 # Redeploy after changes (on NAS):
 ./scripts/deploy.sh
