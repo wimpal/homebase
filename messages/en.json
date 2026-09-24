@@ -191,6 +191,41 @@
       "visitorName": "Visitor name",
       "preferencesJson": "Preferences (JSON)",
       "confirmDelete": "Delete this visitor preference?"
+    },
+    "import": {
+      "title": "Import",
+      "description": "Bring a Notion database CSV into Homebase (no API token)",
+      "adminOnly": "Only household admins can run imports.",
+      "help": "Export a Notion database as CSV, upload it here, dry-run, then apply. See docs/notion-import.md.",
+      "target": "Import target",
+      "comingSoon": "coming soon",
+      "targets": {
+        "products": "Shopping catalog (Products)",
+        "people": "People / contacts"
+      },
+      "file": "Notion CSV file",
+      "fileRequired": "Choose a CSV file first.",
+      "columnName": "Name column",
+      "columnCategory": "Category column",
+      "columnDescription": "Notes / description column",
+      "columnNone": "— not mapped —",
+      "markNeeded": "Also mark imported products as needed on the shopping list",
+      "markNeededHint": "Leave unchecked unless you intentionally want the need list filled.",
+      "dryRun": "Dry run",
+      "apply": "Apply import",
+      "summaryDryRun": "Dry-run summary (nothing written)",
+      "summaryApplied": "Import applied",
+      "counts": {
+        "created": "Created",
+        "updated": "Updated",
+        "unchanged": "Unchanged",
+        "skipped": "Skipped",
+        "failed": "Failed",
+        "needFailed": "Need failed",
+        "rows": "Rows"
+      },
+      "samples": "Sample issues",
+      "sampleRow": "Row {row} ({name}): {message}"
     }
   },
   "auth": {

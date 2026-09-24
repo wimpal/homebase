@@ -24,9 +24,11 @@ import {
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PushNotificationSetup } from "./PushNotificationSetup";
+import { ImportClient } from "@/components/settings/ImportClient";
 import { LanguageToggle } from "@/components/settings/LanguageToggle";
 import { ModuleToggle } from "@/components/settings/ModuleToggle";
 import { NotificationTypeToggle } from "@/components/settings/NotificationTypeToggle";
+import { listImportTargets } from "@/domain/import";
 import { isLocale } from "@/i18n/config";
 
 async function handleToggleModule(formData: FormData) {
@@ -219,6 +221,26 @@ export default async function SettingsPage({
       </Card>
 
       <PushNotificationSetup />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("import.title")}</CardTitle>
+          <CardDescription>{t("import.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!isAdmin ? (
+            <p className="text-sm text-zinc-500">{t("import.adminOnly")}</p>
+          ) : (
+            <ImportClient
+              targets={listImportTargets().map((x) => ({
+                id: x.id,
+                enabled: x.enabled,
+                disabledReason: x.disabledReason,
+              }))}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

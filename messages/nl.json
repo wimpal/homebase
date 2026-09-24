@@ -191,6 +191,41 @@
       "visitorName": "Naam bezoeker",
       "preferencesJson": "Voorkeuren (JSON)",
       "confirmDelete": "Deze bezoekersvoorkeur verwijderen?"
+    },
+    "import": {
+      "title": "Importeren",
+      "description": "Een Notion-database-CSV naar Homebase brengen (geen API-token)",
+      "adminOnly": "Alleen beheerders van het huishouden kunnen importeren.",
+      "help": "Exporteer een Notion-database als CSV, upload hier, doe een dry-run, en pas toe. Zie docs/notion-import.md.",
+      "target": "Importdoel",
+      "comingSoon": "binnenkort",
+      "targets": {
+        "products": "Boodschappencatalogus (Producten)",
+        "people": "Mensen / contacten"
+      },
+      "file": "Notion CSV-bestand",
+      "fileRequired": "Kies eerst een CSV-bestand.",
+      "columnName": "Naamkolom",
+      "columnCategory": "Categoriekolom",
+      "columnDescription": "Notities / omschrijvingkolom",
+      "columnNone": "— niet gekoppeld —",
+      "markNeeded": "Geïmporteerde producten ook als nodig markeren op de boodschappenlijst",
+      "markNeededHint": "Laat uitgeschakeld tenzij je de boodschappenlijst bewust wilt vullen.",
+      "dryRun": "Dry-run",
+      "apply": "Import toepassen",
+      "summaryDryRun": "Dry-run-samenvatting (niets weggeschreven)",
+      "summaryApplied": "Import toegepast",
+      "counts": {
+        "created": "Aangemaakt",
+        "updated": "Bijgewerkt",
+        "unchanged": "Ongewijzigd",
+        "skipped": "Overgeslagen",
+        "failed": "Mislukt",
+        "needFailed": "Nodig mislukt",
+        "rows": "Rijen"
+      },
+      "samples": "Voorbeeldproblemen",
+      "sampleRow": "Rij {row} ({name}): {message}"
     }
   },
   "auth": {
