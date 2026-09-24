@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Pencil } from "lucide-react";
+import { Pencil, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,7 @@ export function ShoppingPlanningView({
   const [mobileTab, setMobileTab] = useState<"need" | "browse">("browse");
   const [storeManageOpen, setStoreManageOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogProduct | null>(null);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -197,7 +198,7 @@ export function ShoppingPlanningView({
     return (
       <li
         key={p.id}
-        className={`flex items-center gap-1 px-1 py-1 ${p.needed ? "opacity-60" : ""}`}
+        className={`flex items-center gap-1 px-1 py-2 ${p.needed ? "opacity-60" : ""}`}
       >
         {p.needed ? (
           <div className="flex min-w-0 flex-1 items-center justify-between px-2 py-1.5">
@@ -249,7 +250,7 @@ export function ShoppingPlanningView({
 
   const browsePanel = (
     <section className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{t("catalog")}</h2>
         <span className="text-xs text-zinc-400">
           {filteredCatalog.length}
@@ -261,11 +262,11 @@ export function ShoppingPlanningView({
         placeholder={t("searchProducts")}
         value={catalogQuery}
         onChange={(e) => setCatalogQuery(e.target.value)}
-        className="mb-2"
+        className="mb-3"
         autoComplete="off"
       />
 
-      <div className="mb-2 flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1">
         {(
           [
             ["all", t("all")],
@@ -300,33 +301,61 @@ export function ShoppingPlanningView({
       </div>
 
       {categories.length > 0 && (
-        <div className="mb-2 flex max-h-24 flex-wrap gap-1 overflow-y-auto">
-          <Button
+        <>
+          <div className="my-3 border-t border-zinc-200 dark:border-zinc-800" />
+          <button
             type="button"
-            size="sm"
-            variant={categoryFilter === null ? "default" : "outline"}
-            onClick={() => setCategoryFilter(null)}
+            className="mb-2 flex w-full items-center gap-2 text-left text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            onClick={() => setCategoriesOpen((o) => !o)}
+            aria-expanded={categoriesOpen}
           >
-            {t("all")}
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              type="button"
-              size="sm"
-              variant={categoryFilter === cat ? "default" : "outline"}
-              onClick={() =>
-                setCategoryFilter((prev) => (prev === cat ? null : cat))
-              }
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 transition-transform ${categoriesOpen ? "" : "-rotate-90"}`}
+            />
+            <span className="font-medium">{t("categories")}</span>
+            {categoryFilter && !categoriesOpen && (
+              <span className="truncate text-xs text-emerald-600">
+                · {categoryFilter}
+              </span>
+            )}
+            {!categoryFilter && (
+              <span className="text-xs text-zinc-400">
+                ({categories.length})
+              </span>
+            )}
+          </button>
+          {categoriesOpen && (
+            <div className="mb-1 flex max-h-36 flex-wrap gap-1 overflow-y-auto pb-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={categoryFilter === null ? "default" : "outline"}
+                onClick={() => setCategoryFilter(null)}
+              >
+                {t("all")}
+              </Button>
+              {categories.map((cat) => (
+                <Button
+                  key={cat}
+                  type="button"
+                  size="sm"
+                  variant={categoryFilter === cat ? "default" : "outline"}
+                  onClick={() =>
+                    setCategoryFilter((prev) => (prev === cat ? null : cat))
+                  }
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
+      <div className="my-3 border-t border-zinc-200 dark:border-zinc-800" />
+
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
+        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {showCreateRow && (
             <li>
               <FormAction
