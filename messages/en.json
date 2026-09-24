@@ -338,7 +338,9 @@
     "needTab": "Need ({count})",
     "hideStores": "Hide stores",
     "finishTrip": "Finish trip",
-    "tripProgress": "{needed} needed · {bought} bought"
+    "tripProgress": "{needed} needed · {bought} bought",
+    "editProduct": "Edit product",
+    "categoryPlaceholder": "e.g. Dairy"
   },
   "inventory": {
     "title": "Inventory",

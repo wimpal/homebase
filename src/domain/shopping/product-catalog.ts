@@ -184,3 +184,66 @@ export async function canDeleteProduct(
 
   return { ok: true };
 }
+
+export interface UpdateCatalogProductInput {
+  id: string;
+  name: string;
+  /** Empty string clears category. */
+  category?: string | null;
+}
+
+/**
+ * Update catalog product name/category. Keeps shopping-slot `name` in sync.
+ * Case-insensitive name uniqueness within the household.
+ */
+export async function updateCatalogProduct(
+  householdId: string,
+  input: UpdateCatalogProductInput,
+): Promise<{ id: string; name: string; category: string | null } | DomainError> {
+  const trimmed = input.name.trim();
+  if (!trimmed) {
+    return DomainError.invalidInput("name is required.");
+  }
+
+  const existing = await prisma.product.findFirst({
+    where: { id: input.id, householdId },
+    select: { id: true, name: true, category: true },
+  });
+  if (!existing) {
+    return DomainError.notFound("Product not found.", "product_not_found");
+  }
+
+  const clash = await findProductByNameCi(householdId, trimmed);
+  if (clash && clash.id !== input.id) {
+    return DomainError.invalidInput(
+      `A product named "${trimmed}" already exists (case-insensitive).`,
+      "product_name_exists",
+    );
+  }
+
+  const category =
+    input.category === undefined
+      ? existing.category
+      : input.category === null || input.category.trim() === ""
+        ? null
+        : input.category.trim();
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const product = await tx.product.update({
+      where: { id: input.id },
+      data: { name: trimmed, category },
+      select: { id: true, name: true, category: true },
+    });
+
+    if (product.name !== existing.name) {
+      await tx.shoppingItem.updateMany({
+        where: { productId: product.id },
+        data: { name: product.name },
+      });
+    }
+
+    return product;
+  });
+
+  return updated;
+}

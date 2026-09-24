@@ -338,7 +338,9 @@
     "needTab": "Nodig ({count})",
     "hideStores": "Winkels verbergen",
     "finishTrip": "Trip afronden",
-    "tripProgress": "{needed} nodig · {bought} gekocht"
+    "tripProgress": "{needed} nodig · {bought} gekocht",
+    "editProduct": "Product bewerken",
+    "categoryPlaceholder": "bijv. Zuivel"
   },
   "inventory": {
     "title": "Voorraad",

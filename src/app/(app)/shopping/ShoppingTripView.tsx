@@ -305,10 +305,9 @@ export function ShoppingTripView({
                       )}
                     </span>
                   </button>
-                  <ConfirmFormAction
+                  <FormAction
                     action={removeShoppingItem}
                     actionName="removeShoppingItem"
-                    message={t("confirmRemoveItem")}
                   >
                     <input type="hidden" name="id" value={item.id} />
                     <Button
@@ -319,7 +318,7 @@ export function ShoppingTripView({
                     >
                       {tc("remove")}
                     </Button>
-                  </ConfirmFormAction>
+                  </FormAction>
                 </>
               )}
             </li>

@@ -7,7 +7,8 @@ export { markProductNeeded } from "./mark-needed";
 export type { MarkNeededInput } from "./mark-needed";
 export { markShoppingItemBought } from "./mark-bought";
 export { unmarkShoppingItemBought } from "./unmark-bought";
-export { canDeleteProduct, findProductByNameCi, upsertProductByName } from "./product-catalog";
+export { canDeleteProduct, findProductByNameCi, upsertProductByName, updateCatalogProduct } from "./product-catalog";
+export type { UpdateCatalogProductInput } from "./product-catalog";
 export { resolvePrimaryListId } from "./primary-list";
 export type {
   AddShoppingItemInput,

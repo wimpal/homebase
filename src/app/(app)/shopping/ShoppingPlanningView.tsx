@@ -2,11 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { FormAction } from "@/components/ui/form-action";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   addShoppingItem,
   createStore,
@@ -14,7 +22,9 @@ import {
   markProductNeededAction,
   removeShoppingItem,
   deleteStore,
+  updateCatalogProductAction,
 } from "@/modules/shopping/actions";
+import type { CatalogProduct } from "@/domain/shopping";
 import { shoppingHref, type ShoppingViewProps } from "./types";
 
 type NeededFilter = "all" | "available" | "on_list";
@@ -34,6 +44,7 @@ export function ShoppingPlanningView({
   const [neededFilter, setNeededFilter] = useState<NeededFilter>("all");
   const [mobileTab, setMobileTab] = useState<"need" | "browse">("browse");
   const [storeManageOpen, setStoreManageOpen] = useState(false);
+  const [editing, setEditing] = useState<CatalogProduct | null>(null);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -165,16 +176,15 @@ export function ShoppingPlanningView({
                     </span>
                   </button>
                 </FormAction>
-                <ConfirmFormAction
+                <FormAction
                   action={removeShoppingItem}
                   actionName="removeShoppingItem"
-                  message={t("confirmRemoveItem")}
                 >
                   <input type="hidden" name="id" value={item.id} />
                   <Button type="submit" variant="ghost" size="sm" className="text-zinc-400">
                     {tc("remove")}
                   </Button>
-                </ConfirmFormAction>
+                </FormAction>
               </li>
             ))}
           </ul>
@@ -182,6 +192,60 @@ export function ShoppingPlanningView({
       </div>
     </section>
   );
+
+  function catalogRow(p: CatalogProduct) {
+    return (
+      <li
+        key={p.id}
+        className={`flex items-center gap-1 px-1 py-1 ${p.needed ? "opacity-60" : ""}`}
+      >
+        {p.needed ? (
+          <div className="flex min-w-0 flex-1 items-center justify-between px-2 py-1.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm">{p.name}</p>
+              {p.category && (
+                <p className="truncate text-xs text-zinc-400">{p.category}</p>
+              )}
+            </div>
+            <span className="text-xs text-emerald-600">{t("onList")}</span>
+          </div>
+        ) : (
+          <FormAction
+            action={markProductNeededAction}
+            actionName="markProductNeeded"
+            className="min-w-0 flex-1"
+          >
+            <input type="hidden" name="listId" value={listId} />
+            <input type="hidden" name="productId" value={p.id} />
+            <button
+              type="submit"
+              className="flex w-full items-center justify-between px-2 py-1.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{p.name}</span>
+                {p.category && (
+                  <span className="block truncate text-xs text-zinc-400">
+                    {p.category}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-xs text-emerald-600">{t("need")}</span>
+            </button>
+          </FormAction>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 shrink-0 p-0 text-zinc-400"
+          aria-label={t("editProduct")}
+          onClick={() => setEditing(p)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </li>
+    );
+  }
 
   const browsePanel = (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -287,52 +351,7 @@ export function ShoppingPlanningView({
               {t("noProductsMatch")}
             </li>
           ) : (
-            filteredCatalog.map((p) =>
-              p.needed ? (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between px-2 py-2.5 opacity-60"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{p.name}</p>
-                    {p.category && (
-                      <p className="truncate text-xs text-zinc-400">
-                        {p.category}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-xs text-emerald-600">{t("onList")}</span>
-                </li>
-              ) : (
-                <li key={p.id}>
-                  <FormAction
-                    action={markProductNeededAction}
-                    actionName="markProductNeeded"
-                  >
-                    <input type="hidden" name="listId" value={listId} />
-                    <input type="hidden" name="productId" value={p.id} />
-                    <button
-                      type="submit"
-                      className="flex w-full items-center justify-between px-2 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
-                          {p.name}
-                        </span>
-                        {p.category && (
-                          <span className="block truncate text-xs text-zinc-400">
-                            {p.category}
-                          </span>
-                        )}
-                      </span>
-                      <span className="shrink-0 text-xs text-emerald-600">
-                        {t("need")}
-                      </span>
-                    </button>
-                  </FormAction>
-                </li>
-              ),
-            )
+            filteredCatalog.map((p) => catalogRow(p))
           )}
         </ul>
       </div>
@@ -368,6 +387,59 @@ export function ShoppingPlanningView({
       <div className="min-h-0 flex-1 lg:hidden">
         {mobileTab === "browse" ? browsePanel : needPanel}
       </div>
+
+      <Dialog
+        open={!!editing}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("editProduct")}</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <FormAction
+              action={updateCatalogProductAction}
+              actionName="updateCatalogProduct"
+              className="space-y-3"
+              diagnosticsFromForm={(fd) => ({
+                name: String(fd.get("name") ?? ""),
+              })}
+              onSuccess={() => setEditing(null)}
+            >
+              <input type="hidden" name="id" value={editing.id} />
+              <div>
+                <Label>{tc("name")}</Label>
+                <Input
+                  name="name"
+                  required
+                  defaultValue={editing.name}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Label>{tc("category")}</Label>
+                <Input
+                  name="category"
+                  defaultValue={editing.category ?? ""}
+                  placeholder={t("categoryPlaceholder")}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditing(null)}
+                >
+                  {tc("cancel")}
+                </Button>
+                <Button type="submit">{tc("save")}</Button>
+              </div>
+            </FormAction>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

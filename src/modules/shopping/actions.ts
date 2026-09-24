@@ -9,6 +9,7 @@ import {
   markProductNeeded,
   markShoppingItemBought,
   unmarkShoppingItemBought,
+  updateCatalogProduct,
 } from "@/domain/shopping";
 import { isDomainError } from "@/domain/error";
 import {
@@ -124,6 +125,35 @@ export async function unmarkItemBought(
   const id = formData.get("id") as string;
   if (!id) return okResult();
   const result = await unmarkShoppingItemBought(householdId, id);
+  if (isDomainError(result)) {
+    return fromDomainError(result);
+  }
+  revalidatePath("/shopping");
+  revalidatePath("/inventory");
+  return okResult();
+}
+
+export async function updateCatalogProductAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const categoryRaw = formData.get("category");
+  const category =
+    categoryRaw === null || categoryRaw === undefined
+      ? undefined
+      : String(categoryRaw);
+
+  if (!id) {
+    return failResult("Product id is required", "invalid_input");
+  }
+
+  const result = await updateCatalogProduct(householdId, {
+    id,
+    name,
+    category,
+  });
   if (isDomainError(result)) {
     return fromDomainError(result);
   }
