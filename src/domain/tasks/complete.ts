@@ -13,7 +13,7 @@ export async function completeChoreDomain(
   try {
     chore = await assertChore(householdId, input.id);
   } catch {
-    return DomainError.notFound("Chore not found.");
+    return DomainError.notFound("Chore not found.", "chore_not_found");
   }
 
   await prisma.choreCompletion.create({

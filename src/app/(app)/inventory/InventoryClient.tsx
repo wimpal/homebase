@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   createProduct,
   createLocation,
@@ -48,6 +49,7 @@ export function InventoryClient({
 }) {
   const t = useTranslations("inventory");
   const tc = useTranslations("common");
+  const { handleActionResult } = useFormError();
   const [scanning, setScanning] = useState(false);
   const [barcode, setBarcode] = useState("");
   const [query, setQuery] = useState("");
@@ -61,6 +63,13 @@ export function InventoryClient({
         (p.category?.toLowerCase().includes(q) ?? false),
     );
   }, [products, query]);
+
+  async function handleCreateProduct(formData: FormData): Promise<void> {
+    const result = await createProduct(formData);
+    handleActionResult(result, "createProduct", {
+      name: String(formData.get("name") ?? ""),
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -96,7 +105,7 @@ export function InventoryClient({
               <CardTitle className="text-base">{t("addProduct")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={createProduct} className="space-y-3">
+              <form action={handleCreateProduct} className="space-y-3">
                 <div>
                   <Label>{tc("name")}</Label>
                   <Input name="name" required />
@@ -172,15 +181,16 @@ export function InventoryClient({
                       className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
                     >
                       <span>{l.name}</span>
-                      <ConfirmForm
+                      <ConfirmFormAction
                         action={deleteLocation}
+                        actionName="deleteLocation"
                         message={t("confirmDeleteLocation")}
                       >
                         <input type="hidden" name="id" value={l.id} />
                         <Button type="submit" variant="destructive" size="sm">
                           {tc("delete")}
                         </Button>
-                      </ConfirmForm>
+                      </ConfirmFormAction>
                     </li>
                   ))}
                 </ul>
@@ -239,15 +249,16 @@ export function InventoryClient({
                           </p>
                         )}
                       </div>
-                      <ConfirmForm
+                      <ConfirmFormAction
                         action={deleteProduct}
+                        actionName="deleteProduct"
                         message={t("confirmDeleteProduct")}
                       >
                         <input type="hidden" name="id" value={p.id} />
                         <Button type="submit" variant="destructive" size="sm">
                           {tc("delete")}
                         </Button>
-                      </ConfirmForm>
+                      </ConfirmFormAction>
                     </div>
                     {p.stockItems.length > 0 && (
                       <ul className="mt-2 space-y-1">
@@ -260,15 +271,16 @@ export function InventoryClient({
                               {stock.quantity}
                               {stock.location ? ` @ ${stock.location.name}` : ""}
                             </span>
-                            <ConfirmForm
+                            <ConfirmFormAction
                               action={removeStock}
+                              actionName="removeStock"
                               message={t("confirmRemoveStock")}
                             >
                               <input type="hidden" name="id" value={stock.id} />
                               <Button type="submit" variant="ghost" size="sm">
                                 {t("removeStock")}
                               </Button>
-                            </ConfirmForm>
+                            </ConfirmFormAction>
                           </li>
                         ))}
                       </ul>

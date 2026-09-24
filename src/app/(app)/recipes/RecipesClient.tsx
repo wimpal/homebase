@@ -2,12 +2,12 @@
 
 import {
   Fragment,
-  useActionState,
   useEffect,
   useMemo,
   useRef,
   useState,
   useTransition,
+  type FormEvent,
 } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -29,13 +31,12 @@ import {
 import {
   addRecipeToShoppingAction,
   clearRecipeThumbnail,
-  createRecipeWithState,
+  createRecipe,
   deleteRecipe,
   addLeftover,
   deleteLeftover,
-  updateRecipeWithState,
+  updateRecipeAction,
   uploadRecipeThumbnail,
-  type RecipeFormState,
 } from "@/modules/recipes/actions";
 import { Timer, ImageIcon, ShoppingCart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,8 +78,6 @@ const GROUP_LABEL_KEYS: Record<string, string> = {
   topping: "groupTopping",
   garnish: "groupGarnish",
 };
-
-const initialFormState: RecipeFormState = {};
 
 const listText = "text-sm text-zinc-700 dark:text-zinc-300";
 const optionalText = "italic text-zinc-500 dark:text-zinc-400";
@@ -418,18 +417,12 @@ export function RecipesClient({
   const [shopFeedback, setShopFeedback] = useState<string | null>(null);
   const [shopPending, startShopTransition] = useTransition();
   const [uploadPending, startUploadTransition] = useTransition();
+  const [createPending, startCreateTransition] = useTransition();
+  const [updatePending, startUpdateTransition] = useTransition();
   const [overlayThumbnailUrl, setOverlayThumbnailUrl] = useState<
     string | null
   >(null);
-
-  const [createState, createAction, createPending] = useActionState(
-    createRecipeWithState,
-    initialFormState,
-  );
-  const [updateState, updateAction, updatePending] = useActionState(
-    updateRecipeWithState,
-    initialFormState,
-  );
+  const { handleActionResult } = useFormError();
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -462,12 +455,6 @@ export function RecipesClient({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (updateState.ok) {
-      setEditing(false);
-    }
-  }, [updateState.ok]);
 
   useEffect(() => {
     if (selected) {
@@ -538,16 +525,37 @@ export function RecipesClient({
         selected.id,
         includeOptional,
       );
-      if (result.error) {
-        setShopFeedback(result.error);
-        return;
-      }
+      if (handleActionResult(result, "addRecipeToShopping")) return;
+      if (!result.ok) return;
+      const data = result.data;
+      if (!data) return;
       setShopFeedback(
         t("shoppingResult", {
-          added: result.added.length,
-          skipped: result.skipped.length,
+          added: data.added.length,
+          skipped: data.skipped.length,
         }),
       );
+    });
+  }
+
+  function onCreateRecipe(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    startCreateTransition(async () => {
+      const result = await createRecipe(fd);
+      if (handleActionResult(result, "createRecipe")) return;
+      form.reset();
+    });
+  }
+
+  function onUpdateRecipe(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startUpdateTransition(async () => {
+      const result = await updateRecipeAction(fd);
+      if (handleActionResult(result, "updateRecipe")) return;
+      setEditing(false);
     });
   }
 
@@ -558,8 +566,10 @@ export function RecipesClient({
     fd.set("file", file);
     startUploadTransition(async () => {
       const result = await uploadRecipeThumbnail(fd);
-      if (result.url) {
-        setOverlayThumbnailUrl(result.url);
+      if (handleActionResult(result, "uploadRecipeThumbnail")) return;
+      if (!result.ok) return;
+      if (result.data?.url) {
+        setOverlayThumbnailUrl(result.data.url);
       }
     });
   }
@@ -568,9 +578,8 @@ export function RecipesClient({
     if (!selected) return;
     startUploadTransition(async () => {
       const result = await clearRecipeThumbnail(selected.id);
-      if (result.ok) {
-        setOverlayThumbnailUrl(null);
-      }
+      if (handleActionResult(result, "clearRecipeThumbnail")) return;
+      setOverlayThumbnailUrl(null);
     });
   }
 
@@ -604,13 +613,8 @@ export function RecipesClient({
                 <CardTitle className="text-base">{t("addRecipe")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={createAction} className="space-y-3">
+                <form onSubmit={onCreateRecipe} className="space-y-3">
                   <RecipeFormFields allTags={allTags} thumbnailUrl={null} />
-                  {createState.error && (
-                    <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                      {createState.error}
-                    </p>
-                  )}
                   <Button type="submit" disabled={createPending}>
                     {t("saveRecipe")}
                   </Button>
@@ -764,15 +768,16 @@ export function RecipesClient({
                       })}
                     </p>
                   </div>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={deleteLeftover}
+                    actionName="deleteLeftover"
                     message={t("confirmDeleteLeftover")}
                   >
                     <input type="hidden" name="id" value={l.id} />
                     <Button type="submit" variant="destructive" size="sm">
                       {t("deleteLeftover")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </CardContent>
               </Card>
             ))
@@ -794,7 +799,7 @@ export function RecipesClient({
             </DialogHeader>
 
             {editing ? (
-              <form action={updateAction} className="space-y-3">
+              <form onSubmit={onUpdateRecipe} className="space-y-3">
                 <input type="hidden" name="id" value={selected.id} />
                 <RecipeFormFields
                   key={`${selected.id}-${displayThumb ?? "none"}`}
@@ -804,11 +809,6 @@ export function RecipesClient({
                   thumbnailUrl={displayThumb}
                   layout="split"
                 />
-                {updateState.error && (
-                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                    {updateState.error}
-                  </p>
-                )}
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={updatePending}>
                     {t("saveChanges")}

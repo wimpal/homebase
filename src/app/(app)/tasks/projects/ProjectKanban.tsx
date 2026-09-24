@@ -28,7 +28,8 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   addWorkItem,
   deleteWorkItem,
@@ -67,11 +68,11 @@ function isWorkStatus(value: string): value is WorkItemStatus {
 function SortableCard({
   item,
   onSave,
-  onDelete,
+  onDeleteSuccess,
 }: {
   item: WorkItem;
   onSave: (formData: FormData) => void | Promise<void>;
-  onDelete: (formData: FormData) => void | Promise<void>;
+  onDeleteSuccess: (id: string) => void;
 }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
@@ -118,12 +119,18 @@ function SortableCard({
           </Button>
         </div>
       </form>
-      <ConfirmForm action={onDelete} message={t("confirmDeleteWorkItem")} className="mt-2">
+      <ConfirmFormAction
+        action={deleteWorkItem}
+        actionName="deleteWorkItem"
+        message={t("confirmDeleteWorkItem")}
+        className="mt-2"
+        onSuccess={() => onDeleteSuccess(item.id)}
+      >
         <input type="hidden" name="id" value={item.id} />
         <Button type="submit" size="sm" variant="destructive">
           {tc("delete")}
         </Button>
-      </ConfirmForm>
+      </ConfirmFormAction>
     </div>
   );
 }
@@ -132,12 +139,14 @@ function Column({
   status,
   items,
   onSave,
-  onDelete,
+  projectId,
+  onDeleteSuccess,
 }: {
   status: WorkItemStatus;
   items: WorkItem[];
   onSave: (formData: FormData) => void | Promise<void>;
-  onDelete: (formData: FormData) => void | Promise<void>;
+  projectId: string;
+  onDeleteSuccess: (id: string) => void;
 }) {
   const t = useTranslations("tasks");
   const { setNodeRef, isOver } = useDroppable({
@@ -160,7 +169,12 @@ function Column({
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <div className="flex min-h-[8rem] flex-col gap-2">
           {items.map((item) => (
-            <SortableCard key={item.id} item={item} onSave={onSave} onDelete={onDelete} />
+            <SortableCard
+              key={item.id}
+              item={item}
+              onSave={onSave}
+              onDeleteSuccess={onDeleteSuccess}
+            />
           ))}
         </div>
       </SortableContext>
@@ -177,11 +191,13 @@ export function ProjectKanban({
 }) {
   const t = useTranslations("tasks");
   const router = useRouter();
+  const { handleActionResult } = useFormError();
   const [items, setItems] = useState(initialItems);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const titleRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef(items);
+  const dragSnapshotRef = useRef<WorkItem[] | null>(null);
   itemsRef.current = items;
 
   useEffect(() => {
@@ -229,6 +245,7 @@ export function ProjectKanban({
   }
 
   function onDragStart(event: DragStartEvent) {
+    dragSnapshotRef.current = [...itemsRef.current];
     setActiveId(String(event.active.id));
   }
 
@@ -323,27 +340,38 @@ export function ProjectKanban({
         .map((i) => i.id),
     };
 
+    const rollback = dragSnapshotRef.current ?? initialItems;
+    dragSnapshotRef.current = null;
+
     startTransition(async () => {
-      await reorderWorkItems({
+      const result = await reorderWorkItems({
         projectId,
         itemId: activeItemId,
         toStatus,
         orderedIdsByStatus,
       });
+      if (handleActionResult(result, "reorderWorkItems")) {
+        setItems(rollback);
+        router.refresh();
+        return;
+      }
       router.refresh();
     });
   }
 
   async function handleAdd(formData: FormData) {
-    const created = await addWorkItem(formData);
+    const result = await addWorkItem(formData);
+    if (!result.ok) {
+      handleActionResult(result, "addWorkItem");
+      return;
+    }
+    const created = result.data!;
     setItems((prev) => [...prev, created]);
     if (titleRef.current) titleRef.current.value = "";
     router.refresh();
   }
 
-  async function handleDelete(formData: FormData) {
-    const id = formData.get("id") as string;
-    await deleteWorkItem(formData);
+  function handleDeleteSuccess(id: string) {
     setItems((prev) => prev.filter((item) => item.id !== id));
     router.refresh();
   }
@@ -352,7 +380,8 @@ export function ProjectKanban({
     const id = formData.get("id") as string;
     const title = (formData.get("title") as string)?.trim();
     const notes = ((formData.get("notes") as string) || "").trim() || null;
-    await updateWorkItem(formData);
+    const result = await updateWorkItem(formData);
+    if (handleActionResult(result, "updateWorkItem")) return;
     if (title) {
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, title, notes } : item)),
@@ -394,7 +423,8 @@ export function ProjectKanban({
               status={status}
               items={byStatus[status]}
               onSave={handleSave}
-              onDelete={handleDelete}
+              projectId={projectId}
+              onDeleteSuccess={handleDeleteSuccess}
             />
           ))}
         </div>

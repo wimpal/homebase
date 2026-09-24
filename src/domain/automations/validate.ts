@@ -89,6 +89,7 @@ function parseActiveWindow(
   if (!TIME_LOCAL_RE.test(fromRaw) || !TIME_LOCAL_RE.test(untilRaw)) {
     return DomainError.invalidInput(
       "activeFromLocal and activeUntilLocal must be HH:MM in 24-hour form (e.g. 07:00).",
+      "automation_invalid",
     );
   }
   return { activeFromLocal: fromRaw, activeUntilLocal: untilRaw };
@@ -102,11 +103,15 @@ export async function validateAutomationWrite(
 ): Promise<ValidatedAutomationWrite | DomainError> {
   const name = input.name?.trim() ?? "";
   if (!name) {
-    return DomainError.invalidInput("Automation name is required.");
+    return DomainError.invalidInput(
+      "Automation name is required.",
+      "automation_name_required",
+    );
   }
   if (name.length > NAME_MAX) {
     return DomainError.invalidInput(
       `Automation name must be at most ${NAME_MAX} characters.`,
+      "automation_invalid",
     );
   }
 

@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   createProject,
   deleteProject,
@@ -30,6 +32,8 @@ export type ProjectListItem = {
 export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
+  const router = useRouter();
+  const { handleActionResult } = useFormError();
   const [filter, setFilter] = useState<"open" | "done">("open");
 
   const visible = useMemo(() => {
@@ -37,6 +41,18 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
       filter === "done" ? p.status === "done" : p.status !== "done",
     );
   }, [projects, filter]);
+
+  async function handleCreateProject(formData: FormData) {
+    const result = await createProject(formData);
+    if (handleActionResult(result, "createProject")) return;
+    router.refresh();
+  }
+
+  async function handleUpdateStatus(formData: FormData) {
+    const result = await updateProjectStatus(formData);
+    if (handleActionResult(result, "updateProjectStatus")) return;
+    router.refresh();
+  }
 
   return (
     <div className="space-y-4">
@@ -69,7 +85,7 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
             <CardTitle className="text-base">{t("newProject")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createProject} className="space-y-3">
+            <form action={handleCreateProject} className="space-y-3">
               <div>
                 <Label>{tc("title")}</Label>
                 <Input name="title" required />
@@ -114,19 +130,21 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
                       </p>
                     )}
                   </div>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={deleteProject}
+                    actionName="deleteProject"
                     message={t("confirmDeleteProject")}
+                    onSuccess={() => router.refresh()}
                   >
                     <input type="hidden" name="id" value={project.id} />
                     <Button type="submit" variant="destructive" size="sm">
                       {tc("delete")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-2">
-                <form action={updateProjectStatus} className="flex items-center gap-2">
+                <form action={handleUpdateStatus} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={project.id} />
                   <select
                     name="status"

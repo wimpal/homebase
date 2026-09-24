@@ -10,6 +10,12 @@ import {
   markShoppingItemBought,
 } from "@/domain/shopping";
 import { isDomainError } from "@/domain/error";
+import {
+  type ActionResult,
+  failResult,
+  fromDomainError,
+  okResult,
+} from "@/lib/action-result";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -42,12 +48,17 @@ export async function getStores() {
   return prisma.store.findMany({ where: { householdId } });
 }
 
-export async function addShoppingItem(formData: FormData) {
+export async function addShoppingItem(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const listId = formData.get("listId") as string;
   const name = formData.get("name") as string;
   const quantity = parseInt((formData.get("quantity") as string) || "1", 10);
-  const tags = ((formData.get("tags") as string) || "").split(",").map((t) => t.trim()).filter(Boolean);
+  const tags = ((formData.get("tags") as string) || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
   const storeId = (formData.get("storeId") as string) || undefined;
   await assertShoppingList(householdId, listId);
   if (storeId) await assertStore(householdId, storeId);
@@ -60,12 +71,15 @@ export async function addShoppingItem(formData: FormData) {
     store_id: storeId,
   });
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
   revalidatePath("/shopping");
+  return okResult();
 }
 
-export async function markProductNeededAction(formData: FormData) {
+export async function markProductNeededAction(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const productId = formData.get("productId") as string;
   const listId = formData.get("listId") as string;
@@ -78,12 +92,15 @@ export async function markProductNeededAction(formData: FormData) {
     shopping_list_id: listId,
   });
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
   revalidatePath("/shopping");
+  return okResult();
 }
 
-export async function markItemBought(formData: FormData) {
+export async function markItemBought(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const id = formData.get("id") as string;
   const result = await markShoppingItemBought(householdId, {
@@ -92,10 +109,11 @@ export async function markItemBought(formData: FormData) {
     source: "manual",
   });
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
   revalidatePath("/shopping");
   revalidatePath("/inventory");
+  return okResult();
 }
 
 export async function createStore(formData: FormData) {
@@ -105,31 +123,40 @@ export async function createStore(formData: FormData) {
   revalidatePath("/shopping");
 }
 
-export async function removeShoppingItem(formData: FormData) {
+export async function removeShoppingItem(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   const item = await prisma.shoppingItem.findFirst({
     where: { id, shoppingList: { householdId }, checked: false },
   });
-  if (!item) throw new Error("Shopping item not found");
+  if (!item) {
+    return failResult("Shopping item not found", "shopping_item_not_found");
+  }
   await prisma.shoppingItem.delete({ where: { id } });
   revalidatePath("/shopping");
+  return okResult();
 }
 
-export async function deleteStore(formData: FormData) {
+export async function deleteStore(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   await assertStore(householdId, id);
   const inUse = await prisma.shoppingItem.count({
     where: { storeId: id, checked: false },
   });
   if (inUse > 0) {
-    throw new Error("Cannot delete a store that still has needed items.");
+    return failResult(
+      "Cannot delete a store that still has needed items.",
+      "store_has_needed_items",
+    );
   }
   await prisma.store.delete({ where: { id } });
   revalidatePath("/shopping");
+  return okResult();
 }
 
 export async function getFilteredItems(listId: string, storeId?: string) {

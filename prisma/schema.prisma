@@ -41,6 +41,7 @@ enum NotificationType {
 enum RequestType {
   GROCERY
   TASK
+  SUPPORT
 }
 
 enum RequestStatus {

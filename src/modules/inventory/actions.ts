@@ -6,6 +6,12 @@ import { assertLocation, assertProduct } from "@/core/tenancy/assertHouseholdRes
 import { listInventory } from "@/domain/inventory";
 import { canDeleteProduct, findProductByNameCi } from "@/domain/shopping";
 import { isDomainError } from "@/domain/error";
+import {
+  type ActionResult,
+  failResult,
+  fromDomainError,
+  okResult,
+} from "@/lib/action-result";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -26,7 +32,7 @@ export async function getProducts() {
   });
 }
 
-export async function createProduct(formData: FormData) {
+export async function createProduct(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const name = formData.get("name") as string;
   const category = (formData.get("category") as string) || undefined;
@@ -42,7 +48,10 @@ export async function createProduct(formData: FormData) {
 
   const existing = await findProductByNameCi(householdId, name);
   if (existing) {
-    throw new Error(`A product named "${name}" already exists.`);
+    return failResult(
+      `A product named "${name}" already exists.`,
+      "product_name_exists",
+    );
   }
 
   await prisma.product.create({
@@ -60,6 +69,7 @@ export async function createProduct(formData: FormData) {
   });
 
   revalidatePath("/inventory");
+  return okResult();
 }
 
 export async function addStock(formData: FormData) {
@@ -121,42 +131,50 @@ export async function getLowStockProducts() {
   });
 }
 
-export async function deleteProduct(formData: FormData) {
+export async function deleteProduct(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   const allowed = await canDeleteProduct(householdId, id);
   if (isDomainError(allowed)) {
-    throw new Error(allowed.message);
+    return fromDomainError(allowed);
   }
   await prisma.product.delete({ where: { id } });
   revalidatePath("/inventory");
   revalidatePath("/shopping");
+  return okResult();
 }
 
-export async function deleteLocation(formData: FormData) {
+export async function deleteLocation(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   await assertLocation(householdId, id);
   const inUse = await prisma.stockItem.count({
     where: { householdId, locationId: id },
   });
   if (inUse > 0) {
-    throw new Error("Cannot delete a location that still has stock.");
+    return failResult(
+      "Cannot delete a location that still has stock.",
+      "location_has_stock",
+    );
   }
   await prisma.location.delete({ where: { id } });
   revalidatePath("/inventory");
+  return okResult();
 }
 
-export async function removeStock(formData: FormData) {
+export async function removeStock(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.INVENTORY);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   const result = await prisma.stockItem.deleteMany({
     where: { id, householdId },
   });
-  if (result.count === 0) throw new Error("Stock item not found");
+  if (result.count === 0) {
+    return failResult("Stock item not found", "stock_not_found");
+  }
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
+  return okResult();
 }

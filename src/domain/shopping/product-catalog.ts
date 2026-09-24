@@ -39,6 +39,7 @@ export async function upsertProductByName(
     }
     return DomainError.invalidInput(
       `A product named "${trimmed}" already exists (case-insensitive).`,
+      "product_name_exists",
     );
   }
 }
@@ -56,19 +57,21 @@ export async function canDeleteProduct(
   });
 
   if (!product) {
-    return DomainError.notFound("Product not found.");
+    return DomainError.notFound("Product not found.", "product_not_found");
   }
 
   const totalStock = product.stockItems.reduce((s, i) => s + i.quantity, 0);
   if (totalStock > 0) {
     return DomainError.invalidInput(
       "Cannot delete a product with stock on hand.",
+      "product_has_stock",
     );
   }
 
   if (product.shoppingItems.length > 0) {
     return DomainError.invalidInput(
       "Cannot delete a product that is currently needed on the shopping list.",
+      "product_on_shopping_list",
     );
   }
 

@@ -8,20 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useFormError } from "@/components/ui/form-error-context";
 import type { DirigeraLight } from "@/domain/smarthome/types";
 import type { DirigeraEdgeSensor } from "@/domain/smarthome";
 import type {
   AutomationListItem,
-  AutomationWriteResult,
   DirigeraEdgeSensorsResult,
   DirigeraLightsResult,
 } from "@/modules/smarthome/actions";
@@ -439,11 +432,11 @@ export function AutomationsPanel({
   const t = useTranslations("smartHome");
   const tc = useTranslations("common");
   const format = useFormatter();
+  const { handleActionResult } = useFormError();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runMessage, setRunMessage] = useState<string | null>(null);
-  const [saveErrorDialog, setSaveErrorDialog] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const lights = dirigera.configured && !dirigera.error ? dirigera.lights : [];
@@ -458,25 +451,20 @@ export function AutomationsPanel({
     [sensors],
   );
 
-  function messageForWriteResult(result: AutomationWriteResult): string {
-    if (result.ok) return "";
-    if (result.reason === "active_window_incomplete") {
-      return t("activeWindowIncomplete");
-    }
-    return t("saveFailedGeneric");
-  }
-
   async function handleCreate(formData: FormData) {
     const result = await createAutomationAction(formData);
-    if (!result.ok) {
-      setSaveErrorDialog(messageForWriteResult(result));
-    }
+    handleActionResult(result, "createAutomation", {
+      name: String(formData.get("name") ?? ""),
+    });
   }
 
   async function handleUpdate(formData: FormData) {
     const result = await updateAutomationAction(formData);
-    if (!result.ok) {
-      setSaveErrorDialog(messageForWriteResult(result));
+    if (
+      handleActionResult(result, "updateAutomation", {
+        name: String(formData.get("name") ?? ""),
+      })
+    ) {
       return;
     }
     setEditingId(null);
@@ -562,13 +550,9 @@ export function AutomationsPanel({
     setError(null);
     setPendingId(rule.id);
     startTransition(async () => {
-      try {
-        await setAutomationEnabledAction(rule.id, enabled);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : tc("failed"));
-      } finally {
-        setPendingId(null);
-      }
+      const result = await setAutomationEnabledAction(rule.id, enabled);
+      handleActionResult(result, "setAutomationEnabled");
+      setPendingId(null);
     });
   }
 
@@ -647,25 +631,6 @@ export function AutomationsPanel({
           {runMessage}
         </p>
       ) : null}
-
-      <Dialog
-        open={saveErrorDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setSaveErrorDialog(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("saveFailedTitle")}</DialogTitle>
-            <DialogDescription>{saveErrorDialog}</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => setSaveErrorDialog(null)}>
-              {t("dialogOk")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <CollapsibleCreate
         openLabel={t("createAutomation")}
@@ -765,15 +730,16 @@ export function AutomationsPanel({
                   >
                     {editing ? tc("cancel") : tc("edit")}
                   </Button>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={deleteAutomationAction}
+                    actionName="deleteAutomation"
                     message={t("confirmDeleteAutomation")}
                   >
                     <input type="hidden" name="id" value={rule.id} />
                     <Button type="submit" variant="destructive" size="sm">
                       {tc("delete")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </div>
               </div>
 

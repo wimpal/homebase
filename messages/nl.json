@@ -688,15 +688,224 @@
     "subtitle": "Huishoudelijke chat en verzoeken",
     "groupChat": "Groepschat",
     "requests": "Verzoeken",
+    "supportReports": "Supportmeldingen",
     "sendMessage": "Bericht versturen",
     "messagePlaceholder": "Bericht aan het huishouden...",
     "newRequest": "Nieuw verzoek",
     "type": "Type",
     "grocery": "Boodschappen",
     "task": "Taak",
+    "support": "Support",
     "submitRequest": "Verzoek indienen",
     "byStatus": "Door {name} · {status}",
     "noMessages": "Nog geen berichten.",
-    "noRequests": "Nog geen verzoeken."
+    "noRequests": "Nog geen verzoeken.",
+    "noSupportReports": "Nog geen supportmeldingen."
+  },
+  "formErrors": {
+    "dialogOk": "OK",
+    "whyLabel": "Waarom:",
+    "fixLabel": "Wat te doen:",
+    "reportToAdmin": "Melden aan beheerder",
+    "reporting": "Versturen…",
+    "reportSent": "Melding naar de beheerder gestuurd.",
+    "reportFailed": "De melding kon niet worden verstuurd. Probeer het later opnieuw.",
+    "generic": {
+      "title": "Dat lukte niet",
+      "why": "De actie kon niet worden afgerond met de huidige invoer of status.",
+      "fix": "Controleer de velden en probeer opnieuw. Blijft het misgaan, meld het dan aan een beheerder."
+    },
+    "reasons": {
+      "active_window_incomplete": {
+        "title": "Automatisering kon niet worden opgeslagen",
+        "why": "Slechts één van Actief vanaf of Actief tot is ingevuld.",
+        "fix": "Vul beide tijden in, of laat beide leeg voor de hele dag."
+      },
+      "automation_name_required": {
+        "title": "Automatisering kon niet worden opgeslagen",
+        "why": "De naam van de automatisering is leeg.",
+        "fix": "Vul een naam in en sla opnieuw op."
+      },
+      "automation_invalid": {
+        "title": "Automatisering kon niet worden opgeslagen",
+        "why": "Een of meer velden van de automatisering zijn ongeldig.",
+        "fix": "Controleer trigger, lampen en actie, en probeer opnieuw."
+      },
+      "automation_not_found": {
+        "title": "Automatisering kon niet worden bijgewerkt",
+        "why": "Deze automatisering bestaat niet meer (mogelijk verwijderd).",
+        "fix": "Vernieuw de pagina en kies een bestaande automatisering."
+      },
+      "product_name_exists": {
+        "title": "Product kon niet worden toegevoegd",
+        "why": "Er bestaat al een product met die naam in dit huishouden.",
+        "fix": "Kies een andere naam, of open en bewerk het bestaande product."
+      },
+      "product_not_found": {
+        "title": "Product niet gevonden",
+        "why": "Dat product bestaat niet meer.",
+        "fix": "Vernieuw de pagina en probeer opnieuw."
+      },
+      "product_has_stock": {
+        "title": "Product kon niet worden verwijderd",
+        "why": "Dit product heeft nog voorraad.",
+        "fix": "Verwijder of verplaats eerst de voorraad, en verwijder daarna het product."
+      },
+      "product_on_shopping_list": {
+        "title": "Product kon niet worden verwijderd",
+        "why": "Dit product staat nog op een boodschappenlijst.",
+        "fix": "Haal het van de boodschappenlijst en probeer opnieuw te verwijderen."
+      },
+      "location_has_stock": {
+        "title": "Locatie kon niet worden verwijderd",
+        "why": "Op deze locatie staat nog voorraad.",
+        "fix": "Verplaats of verwijder eerst de voorraad, en verwijder daarna de locatie."
+      },
+      "stock_not_found": {
+        "title": "Voorraad kon niet worden verwijderd",
+        "why": "Die voorraadregel bestaat niet meer.",
+        "fix": "Vernieuw de voorraadpagina en probeer opnieuw indien nodig."
+      },
+      "name_required": {
+        "title": "Naam verplicht",
+        "why": "Het naamveld was leeg.",
+        "fix": "Vul een naam in en dien opnieuw in."
+      },
+      "quantity_not_positive": {
+        "title": "Ongeldige hoeveelheid",
+        "why": "De hoeveelheid moet een positief getal zijn.",
+        "fix": "Vul een hoeveelheid groter dan nul in."
+      },
+      "store_has_needed_items": {
+        "title": "Winkel kon niet worden verwijderd",
+        "why": "Deze winkel heeft nog items die nodig zijn.",
+        "fix": "Wis of herwijs die boodschappenitems, en verwijder daarna de winkel."
+      },
+      "shopping_item_not_found": {
+        "title": "Boodschappenitem kon niet worden bijgewerkt",
+        "why": "Dat boodschappenitem bestaat niet meer.",
+        "fix": "Vernieuw de boodschappenlijst en probeer opnieuw."
+      },
+      "title_required": {
+        "title": "Titel verplicht",
+        "why": "Het titelveld was leeg.",
+        "fix": "Vul een titel in en probeer opnieuw."
+      },
+      "comment_required": {
+        "title": "Opmerking verplicht",
+        "why": "Het opmerkingenveld was leeg.",
+        "fix": "Schrijf een korte opmerking en dien in."
+      },
+      "invalid_status": {
+        "title": "Ongeldige status",
+        "why": "Deze statuswaarde is niet toegestaan.",
+        "fix": "Kies een status uit de lijst en probeer opnieuw."
+      },
+      "chore_not_found": {
+        "title": "Klus kon niet worden bijgewerkt",
+        "why": "Die klus bestaat niet meer.",
+        "fix": "Vernieuw de takenpagina en probeer opnieuw."
+      },
+      "invalid_payload": {
+        "title": "Recept kon niet worden opgeslagen",
+        "why": "Sommige receptvelden ontbreken of zijn ongeldig.",
+        "fix": "Controleer titel, ingrediënten en stappen, en sla opnieuw op."
+      },
+      "recipe_too_large": {
+        "title": "Recept te groot",
+        "why": "De recepttekst overschrijdt de maximale grootte.",
+        "fix": "Verkort ingrediënten of stappen, en sla opnieuw op."
+      },
+      "title_conflict": {
+        "title": "Titel al in gebruik",
+        "why": "Er is al een recept met deze titel.",
+        "fix": "Kies een andere titel en sla opnieuw op."
+      },
+      "empty_ingredients": {
+        "title": "Ingrediënten verplicht",
+        "why": "Het recept heeft geen ingrediënten.",
+        "fix": "Voeg minstens één ingrediënt toe en sla op."
+      },
+      "invalid_timers": {
+        "title": "Ongeldige timers",
+        "why": "Een of meer timerregels konden niet worden gelezen.",
+        "fix": "Gebruik een label en minuten (bijvoorbeeld: Pasta 10), en sla op."
+      },
+      "leftover_not_found": {
+        "title": "Restje kon niet worden verwijderd",
+        "why": "Dat restje bestaat niet meer.",
+        "fix": "Vernieuw de pagina en probeer opnieuw."
+      },
+      "delivery_not_found": {
+        "title": "Bezorging kon niet worden bijgewerkt",
+        "why": "Dat pakket bestaat niet meer.",
+        "fix": "Vernieuw de bezorgpagina en probeer opnieuw."
+      },
+      "invalid_delivery_status": {
+        "title": "Ongeldige bezorgstatus",
+        "why": "Deze statuswaarde is niet toegestaan.",
+        "fix": "Kies een status uit de lijst en probeer opnieuw."
+      },
+      "file_required": {
+        "title": "Bestand verplicht",
+        "why": "Er is geen bestand geselecteerd.",
+        "fix": "Kies een bestand en upload opnieuw."
+      },
+      "project_not_found": {
+        "title": "Project kon niet worden bijgewerkt",
+        "why": "Dat project bestaat niet meer.",
+        "fix": "Ga terug naar de projectenlijst en open een bestaand project."
+      },
+      "invalid_pin": {
+        "title": "Vision-pin kon niet worden opgeslagen",
+        "why": "Het pintype of de inhoud is ongeldig.",
+        "fix": "Controleer type, tekst of afbeelding, en probeer opnieuw."
+      },
+      "invalid_pin_link": {
+        "title": "Pins konden niet worden gekoppeld",
+        "why": "Pins kunnen niet naar zichzelf of naar een ander project verwijzen.",
+        "fix": "Koppel twee pins binnen hetzelfde project."
+      },
+      "visitor_preference_not_found": {
+        "title": "Voorkeur kon niet worden verwijderd",
+        "why": "Die bezoekersvoorkeur bestaat niet meer.",
+        "fix": "Vernieuw de instellingen en probeer opnieuw."
+      },
+      "invalid_notification_type": {
+        "title": "Melding kon niet worden bijgewerkt",
+        "why": "Dit meldingstype wordt niet herkend.",
+        "fix": "Vernieuw de instellingen en schakel een type uit de lijst."
+      },
+      "invalid_visitor_preference": {
+        "title": "Voorkeur kon niet worden opgeslagen",
+        "why": "De bezoekersvoorkeurgegevens zijn ongeldig.",
+        "fix": "Controleer de velden en probeer opnieuw."
+      },
+      "account_update_failed": {
+        "title": "Account kon niet worden bijgewerkt",
+        "why": "De accountwijziging is afgewezen.",
+        "fix": "Controleer de velden (en huidig wachtwoord indien gevraagd) en probeer opnieuw."
+      },
+      "birthday_invalid": {
+        "title": "Ongeldige verjaardag",
+        "why": "De verjaardagswaarde kon niet worden gelezen.",
+        "fix": "Gebruik een geldige datum, of laat het veld leeg."
+      },
+      "email_invalid": {
+        "title": "Ongeldig e-mailadres",
+        "why": "Dit e-mailadres is niet geldig.",
+        "fix": "Vul een volledig e-mailadres in (bijvoorbeeld naam@voorbeeld.nl)."
+      },
+      "email_taken": {
+        "title": "E-mail al geregistreerd",
+        "why": "Een ander account gebruikt dit e-mailadres al.",
+        "fix": "Kies een ander e-mailadres, of log in met het bestaande account."
+      },
+      "report_rate_limited": {
+        "title": "Te veel meldingen",
+        "why": "Je hebt recent al meerdere foutmeldingen gestuurd.",
+        "fix": "Wacht een paar minuten voordat je opnieuw meldt."
+      }
+    }
   }
 }

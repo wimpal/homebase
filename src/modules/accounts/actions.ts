@@ -9,17 +9,13 @@ import {
   isDomainError,
   updateAccount,
 } from "@/domain/accounts";
+import { fromDomainError, type ActionResult } from "@/lib/action-result";
 import { isNextRedirect } from "@/lib/is-next-redirect";
 import { revalidatePath } from "next/cache";
 
-function settingsError(reason: string, message: string) {
-  const q = new URLSearchParams();
-  q.set("error", reason);
-  q.set("message", message);
-  redirect(`/settings?${q.toString()}`);
-}
-
-export async function updateAccountAction(formData: FormData) {
+export async function updateAccountAction(
+  formData: FormData,
+): Promise<ActionResult> {
   const { userId } = await requireHousehold();
 
   const name = (formData.get("name") as string) || "";
@@ -38,12 +34,10 @@ export async function updateAccountAction(formData: FormData) {
   });
 
   if (isDomainError(result)) {
-    settingsError(result.reason || "update_failed", result.message);
-    return;
+    return fromDomainError(result);
   }
 
   if (result.passwordChanged) {
-    // Session revoked via sessionVersion — sign in again with new password.
     try {
       await signIn("credentials", {
         email: result.email,
@@ -55,7 +49,6 @@ export async function updateAccountAction(formData: FormData) {
       redirect("/login?status=password_reset");
     }
   } else if (result.emailChanged) {
-    // Re-issue JWT with new email; password unchanged — need current password.
     try {
       await signIn("credentials", {
         email: result.email,
@@ -72,7 +65,9 @@ export async function updateAccountAction(formData: FormData) {
   redirect("/settings?status=account_saved");
 }
 
-export async function adminResetMemberPasswordAction(formData: FormData) {
+export async function adminResetMemberPasswordAction(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireAdmin();
   const targetUserId = (formData.get("userId") as string) || "";
   const newPassword = (formData.get("newPassword") as string) || "";
@@ -83,15 +78,16 @@ export async function adminResetMemberPasswordAction(formData: FormData) {
     newPassword,
   });
   if (isDomainError(result)) {
-    settingsError(result.reason || "reset_failed", result.message);
-    return;
+    return fromDomainError(result);
   }
 
   revalidatePath("/settings");
   redirect("/settings?status=member_password_reset");
 }
 
-export async function adminRemoveMemberAction(formData: FormData) {
+export async function adminRemoveMemberAction(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId, userId } = await requireAdmin();
   const targetUserId = (formData.get("userId") as string) || "";
 
@@ -101,8 +97,7 @@ export async function adminRemoveMemberAction(formData: FormData) {
     actorUserId: userId,
   });
   if (isDomainError(result)) {
-    settingsError(result.reason || "remove_failed", result.message);
-    return;
+    return fromDomainError(result);
   }
 
   revalidatePath("/settings");

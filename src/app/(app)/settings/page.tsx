@@ -1,33 +1,26 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ConfirmForm } from "@/components/ui/confirm-form";
 import { MODULE_REGISTRY } from "@/core/modules/registry";
 import { getEnabledModules, toggleModule } from "@/core/modules/settings";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
 import {
   ALL_NOTIFICATION_TYPES,
   getNotificationTypeSettings,
-  setNotificationTypeEnabled,
 } from "@/core/notifications/prefs";
-import {
-  deleteVisitorPreference,
-  getVisitorPreferences,
-  saveVisitorPreference,
-} from "@/modules/social/actions";
-import {
-  adminRemoveMemberAction,
-  adminResetMemberPasswordAction,
-  updateAccountAction,
-} from "@/modules/accounts/actions";
+import { getVisitorPreferences } from "@/modules/social/actions";
+import { toggleNotificationTypeAction } from "@/modules/settings/actions";
 import {
   getAccountProfile,
   isDomainError,
   listMembers,
 } from "@/domain/accounts";
-import { ModuleId, NotificationType } from "@prisma/client";
+import { ModuleId } from "@prisma/client";
+import {
+  SettingsAccountForm,
+  SettingsMemberRow,
+  SettingsVisitorPreferenceDelete,
+  SettingsVisitorPreferenceForm,
+} from "./SettingsForms";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PushNotificationSetup } from "./PushNotificationSetup";
@@ -45,22 +38,10 @@ async function handleToggleModule(formData: FormData) {
   revalidatePath("/settings");
 }
 
-async function handleToggleNotificationType(formData: FormData) {
-  "use server";
-  const { householdId } = await requireAdmin();
-  const type = formData.get("type") as NotificationType;
-  if (!ALL_NOTIFICATION_TYPES.includes(type)) {
-    throw new Error("Invalid notification type");
-  }
-  const enabled = formData.get("enabled") === "true";
-  await setNotificationTypeEnabled(householdId, type, enabled);
-  revalidatePath("/settings");
-}
-
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string; message?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   const { householdId, household, role, userId } = await requireHousehold();
   const isAdmin = role === "ADMIN";
@@ -73,7 +54,6 @@ export default async function SettingsPage({
   const members = isAdmin ? await listMembers(householdId) : [];
   const t = await getTranslations("settings");
   const tm = await getTranslations("modules");
-  const tc = await getTranslations("common");
   const localeRaw = await getLocale();
   const locale = isLocale(localeRaw) ? localeRaw : "en";
   const params = await searchParams;
@@ -109,12 +89,6 @@ export default async function SettingsPage({
           {t("members.removed")}
         </p>
       )}
-      {params.error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">
-          {params.message || params.error}
-        </p>
-      )}
-
       {profile && (
         <Card>
           <CardHeader>
@@ -122,65 +96,10 @@ export default async function SettingsPage({
             <CardDescription>{t("account.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateAccountAction} className="space-y-3">
-              <div>
-                <Label htmlFor="account-name">{t("account.displayName")}</Label>
-                <Input
-                  id="account-name"
-                  name="name"
-                  defaultValue={profile.name ?? ""}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="account-email">{tc("email")}</Label>
-                <Input
-                  id="account-email"
-                  name="email"
-                  type="email"
-                  defaultValue={profile.email}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="account-birthday">{t("account.birthday")}</Label>
-                <Input
-                  id="account-birthday"
-                  name="birthday"
-                  type="date"
-                  defaultValue={profile.birthday ?? ""}
-                />
-                <p className="mt-1 text-xs text-zinc-500">
-                  {t("account.birthdayHint")}
-                  {birthdayDisplay ? ` · ${birthdayDisplay}` : ""}
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="account-current-password">
-                  {t("account.currentPassword")}
-                </Label>
-                <Input
-                  id="account-current-password"
-                  name="currentPassword"
-                  type="password"
-                  autoComplete="current-password"
-                />
-                <p className="mt-1 text-xs text-zinc-500">
-                  {t("account.currentPasswordHint")}
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="account-new-password">{t("account.newPassword")}</Label>
-                <Input
-                  id="account-new-password"
-                  name="newPassword"
-                  type="password"
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </div>
-              <Button type="submit">{tc("save")}</Button>
-            </form>
+            <SettingsAccountForm
+              profile={profile}
+              birthdayDisplay={birthdayDisplay}
+            />
           </CardContent>
         </Card>
       )}
@@ -196,60 +115,11 @@ export default async function SettingsPage({
               <p className="text-sm text-zinc-500">{t("members.empty")}</p>
             ) : (
               members.map((m) => (
-                <div
+                <SettingsMemberRow
                   key={m.membershipId}
-                  className="space-y-3 rounded-lg border p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{m.name || m.email}</p>
-                      <p className="text-sm text-zinc-500">
-                        {m.email} · {m.role}
-                        {m.userId === userId ? ` · ${t("members.you")}` : ""}
-                      </p>
-                    </div>
-                    {m.userId !== userId &&
-                      (m.isLastAdmin ? (
-                        <p className="text-xs text-zinc-500">
-                          {t("members.cannotRemoveLastAdmin")}
-                        </p>
-                      ) : (
-                        <ConfirmForm
-                          action={adminRemoveMemberAction}
-                          message={t("members.confirmRemove")}
-                        >
-                          <input type="hidden" name="userId" value={m.userId} />
-                          <Button type="submit" variant="destructive" size="sm">
-                            {t("members.remove")}
-                          </Button>
-                        </ConfirmForm>
-                      ))}
-                  </div>
-                  {m.userId !== userId && (
-                    <form
-                      action={adminResetMemberPasswordAction}
-                      className="flex flex-wrap items-end gap-2"
-                    >
-                      <input type="hidden" name="userId" value={m.userId} />
-                      <div className="min-w-[12rem] flex-1">
-                        <Label htmlFor={`reset-${m.userId}`}>
-                          {t("members.newPassword")}
-                        </Label>
-                        <Input
-                          id={`reset-${m.userId}`}
-                          name="newPassword"
-                          type="password"
-                          minLength={8}
-                          required
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      <Button type="submit" size="sm" variant="outline">
-                        {t("members.resetPassword")}
-                      </Button>
-                    </form>
-                  )}
-                </div>
+                  member={m}
+                  currentUserId={userId}
+                />
               ))
             )}
           </CardContent>
@@ -337,7 +207,7 @@ export default async function SettingsPage({
                   <NotificationTypeToggle
                     type={type}
                     enabled={enabled}
-                    action={handleToggleNotificationType}
+                    action={toggleNotificationTypeAction}
                   />
                 ) : (
                   <Switch checked={enabled} disabled />
@@ -356,21 +226,7 @@ export default async function SettingsPage({
           <CardDescription>{t("visitor.description")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={saveVisitorPreference} className="space-y-3">
-            <div>
-              <Label>{t("visitor.visitorName")}</Label>
-              <Input name="visitorName" required />
-            </div>
-            <div>
-              <Label>{t("visitor.preferencesJson")}</Label>
-              <Input
-                name="preferences"
-                defaultValue='{"tea": "Earl Grey, no milk"}'
-                required
-              />
-            </div>
-            <Button type="submit">{tc("save")}</Button>
-          </form>
+          <SettingsVisitorPreferenceForm />
           {visitorPrefs.length > 0 && (
             <div className="mt-4 space-y-2">
               {visitorPrefs.map((vp) => (
@@ -384,15 +240,7 @@ export default async function SettingsPage({
                       {JSON.stringify(vp.preferences)}
                     </p>
                   </div>
-                  <ConfirmForm
-                    action={deleteVisitorPreference}
-                    message={t("visitor.confirmDelete")}
-                  >
-                    <input type="hidden" name="id" value={vp.id} />
-                    <Button type="submit" variant="destructive" size="sm">
-                      {tc("delete")}
-                    </Button>
-                  </ConfirmForm>
+                  <SettingsVisitorPreferenceDelete id={vp.id} />
                 </div>
               ))}
             </div>

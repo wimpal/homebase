@@ -19,7 +19,7 @@ export async function addRecipe(
     select: { id: true },
   });
   if (existing) {
-    return DomainError.conflict("Recipe title already exists");
+    return DomainError.conflict("Recipe title already exists", "title_conflict");
   }
 
   const instructions = normalized.steps.join("\n");

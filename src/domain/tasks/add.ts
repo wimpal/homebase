@@ -11,7 +11,7 @@ export async function addChore(
 ): Promise<TaskListItem | DomainError> {
   const title = input.title.trim();
   if (!title) {
-    return DomainError.invalidInput("title is required.");
+    return DomainError.invalidInput("title is required.", "title_required");
   }
 
   let intervalDays = input.intervalDays;

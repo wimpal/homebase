@@ -10,7 +10,7 @@ export async function updateRecipe(
 ): Promise<RecipeDetail | DomainError> {
   const id = (input.id ?? "").trim();
   if (!id) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "invalid_payload");
   }
 
   const normalized = normalizeRecipeInput(input);
@@ -39,7 +39,7 @@ export async function updateRecipe(
     select: { id: true },
   });
   if (duplicate) {
-    return DomainError.conflict("Recipe title already exists");
+    return DomainError.conflict("Recipe title already exists", "title_conflict");
   }
 
   const instructions = normalized.steps.join("\n");

@@ -39,14 +39,14 @@ export function normalizeTags(tags: string[] | undefined): string[] | DomainErro
     const tag = (raw ?? "").trim().toLowerCase();
     if (!tag) continue;
     if (tag.length > MAX_TAG_LEN) {
-      return DomainError.invalidInput("Recipe too large");
+      return DomainError.invalidInput("Recipe too large", "recipe_too_large");
     }
     if (seen.has(tag)) continue;
     seen.add(tag);
     out.push(tag);
   }
   if (out.length > MAX_TAGS) {
-    return DomainError.invalidInput("Recipe too large");
+    return DomainError.invalidInput("Recipe too large", "recipe_too_large");
   }
   return out;
 }
@@ -56,7 +56,7 @@ function normalizeNutrition(
 ): number | null | DomainError {
   if (value === undefined || value === null) return null;
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "invalid_payload");
   }
   return value;
 }
@@ -77,13 +77,13 @@ function normalizeIngredients(
     .filter((item) => item.name);
 
   if (mapped.length === 0) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "empty_ingredients");
   }
   if (
     mapped.length > MAX_INGREDIENTS ||
     mapped.some((item) => (item.group?.length ?? 0) > MAX_GROUP_LEN)
   ) {
-    return DomainError.invalidInput("Recipe too large");
+    return DomainError.invalidInput("Recipe too large", "recipe_too_large");
   }
   return mapped;
 }
@@ -94,20 +94,20 @@ function normalizeSteps(
 ): { steps: string[]; stepOptional: boolean[] } | DomainError {
   const cleaned = (steps ?? []).map((s) => s.trim()).filter(Boolean);
   if (cleaned.length === 0) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "invalid_payload");
   }
   if (
     cleaned.length > MAX_STEPS ||
     cleaned.some((s) => s.length > MAX_STEP_LEN)
   ) {
-    return DomainError.invalidInput("Recipe too large");
+    return DomainError.invalidInput("Recipe too large", "recipe_too_large");
   }
 
   let flags: boolean[];
   if (stepOptional === undefined || stepOptional === null) {
     flags = cleaned.map(() => false);
   } else if (stepOptional.length !== cleaned.length) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "invalid_payload");
   } else {
     flags = stepOptional.map((v) => Boolean(v));
   }
@@ -134,19 +134,19 @@ export function normalizeTimers(
 
     if (!hasLabel && !hasMinutes) continue;
     if (!hasLabel || !hasMinutes) {
-      return DomainError.invalidInput("Invalid recipe payload");
+      return DomainError.invalidInput("Invalid recipe payload", "invalid_timers");
     }
     const minutes = Math.floor(Number(minutesRaw));
     if (!Number.isFinite(minutes) || minutes < 1) {
-      return DomainError.invalidInput("Invalid recipe payload");
+      return DomainError.invalidInput("Invalid recipe payload", "invalid_timers");
     }
     if (label.length > MAX_TIMER_LABEL_LEN) {
-      return DomainError.invalidInput("Recipe too large");
+      return DomainError.invalidInput("Recipe too large", "recipe_too_large");
     }
     out.push({ label, minutes });
   }
   if (out.length > MAX_TIMERS) {
-    return DomainError.invalidInput("Recipe too large");
+    return DomainError.invalidInput("Recipe too large", "recipe_too_large");
   }
   return out;
 }
@@ -156,10 +156,10 @@ export function normalizeRecipeInput(
 ): NormalizedRecipeFields | DomainError {
   const title = (input.title ?? "").trim();
   if (!title) {
-    return DomainError.invalidInput("Invalid recipe payload");
+    return DomainError.invalidInput("Invalid recipe payload", "invalid_payload");
   }
   if (title.length > MAX_TITLE_LEN) {
-    return DomainError.invalidInput("Recipe too large");
+    return DomainError.invalidInput("Recipe too large", "recipe_too_large");
   }
 
   const ingredients = normalizeIngredients(input.ingredients);
@@ -220,7 +220,7 @@ export function parseTimerLines(
     const minutesPart = parts[1] ?? "";
     if (!label && !minutesPart) continue;
     if (!label || !minutesPart) {
-      return DomainError.invalidInput("Invalid recipe payload");
+      return DomainError.invalidInput("Invalid recipe payload", "invalid_timers");
     }
     const minutes = parseInt(minutesPart, 10);
     items.push({ label, minutes });

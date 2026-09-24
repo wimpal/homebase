@@ -14,12 +14,15 @@ export async function addShoppingListItem(
 ): Promise<ShoppingListItemWithChange | DomainError> {
   const name = input.name.trim();
   if (!name) {
-    return DomainError.invalidInput("name is required.");
+    return DomainError.invalidInput("name is required.", "name_required");
   }
 
   const quantity = input.quantity ?? 1;
   if (!Number.isFinite(quantity) || quantity < 1) {
-    return DomainError.invalidInput("quantity must be a positive number.");
+    return DomainError.invalidInput(
+      "quantity must be a positive number.",
+      "quantity_not_positive",
+    );
   }
 
   const result = await markProductNeeded(householdId, {

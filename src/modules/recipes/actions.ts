@@ -18,6 +18,12 @@ import {
   type AddRecipeToShoppingResult,
 } from "@/domain/recipes";
 import { isDomainError } from "@/domain/error";
+import {
+  type ActionResult,
+  failResult,
+  fromDomainError,
+  okResult,
+} from "@/lib/action-result";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -34,8 +40,6 @@ export async function getRecipes() {
     orderBy: { title: "asc" },
   });
 }
-
-export type RecipeFormState = { error?: string; ok?: boolean };
 
 function parseIngredientLine(line: string, forceOptional?: boolean) {
   const parts = line.split("|").map((s) => s.trim());
@@ -152,7 +156,11 @@ async function saveRecipeTimers(
   });
 }
 
-export async function createRecipe(formData: FormData) {
+function invalidRecipePayload(message = "Invalid recipe payload"): ActionResult<never> {
+  return failResult(message, "invalid_payload");
+}
+
+export async function createRecipe(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const parsed = parseRecipeForm(formData);
 
@@ -162,16 +170,16 @@ export async function createRecipe(formData: FormData) {
     (parsed.carbs_g !== undefined && Number.isNaN(parsed.carbs_g)) ||
     (parsed.fat_g !== undefined && Number.isNaN(parsed.fat_g))
   ) {
-    throw new Error("Invalid recipe payload");
+    return invalidRecipePayload();
   }
 
   const timers = parseTimerLines(parsed.timersRaw);
   if (isDomainError(timers)) {
-    throw new Error(timers.message);
+    return fromDomainError(timers);
   }
 
   if (parsed.ingredients.length === 0) {
-    throw new Error("Invalid recipe payload");
+    return failResult("Invalid recipe payload", "empty_ingredients");
   }
 
   const result = await addRecipe(householdId, {
@@ -189,31 +197,18 @@ export async function createRecipe(formData: FormData) {
   });
 
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
 
   await saveRecipeTimers(result.id, timers);
   revalidatePath("/recipes");
+  return okResult();
 }
 
-export async function createRecipeWithState(
-  _prev: RecipeFormState,
-  formData: FormData,
-): Promise<RecipeFormState> {
-  try {
-    await createRecipe(formData);
-    return { ok: true };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to create recipe",
-    };
-  }
-}
-
-export async function updateRecipeAction(formData: FormData) {
+export async function updateRecipeAction(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const id = (formData.get("id") as string) || "";
-  if (!id) throw new Error("Invalid recipe payload");
+  if (!id) return invalidRecipePayload();
   await assertRecipe(householdId, id);
 
   const parsed = parseRecipeForm(formData);
@@ -223,16 +218,16 @@ export async function updateRecipeAction(formData: FormData) {
     (parsed.carbs_g !== undefined && Number.isNaN(parsed.carbs_g)) ||
     (parsed.fat_g !== undefined && Number.isNaN(parsed.fat_g))
   ) {
-    throw new Error("Invalid recipe payload");
+    return invalidRecipePayload();
   }
 
   const timers = parseTimerLines(parsed.timersRaw);
   if (isDomainError(timers)) {
-    throw new Error(timers.message);
+    return fromDomainError(timers);
   }
 
   if (parsed.ingredients.length === 0) {
-    throw new Error("Invalid recipe payload");
+    return failResult("Invalid recipe payload", "empty_ingredients");
   }
 
   const result = await updateRecipe(householdId, {
@@ -252,34 +247,21 @@ export async function updateRecipeAction(formData: FormData) {
   });
 
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
 
   revalidatePath("/recipes");
-}
-
-export async function updateRecipeWithState(
-  _prev: RecipeFormState,
-  formData: FormData,
-): Promise<RecipeFormState> {
-  try {
-    await updateRecipeAction(formData);
-    return { ok: true };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to update recipe",
-    };
-  }
+  return okResult();
 }
 
 export async function uploadRecipeThumbnail(
   formData: FormData,
-): Promise<{ url?: string; error?: string }> {
+): Promise<ActionResult<{ url: string }>> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const id = (formData.get("id") as string) || "";
   const file = formData.get("file");
   if (!id || !(file instanceof File) || file.size === 0) {
-    return { error: "Invalid recipe payload" };
+    return failResult("Invalid recipe payload", "file_required");
   }
   await assertRecipe(householdId, id);
 
@@ -288,40 +270,35 @@ export async function uploadRecipeThumbnail(
     select: { thumbnailUrl: true },
   });
 
-  try {
-    const saved = await saveUpload(file, {
-      householdId,
-      subdir: "recipes",
-    });
-    await prisma.recipe.update({
-      where: { id },
-      data: { thumbnailUrl: saved.url },
-    });
-    if (existing?.thumbnailUrl && existing.thumbnailUrl !== saved.url) {
-      await deleteUploadByUrl(existing.thumbnailUrl);
-    }
-    revalidatePath("/recipes");
-    return { url: saved.url };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Upload failed",
-    };
+  const saved = await saveUpload(file, {
+    householdId,
+    subdir: "recipes",
+  });
+  await prisma.recipe.update({
+    where: { id },
+    data: { thumbnailUrl: saved.url },
+  });
+  if (existing?.thumbnailUrl && existing.thumbnailUrl !== saved.url) {
+    await deleteUploadByUrl(existing.thumbnailUrl);
   }
+  revalidatePath("/recipes");
+  return okResult({ url: saved.url });
 }
-
 
 export async function clearRecipeThumbnail(
   recipeId: string,
-): Promise<{ ok?: boolean; error?: string }> {
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
-  if (!recipeId) return { error: "Invalid recipe payload" };
+  if (!recipeId) return invalidRecipePayload();
   await assertRecipe(householdId, recipeId);
 
   const existing = await prisma.recipe.findFirst({
     where: { id: recipeId, householdId },
     select: { thumbnailUrl: true },
   });
-  if (!existing) return { error: "Recipe not found" };
+  if (!existing) {
+    return failResult("Recipe not found", "invalid_payload");
+  }
 
   await prisma.recipe.update({
     where: { id: recipeId },
@@ -331,13 +308,13 @@ export async function clearRecipeThumbnail(
     await deleteUploadByUrl(existing.thumbnailUrl);
   }
   revalidatePath("/recipes");
-  return { ok: true };
+  return okResult();
 }
 
 export async function addRecipeToShoppingAction(
   recipeId: string,
   includeOptional: boolean,
-): Promise<AddRecipeToShoppingResult & { error?: string }> {
+): Promise<ActionResult<AddRecipeToShoppingResult>> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   await assertRecipe(householdId, recipeId);
   const result = await addRecipeIngredientsToShopping(
@@ -346,11 +323,11 @@ export async function addRecipeToShoppingAction(
     includeOptional,
   );
   if (isDomainError(result)) {
-    return { added: [], skipped: [], errors: [], error: result.message };
+    return fromDomainError(result);
   }
   revalidatePath("/shopping");
   revalidatePath("/recipes");
-  return result;
+  return okResult(result);
 }
 
 export async function deleteRecipe(formData: FormData) {
@@ -396,15 +373,18 @@ export async function addLeftover(formData: FormData) {
   revalidatePath("/recipes");
 }
 
-export async function deleteLeftover(formData: FormData) {
+export async function deleteLeftover(formData: FormData): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return okResult();
   const result = await prisma.leftover.deleteMany({
     where: { id, householdId },
   });
-  if (result.count === 0) throw new Error("Leftover not found");
+  if (result.count === 0) {
+    return failResult("Leftover not found", "leftover_not_found");
+  }
   revalidatePath("/recipes");
+  return okResult();
 }
 
 export async function getBudgets() {

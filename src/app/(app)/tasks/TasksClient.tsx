@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  createChoreWithState,
-  completeChoreWithState,
+  createChore,
+  completeChore,
   deleteChore,
-  type ChoreFormState,
 } from "@/modules/tasks/actions";
 import type { ChoreHistoryItem } from "@/domain/tasks";
 import { Timer } from "lucide-react";
@@ -30,8 +30,6 @@ interface Chore {
   deadline: Date | null;
   completions: { durationMin: number | null }[];
 }
-
-const initialFormState: ChoreFormState = {};
 
 export function TasksClient({
   chores,
@@ -49,14 +47,9 @@ export function TasksClient({
   const [timerStartedAt, setTimerStartedAt] = useState<Record<string, string>>({});
   const [elapsed, setElapsed] = useState(0);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
-  const [createState, createAction, createPending] = useActionState(
-    createChoreWithState,
-    initialFormState,
-  );
-  const [completeState, completeAction, completePending] = useActionState(
-    completeChoreWithState,
-    initialFormState,
-  );
+  const [createPending, startCreateTransition] = useTransition();
+  const [completePending, startCompleteTransition] = useTransition();
+  const { handleActionResult } = useFormError();
 
   function formatDateTime(iso: string | null) {
     if (!iso) return tc("emDash");
@@ -82,7 +75,25 @@ export function TasksClient({
   const formatTime = (s: number) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const formError = createState.error ?? completeState.error;
+  function onCreateChore(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    startCreateTransition(async () => {
+      const result = await createChore(fd);
+      if (handleActionResult(result, "createChore")) return;
+      form.reset();
+    });
+  }
+
+  function onCompleteChore(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startCompleteTransition(async () => {
+      const result = await completeChore(fd);
+      handleActionResult(result, "completeChore");
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -90,12 +101,6 @@ export function TasksClient({
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
-
-      {formError && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {formError}
-        </p>
-      )}
 
       <Tabs defaultValue="chores">
         <TabsList>
@@ -115,7 +120,7 @@ export function TasksClient({
                 <CardTitle className="text-base">{t("addChore")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={createAction} className="grid gap-3 md:grid-cols-2">
+                <form onSubmit={onCreateChore} className="grid gap-3 md:grid-cols-2">
                   <div>
                     <Label>{tc("title")}</Label>
                     <Input name="title" required />
@@ -183,7 +188,12 @@ export function TasksClient({
                           <Timer className="h-4 w-4" />
                           {formatTime(elapsed)}
                         </span>
-                        <form action={completeAction} onSubmit={stopTimer}>
+                        <form
+                          onSubmit={(e) => {
+                            stopTimer();
+                            onCompleteChore(e);
+                          }}
+                        >
                           <input type="hidden" name="choreId" value={chore.id} />
                           <input
                             type="hidden"
@@ -211,7 +221,7 @@ export function TasksClient({
                         >
                           {t("startTimer")}
                         </Button>
-                        <form action={completeAction}>
+                        <form onSubmit={onCompleteChore}>
                           <input type="hidden" name="choreId" value={chore.id} />
                           <Button type="submit" size="sm" disabled={completePending}>
                             {tc("complete")}
@@ -219,15 +229,16 @@ export function TasksClient({
                         </form>
                       </>
                     )}
-                    <ConfirmForm
+                    <ConfirmFormAction
                       action={deleteChore}
+                      actionName="deleteChore"
                       message={t("confirmDeleteChore")}
                     >
                       <input type="hidden" name="id" value={chore.id} />
                       <Button type="submit" variant="destructive" size="sm">
                         {tc("delete")}
                       </Button>
-                    </ConfirmForm>
+                    </ConfirmFormAction>
                   </div>
                 </CardContent>
               </Card>

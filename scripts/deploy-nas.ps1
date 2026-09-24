@@ -180,13 +180,19 @@ function Get-DockerRemoteCmd {
     return (
         "set -eu && " +
         "cd '$TargetNasPath' && " +
+        "echo '==> Building and restarting HomeBase...' && " +
         "docker compose up --build -d && " +
+        "echo '==> Migrating shopping slots (T-035)...' && " +
         "docker compose exec -T worker npx tsx scripts/migrate-shopping-slots.ts && " +
+        "echo '==> Migrating project work items (T-082)...' && " +
         "docker compose exec -T worker npx tsx scripts/migrate-project-work-items.ts && " +
+        "echo '==> Applying database schema (prisma db push)...' && " +
         "docker compose exec -T worker npx prisma db push --accept-data-loss && " +
+        "echo '==> Ensuring product name index...' && " +
         "docker compose exec -T worker npx tsx scripts/ensure-product-ci-index.ts && " +
         "docker compose logs --tail=30 && " +
         "sleep 2 && " +
+        "echo '==> Health check...' && " +
         "curl -sf http://127.0.0.1:3000/health"
     )
 }

@@ -25,7 +25,8 @@ import { Expand, GripVertical, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   Dialog,
   DialogContent,
@@ -429,11 +430,11 @@ function VisionAddForms({
 
 function VisionPinList({
   pins,
-  onDelete,
+  onDeleteSuccess,
   className,
 }: {
   pins: VisionPin[];
-  onDelete: (formData: FormData) => Promise<void>;
+  onDeleteSuccess: (id: string) => void;
   className?: string;
 }) {
   const t = useTranslations("tasks");
@@ -446,12 +447,17 @@ function VisionPinList({
           <span className="min-w-0 truncate">
             {pin.kind === "text" ? pin.body : pin.body || t("imagePin")}
           </span>
-          <ConfirmForm action={onDelete} message={t("confirmDeletePin")}>
+          <ConfirmFormAction
+            action={deleteVisionPin}
+            actionName="deleteVisionPin"
+            message={t("confirmDeletePin")}
+            onSuccess={() => onDeleteSuccess(pin.id)}
+          >
             <input type="hidden" name="id" value={pin.id} />
             <Button type="submit" size="sm" variant="destructive">
               {tc("delete")}
             </Button>
-          </ConfirmForm>
+          </ConfirmFormAction>
         </li>
       ))}
     </ul>
@@ -656,6 +662,7 @@ export function ProjectVisionBoard({
 }) {
   const t = useTranslations("tasks");
   const router = useRouter();
+  const { handleActionResult, showFormError } = useFormError();
   const boardRef = useRef<HTMLDivElement>(null);
   const textFormRef = useRef<HTMLFormElement>(null);
   const imageFormRef = useRef<HTMLFormElement>(null);
@@ -826,7 +833,7 @@ export function ProjectVisionBoard({
       try {
         await resizeVisionPin({ pinId, ...next });
         router.refresh();
-      } catch {
+      } catch (err) {
         if (previous) {
           setPins((prev) =>
             prev.map((row) =>
@@ -842,6 +849,11 @@ export function ProjectVisionBoard({
             ),
           );
         }
+        showFormError({
+          actionName: "resizeVisionPin",
+          message:
+            err instanceof Error ? err.message : "Failed to resize vision pin",
+        });
       }
     });
   }
@@ -853,34 +865,36 @@ export function ProjectVisionBoard({
 
     const tempId = `temp-${a}-${b}`;
     setLinks((prev) => [...prev, { id: tempId, fromPinId: a, toPinId: b }]);
-    try {
-      const created = await createVisionPinLink({
-        pinAId: fromPinId,
-        pinBId: toPinId,
-      });
-      setLinks((prev) => {
-        const withoutTemp = prev.filter((l) => l.id !== tempId);
-        if (
-          withoutTemp.some(
-            (l) =>
-              l.fromPinId === created.fromPinId && l.toPinId === created.toPinId,
-          )
-        ) {
-          return withoutTemp;
-        }
-        return [
-          ...withoutTemp,
-          {
-            id: created.id,
-            fromPinId: created.fromPinId,
-            toPinId: created.toPinId,
-          },
-        ];
-      });
-      router.refresh();
-    } catch {
+    const result = await createVisionPinLink({
+      pinAId: fromPinId,
+      pinBId: toPinId,
+    });
+    if (!result.ok) {
+      handleActionResult(result, "createVisionPinLink");
       setLinks((prev) => prev.filter((l) => l.id !== tempId));
+      return;
     }
+    const created = result.data!;
+    setLinks((prev) => {
+      const withoutTemp = prev.filter((l) => l.id !== tempId);
+      if (
+        withoutTemp.some(
+          (l) =>
+            l.fromPinId === created.fromPinId && l.toPinId === created.toPinId,
+        )
+      ) {
+        return withoutTemp;
+      }
+      return [
+        ...withoutTemp,
+        {
+          id: created.id,
+          fromPinId: created.fromPinId,
+          toPinId: created.toPinId,
+        },
+      ];
+    });
+    router.refresh();
   }
 
   function onConnectStart(
@@ -973,19 +987,24 @@ export function ProjectVisionBoard({
     const prev = links;
     setLinks((rows) => rows.filter((l) => l.id !== linkId));
     startTransition(async () => {
-      try {
-        const fd = new FormData();
-        fd.set("id", linkId);
-        await deleteVisionPinLink(fd);
-        router.refresh();
-      } catch {
+      const fd = new FormData();
+      fd.set("id", linkId);
+      const result = await deleteVisionPinLink(fd);
+      if (handleActionResult(result, "deleteVisionPinLink")) {
         setLinks(prev);
+        return;
       }
+      router.refresh();
     });
   }
 
   async function handleAdd(formData: FormData) {
-    const created = await addVisionPin(formData);
+    const result = await addVisionPin(formData);
+    if (!result.ok) {
+      handleActionResult(result, "addVisionPin");
+      return;
+    }
+    const created = result.data!;
     setPins((prev) => [...prev, pinWithDefaults(created)]);
     const kind = formData.get("kind");
     if (kind === "text") textFormRef.current?.reset();
@@ -993,9 +1012,7 @@ export function ProjectVisionBoard({
     router.refresh();
   }
 
-  async function handleDelete(formData: FormData) {
-    const id = formData.get("id") as string;
-    await deleteVisionPin(formData);
+  function handlePinDeleted(id: string) {
     setPins((prev) => prev.filter((pin) => pin.id !== id));
     setLinks((prev) =>
       prev.filter((l) => l.fromPinId !== id && l.toPinId !== id),
@@ -1104,7 +1121,7 @@ export function ProjectVisionBoard({
                 onAdd={handleAdd}
                 compact
               />
-              <VisionPinList pins={pins} onDelete={handleDelete} />
+              <VisionPinList pins={pins} onDeleteSuccess={handlePinDeleted} />
             </div>
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">{board}</div>
           </div>
@@ -1135,7 +1152,7 @@ export function ProjectVisionBoard({
         onAdd={handleAdd}
       />
       {board}
-      <VisionPinList pins={pins} onDelete={handleDelete} />
+      <VisionPinList pins={pins} onDeleteSuccess={handlePinDeleted} />
       {lightboxDialog}
     </div>
   );

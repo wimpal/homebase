@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ export function ProjectFiles({
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
   const router = useRouter();
+  const { handleActionResult } = useFormError();
   const formRef = useRef<HTMLFormElement>(null);
   const [files, setFiles] = useState(initialFiles);
   const [preview, setPreview] = useState<ProjectFileRow | null>(null);
@@ -82,15 +84,18 @@ export function ProjectFiles({
   }
 
   async function handleUpload(formData: FormData) {
-    const created = await uploadProjectFile(formData);
+    const result = await uploadProjectFile(formData);
+    if (!result.ok) {
+      handleActionResult(result, "uploadProjectFile");
+      return;
+    }
+    const created = result.data!;
     setFiles((prev) => [created, ...prev]);
     formRef.current?.reset();
     router.refresh();
   }
 
-  async function handleDelete(formData: FormData) {
-    const id = formData.get("id") as string;
-    await deleteProjectFile(formData);
+  function handleDeleteSuccess(id: string) {
     setFiles((prev) => prev.filter((file) => file.id !== id));
     if (preview?.id === id) setPreview(null);
     router.refresh();
@@ -140,12 +145,17 @@ export function ProjectFiles({
                 <Button type="button" size="sm" variant="outline" onClick={() => openPreview(file)}>
                   {t("preview")}
                 </Button>
-                <ConfirmForm action={handleDelete} message={t("confirmDeleteFile")}>
+                <ConfirmFormAction
+                  action={deleteProjectFile}
+                  actionName="deleteProjectFile"
+                  message={t("confirmDeleteFile")}
+                  onSuccess={() => handleDeleteSuccess(file.id)}
+                >
                   <input type="hidden" name="id" value={file.id} />
                   <Button type="submit" size="sm" variant="destructive">
                     {tc("delete")}
                   </Button>
-                </ConfirmForm>
+                </ConfirmFormAction>
               </div>
             </li>
           ))}

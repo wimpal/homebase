@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { FormAction } from "@/components/ui/form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   addShoppingItem,
@@ -76,13 +77,16 @@ function CatalogPanel({
                 {p.needed ? (
                   <span className="ml-2 text-xs text-emerald-600">{t("onList")}</span>
                 ) : (
-                  <form action={markProductNeededAction}>
+                  <FormAction
+                    action={markProductNeededAction}
+                    actionName="markProductNeeded"
+                  >
                     <input type="hidden" name="listId" value={listId} />
                     <input type="hidden" name="productId" value={p.id} />
                     <Button type="submit" size="sm" variant="outline">
                       {t("need")}
                     </Button>
-                  </form>
+                  </FormAction>
                 )}
               </div>
             ))
@@ -152,7 +156,15 @@ export function ShoppingClient({
             <CardTitle className="text-base">{t("addItem")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={addShoppingItem} className="space-y-3">
+            <FormAction
+              action={addShoppingItem}
+              actionName="addShoppingItem"
+              className="space-y-3"
+              diagnosticsFromForm={(fd) => ({
+                name: String(fd.get("name") ?? ""),
+                quantity: String(fd.get("quantity") ?? ""),
+              })}
+            >
               <input type="hidden" name="listId" value={listId} />
               <div>
                 <Label>{t("item")}</Label>
@@ -208,7 +220,7 @@ export function ShoppingClient({
                 </select>
               </div>
               <Button type="submit">{t("addToList")}</Button>
-            </form>
+            </FormAction>
           </CardContent>
         </Card>
 
@@ -236,15 +248,16 @@ export function ShoppingClient({
                   >
                     {s.name}
                   </a>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={deleteStore}
+                    actionName="deleteStore"
                     message={t("confirmDeleteStore")}
                   >
                     <input type="hidden" name="id" value={s.id} />
                     <Button type="submit" variant="ghost" size="sm" className="h-6 px-1 text-xs">
                       {tc("delete")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </div>
               ))}
             </div>
@@ -267,12 +280,12 @@ export function ShoppingClient({
                   className="flex items-center justify-between gap-3 rounded-lg border p-3"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <form action={markItemBought}>
+                    <FormAction action={markItemBought} actionName="markItemBought">
                       <input type="hidden" name="id" value={item.id} />
                       <Button type="submit" size="sm" variant="outline">
                         {t("markBought")}
                       </Button>
-                    </form>
+                    </FormAction>
                     <div className="min-w-0">
                       <p className="text-sm font-medium">
                         {item.name} x{item.quantity}
@@ -297,15 +310,16 @@ export function ShoppingClient({
                       )}
                     </div>
                   </div>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={removeShoppingItem}
+                    actionName="removeShoppingItem"
                     message={t("confirmRemoveItem")}
                   >
                     <input type="hidden" name="id" value={item.id} />
                     <Button type="submit" variant="destructive" size="sm">
                       {tc("remove")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </li>
               ))}
             </ul>

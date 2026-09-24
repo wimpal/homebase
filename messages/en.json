@@ -688,15 +688,224 @@
     "subtitle": "Household chat and requests",
     "groupChat": "Group Chat",
     "requests": "Requests",
+    "supportReports": "Support reports",
     "sendMessage": "Send Message",
     "messagePlaceholder": "Message the household...",
     "newRequest": "New Request",
     "type": "Type",
     "grocery": "Grocery",
     "task": "Task",
+    "support": "Support",
     "submitRequest": "Submit Request",
     "byStatus": "By {name} · {status}",
     "noMessages": "No messages yet.",
-    "noRequests": "No requests yet."
+    "noRequests": "No requests yet.",
+    "noSupportReports": "No support reports yet."
+  },
+  "formErrors": {
+    "dialogOk": "OK",
+    "whyLabel": "Why:",
+    "fixLabel": "What to do:",
+    "reportToAdmin": "Report to admin",
+    "reporting": "Sending…",
+    "reportSent": "Report sent to admin.",
+    "reportFailed": "Could not send the report. Try again later.",
+    "generic": {
+      "title": "Couldn't complete that",
+      "why": "The action could not be completed with the current input or state.",
+      "fix": "Check the fields and try again. If it keeps happening, report it to an admin."
+    },
+    "reasons": {
+      "active_window_incomplete": {
+        "title": "Couldn't save automation",
+        "why": "Only one of Active from or Active until was filled in.",
+        "fix": "Set both times, or leave both empty for all day."
+      },
+      "automation_name_required": {
+        "title": "Couldn't save automation",
+        "why": "The automation name is empty.",
+        "fix": "Enter a name, then save again."
+      },
+      "automation_invalid": {
+        "title": "Couldn't save automation",
+        "why": "One or more automation fields are invalid.",
+        "fix": "Check trigger, lights, and action settings, then try again."
+      },
+      "automation_not_found": {
+        "title": "Couldn't update automation",
+        "why": "That automation no longer exists (it may have been deleted).",
+        "fix": "Refresh the page and pick an existing automation."
+      },
+      "product_name_exists": {
+        "title": "Couldn't add product",
+        "why": "A product with that name already exists in this household.",
+        "fix": "Choose a different name, or open and edit the existing product."
+      },
+      "product_not_found": {
+        "title": "Product not found",
+        "why": "That product no longer exists.",
+        "fix": "Refresh the page and try again."
+      },
+      "product_has_stock": {
+        "title": "Couldn't delete product",
+        "why": "This product still has stock on hand.",
+        "fix": "Remove or move the stock first, then delete the product."
+      },
+      "product_on_shopping_list": {
+        "title": "Couldn't delete product",
+        "why": "This product is still marked as needed on a shopping list.",
+        "fix": "Clear it from the shopping list, then try deleting again."
+      },
+      "location_has_stock": {
+        "title": "Couldn't delete location",
+        "why": "This location still has stock items.",
+        "fix": "Move or remove the stock first, then delete the location."
+      },
+      "stock_not_found": {
+        "title": "Couldn't remove stock",
+        "why": "That stock row is gone (already removed or refreshed).",
+        "fix": "Refresh the inventory page and try again if needed."
+      },
+      "name_required": {
+        "title": "Name required",
+        "why": "The name field was empty.",
+        "fix": "Enter a name and submit again."
+      },
+      "quantity_not_positive": {
+        "title": "Invalid quantity",
+        "why": "Quantity must be a positive number.",
+        "fix": "Enter a quantity greater than zero."
+      },
+      "store_has_needed_items": {
+        "title": "Couldn't delete store",
+        "why": "This store still has items marked as needed.",
+        "fix": "Clear or reassign those shopping items, then delete the store."
+      },
+      "shopping_item_not_found": {
+        "title": "Couldn't update shopping item",
+        "why": "That shopping item no longer exists.",
+        "fix": "Refresh the shopping list and try again."
+      },
+      "title_required": {
+        "title": "Title required",
+        "why": "The title field was empty.",
+        "fix": "Enter a title and try again."
+      },
+      "comment_required": {
+        "title": "Comment required",
+        "why": "The comment field was empty.",
+        "fix": "Write a short comment, then submit."
+      },
+      "invalid_status": {
+        "title": "Invalid status",
+        "why": "The status value is not allowed.",
+        "fix": "Pick a status from the list and try again."
+      },
+      "chore_not_found": {
+        "title": "Couldn't update chore",
+        "why": "That chore no longer exists.",
+        "fix": "Refresh the tasks page and try again."
+      },
+      "invalid_payload": {
+        "title": "Couldn't save recipe",
+        "why": "Some recipe fields are missing or invalid.",
+        "fix": "Check title, ingredients, and steps, then save again."
+      },
+      "recipe_too_large": {
+        "title": "Recipe too large",
+        "why": "The recipe text exceeds the size limit.",
+        "fix": "Shorten ingredients or steps, then save again."
+      },
+      "title_conflict": {
+        "title": "Title already used",
+        "why": "Another recipe already has this title.",
+        "fix": "Choose a different title and save again."
+      },
+      "empty_ingredients": {
+        "title": "Ingredients required",
+        "why": "The recipe has no ingredients.",
+        "fix": "Add at least one ingredient, then save."
+      },
+      "invalid_timers": {
+        "title": "Invalid timers",
+        "why": "One or more timer lines could not be parsed.",
+        "fix": "Use a clear label and minutes (for example: Pasta 10), then save."
+      },
+      "leftover_not_found": {
+        "title": "Couldn't delete leftover",
+        "why": "That leftover no longer exists.",
+        "fix": "Refresh the page and try again."
+      },
+      "delivery_not_found": {
+        "title": "Couldn't update delivery",
+        "why": "That package no longer exists.",
+        "fix": "Refresh the delivery page and try again."
+      },
+      "invalid_delivery_status": {
+        "title": "Invalid delivery status",
+        "why": "The status value is not allowed.",
+        "fix": "Pick a status from the list and try again."
+      },
+      "file_required": {
+        "title": "File required",
+        "why": "No file was selected.",
+        "fix": "Choose a file, then upload again."
+      },
+      "project_not_found": {
+        "title": "Couldn't update project",
+        "why": "That project no longer exists.",
+        "fix": "Go back to the projects list and open an existing project."
+      },
+      "invalid_pin": {
+        "title": "Couldn't save vision pin",
+        "why": "The pin kind or content is invalid.",
+        "fix": "Check the pin type and body or image, then try again."
+      },
+      "invalid_pin_link": {
+        "title": "Couldn't link pins",
+        "why": "Pins cannot link to themselves or across different projects.",
+        "fix": "Link two pins in the same project."
+      },
+      "visitor_preference_not_found": {
+        "title": "Couldn't delete preference",
+        "why": "That visitor preference no longer exists.",
+        "fix": "Refresh settings and try again."
+      },
+      "invalid_notification_type": {
+        "title": "Couldn't update notification",
+        "why": "That notification type is not recognized.",
+        "fix": "Refresh settings and toggle a listed type."
+      },
+      "invalid_visitor_preference": {
+        "title": "Couldn't save preference",
+        "why": "The visitor preference data is invalid.",
+        "fix": "Check the fields and try again."
+      },
+      "account_update_failed": {
+        "title": "Couldn't update account",
+        "why": "The account change was rejected.",
+        "fix": "Check the fields (and current password if asked) and try again."
+      },
+      "birthday_invalid": {
+        "title": "Invalid birthday",
+        "why": "The birthday value could not be read.",
+        "fix": "Use a valid date, or leave birthday empty."
+      },
+      "email_invalid": {
+        "title": "Invalid email",
+        "why": "That email address is not valid.",
+        "fix": "Enter a full email address (for example name@example.com)."
+      },
+      "email_taken": {
+        "title": "Email already registered",
+        "why": "Another account already uses that email.",
+        "fix": "Choose a different email, or sign in with the existing account."
+      },
+      "report_rate_limited": {
+        "title": "Too many reports",
+        "why": "You already sent several error reports recently.",
+        "fix": "Wait a few minutes before reporting again."
+      }
+    }
   }
 }

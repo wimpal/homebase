@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   addProjectUpdate,
   deleteProject,
@@ -42,6 +43,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
   const router = useRouter();
+  const { handleActionResult } = useFormError();
   const updateFormRef = useRef<HTMLFormElement>(null);
   const [updates, setUpdates] = useState(project.updates);
 
@@ -49,8 +51,25 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
     setUpdates(project.updates);
   }, [project.updates]);
 
+  async function handleUpdateMeta(formData: FormData) {
+    const result = await updateProjectMeta(formData);
+    if (handleActionResult(result, "updateProjectMeta")) return;
+    router.refresh();
+  }
+
+  async function handleUpdateStatus(formData: FormData) {
+    const result = await updateProjectStatus(formData);
+    if (handleActionResult(result, "updateProjectStatus")) return;
+    router.refresh();
+  }
+
   async function handleAddUpdate(formData: FormData) {
-    const created = await addProjectUpdate(formData);
+    const result = await addProjectUpdate(formData);
+    if (!result.ok) {
+      handleActionResult(result, "addProjectUpdate");
+      return;
+    }
+    const created = result.data!;
     setUpdates((prev) => [created, ...prev]);
     updateFormRef.current?.reset();
     router.refresh();
@@ -68,12 +87,17 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
             <p className="text-zinc-500">{project.description}</p>
           )}
         </div>
-        <ConfirmForm action={deleteProject} message={t("confirmDeleteProject")}>
+        <ConfirmFormAction
+          action={deleteProject}
+          actionName="deleteProject"
+          message={t("confirmDeleteProject")}
+          onSuccess={() => router.push("/tasks")}
+        >
           <input type="hidden" name="id" value={project.id} />
           <Button type="submit" variant="destructive" size="sm">
             {tc("delete")}
           </Button>
-        </ConfirmForm>
+        </ConfirmFormAction>
       </div>
 
       <Card>
@@ -81,7 +105,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
           <CardTitle className="text-base">{tc("edit")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form action={updateProjectMeta} className="space-y-3">
+          <form action={handleUpdateMeta} className="space-y-3">
             <input type="hidden" name="id" value={project.id} />
             <div>
               <Label>{tc("title")}</Label>
@@ -95,7 +119,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
               {tc("save")}
             </Button>
           </form>
-          <form action={updateProjectStatus} className="flex flex-wrap items-center gap-2">
+          <form action={handleUpdateStatus} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="id" value={project.id} />
             <select
               name="status"

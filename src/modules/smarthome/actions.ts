@@ -27,6 +27,7 @@ import {
 } from "@/domain/smarthome";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@/lib/action-result";
 
 export type DeviceForUi = {
   id: string;
@@ -371,9 +372,7 @@ export async function getDirigeraEdgeSensors(): Promise<DirigeraEdgeSensorsResul
   return { configured: true, sensors: result };
 }
 
-export type AutomationWriteResult =
-  | { ok: true }
-  | { ok: false; reason?: string; message: string };
+export type AutomationWriteResult = ActionResult;
 
 export async function createAutomationAction(
   formData: FormData,
@@ -398,13 +397,17 @@ export async function updateAutomationAction(
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const id = String(formData.get("id") ?? "");
   if (!id) {
-    return { ok: false, message: "Automation id is required." };
+    return {
+      ok: false,
+      reason: "automation_not_found",
+      message: "Automation id is required.",
+    };
   }
   const existing = await getAutomation(householdId, id);
   if (isDomainError(existing)) {
     return {
       ok: false,
-      reason: existing.reason,
+      reason: existing.reason ?? "automation_not_found",
       message: existing.message,
     };
   }
@@ -412,6 +415,7 @@ export async function updateAutomationAction(
   if (existing.triggerKind === "BUTTON") {
     return {
       ok: false,
+      reason: "automation_invalid",
       message:
         "Button automations cannot be edited in the UI yet. Disable or delete instead.",
     };
@@ -429,24 +433,39 @@ export async function updateAutomationAction(
   return { ok: true };
 }
 
-export async function setAutomationEnabledAction(id: string, enabled: boolean) {
+export async function setAutomationEnabledAction(
+  id: string,
+  enabled: boolean,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const result = await setAutomationEnabled(householdId, id, enabled);
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return {
+      ok: false,
+      reason: result.reason ?? "automation_not_found",
+      message: result.message,
+    };
   }
   revalidatePath("/smart-home");
+  return { ok: true };
 }
 
-export async function deleteAutomationAction(formData: FormData) {
+export async function deleteAutomationAction(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.SMART_HOME);
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!id) return { ok: true };
   const result = await deleteAutomation(householdId, id);
   if (isDomainError(result)) {
-    throw new Error(result.message);
+    return {
+      ok: false,
+      reason: result.reason ?? "automation_not_found",
+      message: result.message,
+    };
   }
   revalidatePath("/smart-home");
+  return { ok: true };
 }
 
 export async function applyAutomationActionUi(id: string) {
