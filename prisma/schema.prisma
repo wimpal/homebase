@@ -779,7 +779,7 @@ model Recipe {
   fatG         Float?
   thumbnailUrl String?
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime @default(now()) @updatedAt
 
   household   Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
