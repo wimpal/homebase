@@ -822,8 +822,18 @@ async function main() {
   // --- T-108 Network devices ---
   function assertNoMac(payload: unknown, label: string) {
     const text = JSON.stringify(payload);
-    if (/"mac"/i.test(text) || /mac_address/i.test(text) || /macAddress/.test(text)) {
-      fail(`${label}: MAC leak in payload: ${text}`);
+    if (
+      /"mac"/i.test(text) ||
+      /mac_address/i.test(text) ||
+      /macAddress/.test(text) ||
+      /lastSeenIp/.test(text) ||
+      /lastSeenHostname/.test(text) ||
+      /lastSeenAt/.test(text) ||
+      /last_seen_ip/.test(text) ||
+      /last_seen_hostname/.test(text) ||
+      /last_seen_at/.test(text)
+    ) {
+      fail(`${label}: identity/MAC leak in payload: ${text}`);
     }
   }
 

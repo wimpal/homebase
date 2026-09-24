@@ -887,7 +887,8 @@ model DeviceLocation {
   @@index([householdId])
 }
 
-/// Network device inventory (IT gear). Soft-retire via retiredAt. MAC deferred to T-101.
+/// Network device inventory (IT gear). Soft-retire via retiredAt.
+/// MAC / last-seen identity: UI + enroll only — never returned by MCP (ADR-021).
 model NetworkDevice {
   id          String    @id @default(cuid())
   householdId String
@@ -896,6 +897,11 @@ model NetworkDevice {
   locationId  String
   notes       String?
   retiredAt   DateTime?
+  /// Normalized aa:bb:cc:dd:ee:ff; unique per household when set. WoL allowlist is T-101.
+  macAddress       String?
+  lastSeenIp       String?
+  lastSeenHostname String?
+  lastSeenAt       DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -903,6 +909,7 @@ model NetworkDevice {
   type      NetworkDeviceType @relation(fields: [typeId], references: [id], onDelete: Restrict)
   location  DeviceLocation    @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
+  @@unique([householdId, macAddress])
   @@index([householdId, retiredAt])
   @@index([householdId, name])
   @@index([typeId])

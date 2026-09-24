@@ -23,6 +23,7 @@
     "automations:bilresa-demo": "tsx scripts/ensure-bilresa-demo-automation.ts",
     "automations:sunset-smoke": "tsx scripts/automations-sunset-smoke.ts",
     "automations:active-window-selftest": "tsx scripts/active-window-selftest.ts",
+    "network:scan-selftest": "tsx scripts/network-scan-selftest.ts",
     "household:geo-backfill": "tsx scripts/backfill-household-geo.ts",
     "recipes:backfill-steps": "tsx scripts/backfill-recipe-steps.ts",
     "household:id": "tsx scripts/print-household-id.ts",

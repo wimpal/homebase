@@ -30,6 +30,10 @@ export type AddNetworkDeviceInput = {
   type: string;
   location: string;
   notes?: string;
+  /** UI / enroll-from-scan only — never exposed on MCP. */
+  mac_address?: string;
+  last_seen_ip?: string;
+  last_seen_hostname?: string;
 };
 
 export type UpdateNetworkDeviceInput = {
@@ -38,4 +42,14 @@ export type UpdateNetworkDeviceInput = {
   type?: string;
   location?: string;
   notes?: string;
+  mac_address?: string | null;
+  last_seen_ip?: string | null;
+  last_seen_hostname?: string | null;
+};
+
+/** ADMIN UI list row — identity fields never go through MCP mappers. */
+export type NetworkDeviceUiRow = NetworkDeviceDetail & {
+  mac_address?: string;
+  last_seen_ip?: string;
+  last_seen_hostname?: string;
 };

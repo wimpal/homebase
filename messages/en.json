@@ -766,7 +766,20 @@
     "locationName": "Location name",
     "rename": "Rename",
     "reserved": "Reserved",
-    "system": "System"
+    "system": "System",
+    "scanTitle": "Scan network",
+    "scanHint": "Finds live hosts on HOME_NETWORK_SCAN_CIDR. Nothing is enrolled until you confirm.",
+    "scanStart": "Scan network",
+    "scanCancel": "Cancel scan",
+    "scanProgress": "Scanning… {done}/{total}",
+    "scanDone": "Found {count} host(s). Enroll new ones below.",
+    "scanFailed": "Scan failed.",
+    "scanCancelled": "Scan cancelled.",
+    "scanDismiss": "Dismiss",
+    "scanStatus_new": "New",
+    "scanStatus_enrolled": "Enrolled",
+    "scanStatus_ambiguous": "Ambiguous",
+    "scanStatus_retired": "Retired"
   },
   "messages": {
     "title": "Messages",

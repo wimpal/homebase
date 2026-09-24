@@ -1,6 +1,11 @@
 import { prisma } from "@/core/db";
-import { DomainError } from "@/domain/error";
+import { DomainError, isDomainError } from "@/domain/error";
 import { ensureNetworkCatalogues } from "./ensure-catalogues";
+import {
+  normalizeHostname,
+  normalizeIp,
+  normalizeMacAddress,
+} from "./identity";
 import { toNetworkDeviceDetail } from "./map";
 import { assertHomeNetworkEnabled } from "./module-gate";
 import {
@@ -35,6 +40,10 @@ export async function updateNetworkDevice(
     typeId?: string;
     locationId?: string;
     notes?: string | null;
+    macAddress?: string | null;
+    lastSeenIp?: string | null;
+    lastSeenHostname?: string | null;
+    lastSeenAt?: Date | null;
   } = {};
 
   if (input.name !== undefined) {
@@ -62,6 +71,37 @@ export async function updateNetworkDevice(
 
   if (input.notes !== undefined) {
     data.notes = input.notes.trim() || null;
+  }
+
+  let touchSeen = false;
+  if (input.mac_address !== undefined) {
+    const mac = normalizeMacAddress(input.mac_address);
+    if (isDomainError(mac)) return mac;
+    if (mac) {
+      const clash = await prisma.networkDevice.findFirst({
+        where: { householdId, macAddress: mac, id: { not: id } },
+        select: { id: true },
+      });
+      if (clash) {
+        return DomainError.conflict(
+          "A device with this MAC already exists.",
+          "mac_conflict",
+        );
+      }
+    }
+    data.macAddress = mac;
+    touchSeen = true;
+  }
+  if (input.last_seen_ip !== undefined) {
+    data.lastSeenIp = normalizeIp(input.last_seen_ip);
+    touchSeen = true;
+  }
+  if (input.last_seen_hostname !== undefined) {
+    data.lastSeenHostname = normalizeHostname(input.last_seen_hostname);
+    touchSeen = true;
+  }
+  if (touchSeen) {
+    data.lastSeenAt = new Date();
   }
 
   const row = await prisma.networkDevice.update({

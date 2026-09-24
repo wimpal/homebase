@@ -17,7 +17,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg iputils-ping iproute2
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

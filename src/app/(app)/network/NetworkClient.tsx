@@ -24,11 +24,12 @@ import {
 import type {
   CatalogueLocation,
   CatalogueType,
-  NetworkDeviceDetail,
+  NetworkDeviceUiRow,
 } from "@/domain/network";
+import { NetworkScanPanel } from "./NetworkScanPanel";
 
 type Props = {
-  devices: NetworkDeviceDetail[];
+  devices: NetworkDeviceUiRow[];
   types: CatalogueType[];
   locations: CatalogueLocation[];
   isAdmin: boolean;
@@ -63,6 +64,8 @@ export function NetworkClient({
       {!isAdmin && (
         <p className="text-sm text-zinc-500">{t("adminOnly")}</p>
       )}
+
+      {isAdmin && <NetworkScanPanel types={types} locations={locations} />}
 
       {isAdmin && (
         <CollapsibleCreate

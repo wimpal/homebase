@@ -1,6 +1,11 @@
 import { prisma } from "@/core/db";
-import { DomainError } from "@/domain/error";
+import { DomainError, isDomainError } from "@/domain/error";
 import { ensureNetworkCatalogues } from "./ensure-catalogues";
+import {
+  normalizeHostname,
+  normalizeIp,
+  normalizeMacAddress,
+} from "./identity";
 import { toNetworkDeviceDetail } from "./map";
 import { assertHomeNetworkEnabled } from "./module-gate";
 import {
@@ -31,6 +36,26 @@ export async function addNetworkDevice(
   const location = await resolveLocation(householdId, input.location);
   if (location instanceof DomainError) return location;
 
+  const mac = normalizeMacAddress(input.mac_address);
+  if (isDomainError(mac)) return mac;
+  if (mac) {
+    const clash = await prisma.networkDevice.findFirst({
+      where: { householdId, macAddress: mac },
+      select: { id: true },
+    });
+    if (clash) {
+      return DomainError.conflict(
+        "A device with this MAC already exists.",
+        "mac_conflict",
+      );
+    }
+  }
+
+  const lastSeenIp = normalizeIp(input.last_seen_ip);
+  const lastSeenHostname = normalizeHostname(input.last_seen_hostname);
+  const hasSeen =
+    lastSeenIp != null || lastSeenHostname != null || mac != null;
+
   const name = await allocateUniqueName(householdId, nameRaw);
   const notes = input.notes?.trim() || null;
 
@@ -41,6 +66,10 @@ export async function addNetworkDevice(
       typeId: type.id,
       locationId: location.id,
       notes,
+      macAddress: mac,
+      lastSeenIp,
+      lastSeenHostname,
+      lastSeenAt: hasSeen ? new Date() : null,
     },
     include: { type: true, location: true },
   });

@@ -6,20 +6,26 @@ import {
   addDeviceLocation,
   addNetworkDevice,
   addNetworkDeviceType,
+  cancelScanJob,
   getNetworkDevice,
+  getScanJob,
   listDeviceLocations,
   listNetworkDeviceTypes,
-  listNetworkDevices,
+  listNetworkDevicesForUi,
   renameDeviceLocation,
   restoreNetworkDevice,
   retireNetworkDevice,
+  startNetworkScan,
   updateNetworkDevice,
   type CatalogueLocation,
   type CatalogueType,
   type NetworkDeviceDetail,
+  type NetworkDeviceUiRow,
+  type ScanJobSnapshot,
 } from "@/domain/network";
 import { isDomainError } from "@/domain/error";
 import {
+  failResult,
   fromDomainError,
   okResult,
   type ActionResult,
@@ -34,7 +40,7 @@ async function adminNetwork() {
 }
 
 export async function getNetworkPageData(includeRetired: boolean): Promise<{
-  devices: NetworkDeviceDetail[];
+  devices: NetworkDeviceUiRow[];
   types: CatalogueType[];
   locations: CatalogueLocation[];
 }> {
@@ -42,7 +48,7 @@ export async function getNetworkPageData(includeRetired: boolean): Promise<{
   await requireModule(householdId, ModuleId.HOME_NETWORK);
 
   const [devicesResult, types, locations] = await Promise.all([
-    listNetworkDevices(householdId, { include_retired: includeRetired }),
+    listNetworkDevicesForUi(householdId, { include_retired: includeRetired }),
     listNetworkDeviceTypes(householdId),
     listDeviceLocations(householdId),
   ]);
@@ -149,7 +155,6 @@ export async function renameDeviceLocationAction(
   return okResult();
 }
 
-/** Used by page for optional detail peek — keep household-scoped. */
 export async function getNetworkDeviceAction(
   id: string,
 ): Promise<NetworkDeviceDetail | null> {
@@ -158,4 +163,63 @@ export async function getNetworkDeviceAction(
   const result = await getNetworkDevice(householdId, id);
   if (isDomainError(result)) return null;
   return result;
+}
+
+// --- T-110 LAN scan ---
+
+export async function startNetworkScanAction(): Promise<
+  ActionResult<ScanJobSnapshot>
+> {
+  const { householdId } = await adminNetwork();
+  const result = await startNetworkScan(householdId);
+  if (isDomainError(result)) return fromDomainError(result);
+  return okResult(result);
+}
+
+export async function getNetworkScanStatusAction(
+  jobId: string,
+): Promise<ActionResult<ScanJobSnapshot>> {
+  const { householdId } = await adminNetwork();
+  const snap = getScanJob(jobId, householdId);
+  if (!snap) {
+    return failResult("Scan job not found.", "scan_job_not_found");
+  }
+  return okResult(snap);
+}
+
+export async function cancelNetworkScanAction(
+  jobId: string,
+): Promise<ActionResult<ScanJobSnapshot>> {
+  const { householdId } = await adminNetwork();
+  const snap = cancelScanJob(jobId, householdId);
+  if (!snap) {
+    return failResult("Scan job not found.", "scan_job_not_found");
+  }
+  return okResult(snap);
+}
+
+export async function enrollFromScanCandidateAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await adminNetwork();
+  const ip = String(formData.get("ip") ?? "").trim();
+  const mac = String(formData.get("mac") ?? "").trim() || undefined;
+  const hostname =
+    String(formData.get("hostname") ?? "").trim() || undefined;
+  const type = String(formData.get("type") ?? "");
+  const location = String(formData.get("location") ?? "");
+  const nameRaw = String(formData.get("name") ?? "").trim();
+  const name = (nameRaw || hostname || ip).slice(0, 200);
+
+  const result = await addNetworkDevice(householdId, {
+    name,
+    type,
+    location,
+    mac_address: mac,
+    last_seen_ip: ip || undefined,
+    last_seen_hostname: hostname,
+  });
+  if (isDomainError(result)) return fromDomainError(result);
+  revalidatePath("/network");
+  return okResult();
 }

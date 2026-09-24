@@ -766,7 +766,20 @@
     "locationName": "Locatienaam",
     "rename": "Hernoemen",
     "reserved": "Gereserveerd",
-    "system": "Systeem"
+    "system": "Systeem",
+    "scanTitle": "Netwerk scannen",
+    "scanHint": "Zoekt actieve hosts op HOME_NETWORK_SCAN_CIDR. Niets wordt toegevoegd zonder bevestiging.",
+    "scanStart": "Netwerk scannen",
+    "scanCancel": "Scan annuleren",
+    "scanProgress": "Scannen… {done}/{total}",
+    "scanDone": "{count} host(s) gevonden. Voeg nieuwe hieronder toe.",
+    "scanFailed": "Scan mislukt.",
+    "scanCancelled": "Scan geannuleerd.",
+    "scanDismiss": "Negeren",
+    "scanStatus_new": "Nieuw",
+    "scanStatus_enrolled": "Geregistreerd",
+    "scanStatus_ambiguous": "Twijfelachtig",
+    "scanStatus_retired": "Uitgeschakeld"
   },
   "messages": {
     "title": "Berichten",
