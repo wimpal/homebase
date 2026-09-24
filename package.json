@@ -24,6 +24,7 @@
     "automations:sunset-smoke": "tsx scripts/automations-sunset-smoke.ts",
     "automations:active-window-selftest": "tsx scripts/active-window-selftest.ts",
     "household:geo-backfill": "tsx scripts/backfill-household-geo.ts",
+    "recipes:backfill-steps": "tsx scripts/backfill-recipe-steps.ts",
     "household:id": "tsx scripts/print-household-id.ts",
     "household:list": "tsx scripts/list-households.ts",
     "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-preflight.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1 -SkipPreflight",

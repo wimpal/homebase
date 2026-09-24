@@ -772,10 +772,18 @@ model Recipe {
   title        String
   instructions String
   servings     Int      @default(4)
+  tags         String[] @default([])
+  calories     Float?
+  proteinG     Float?
+  carbsG       Float?
+  fatG         Float?
+  thumbnailUrl String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   household   Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
+  steps       RecipeStep[]
   timers      RecipeTimer[]
   leftovers   Leftover[]
 }
@@ -787,9 +795,22 @@ model RecipeIngredient {
   name      String
   quantity  String
   group     String?
+  optional  Boolean @default(false)
 
   recipe  Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model RecipeStep {
+  id        String  @id @default(cuid())
+  recipeId  String
+  text      String
+  optional  Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId, sortOrder])
 }
 
 model RecipeTimer {

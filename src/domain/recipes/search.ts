@@ -1,38 +1,11 @@
 import { prisma } from "@/core/db";
 import type { Prisma } from "@prisma/client";
-import type { RecipeIngredientItem, RecipeSummary, SearchRecipesInput } from "./types";
+import { toRecipeSummary } from "./map";
+import { normalizeTags } from "./validate";
+import type { RecipeSummary, SearchRecipesInput } from "./types";
+import { DomainError } from "@/domain/error";
 
 const MAX_RESULTS = 25;
-
-type RecipeWithIngredients = Prisma.RecipeGetPayload<{
-  include: { ingredients: true };
-}>;
-
-function toIngredientItems(
-  ingredients: RecipeWithIngredients["ingredients"],
-): RecipeIngredientItem[] {
-  return ingredients.map((item) => {
-    const mapped: RecipeIngredientItem = {
-      name: item.name,
-      quantity: item.quantity,
-    };
-    const group = item.group?.trim();
-    if (group) {
-      mapped.group = group;
-    }
-    return mapped;
-  });
-}
-
-function toRecipeSummary(recipe: RecipeWithIngredients): RecipeSummary {
-  return {
-    id: recipe.id,
-    name: recipe.title,
-    tags: [],
-    ingredients: toIngredientItems(recipe.ingredients),
-    servings: recipe.servings,
-  };
-}
 
 function buildIngredientFilters(
   ingredients: string[],
@@ -53,22 +26,44 @@ export async function searchRecipes(
   householdId: string,
   input: SearchRecipesInput = {},
 ): Promise<RecipeSummary[]> {
-  const where: Prisma.RecipeWhereInput = { householdId };
+  const andFilters: Prisma.RecipeWhereInput[] = [];
 
-  if (input.query?.trim()) {
-    where.title = { contains: input.query.trim(), mode: "insensitive" };
+  const query = input.query?.trim();
+  if (query) {
+    const normalizedQuery = query.toLowerCase();
+    andFilters.push({
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { tags: { has: normalizedQuery } },
+      ],
+    });
   }
 
-  const ingredientFilters = input.ingredients
-    ? buildIngredientFilters(input.ingredients)
-    : [];
-  if (ingredientFilters.length > 0) {
-    where.AND = ingredientFilters;
+  if (input.ingredients?.length) {
+    andFilters.push(...buildIngredientFilters(input.ingredients));
   }
+
+  if (input.tags?.length) {
+    const tags = normalizeTags(input.tags);
+    if (tags instanceof DomainError) {
+      return [];
+    }
+    if (tags.length > 0) {
+      andFilters.push({ tags: { hasEvery: tags } });
+    }
+  }
+
+  const where: Prisma.RecipeWhereInput = {
+    householdId,
+    ...(andFilters.length > 0 ? { AND: andFilters } : {}),
+  };
 
   const recipes = await prisma.recipe.findMany({
     where,
-    include: { ingredients: true },
+    include: {
+      ingredients: true,
+      steps: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: { title: "asc" },
     take: MAX_RESULTS,
   });

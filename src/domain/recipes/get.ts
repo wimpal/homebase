@@ -9,7 +9,10 @@ export async function getRecipe(
 ): Promise<RecipeDetail | DomainError> {
   const recipe = await prisma.recipe.findFirst({
     where: { id, householdId },
-    include: { ingredients: true },
+    include: {
+      ingredients: true,
+      steps: { orderBy: { sortOrder: "asc" } },
+    },
   });
 
   if (!recipe) {

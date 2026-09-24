@@ -2,50 +2,19 @@ import { prisma } from "@/core/db";
 import { DomainError } from "@/domain/error";
 import { toRecipeDetail } from "./map";
 import type { AddRecipeInput, RecipeDetail } from "./types";
-
-const MAX_TITLE_LEN = 200;
-const MAX_INGREDIENTS = 50;
-const MAX_STEPS = 100;
-const MAX_STEP_LEN = 2000;
-const MAX_GROUP_LEN = 40;
+import { normalizeRecipeInput } from "./validate";
 
 export async function addRecipe(
   householdId: string,
   input: AddRecipeInput,
 ): Promise<RecipeDetail | DomainError> {
-  const title = (input.title ?? "").trim();
-  const steps = (input.steps ?? [])
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const ingredients = (input.ingredients ?? [])
-    .map((item) => {
-      const groupRaw = (item.group ?? "").trim();
-      return {
-        name: (item.name ?? "").trim(),
-        quantity: (item.quantity ?? "").trim() || "1",
-        group: groupRaw || null,
-      };
-    })
-    .filter((item) => item.name);
-
-  if (!title || steps.length === 0 || ingredients.length === 0) {
-    return DomainError.invalidInput("Invalid recipe payload");
-  }
-
-  if (
-    title.length > MAX_TITLE_LEN ||
-    ingredients.length > MAX_INGREDIENTS ||
-    steps.length > MAX_STEPS ||
-    steps.some((s) => s.length > MAX_STEP_LEN) ||
-    ingredients.some((item) => (item.group?.length ?? 0) > MAX_GROUP_LEN)
-  ) {
-    return DomainError.invalidInput("Recipe too large");
-  }
+  const normalized = normalizeRecipeInput(input);
+  if (normalized instanceof DomainError) return normalized;
 
   const existing = await prisma.recipe.findFirst({
     where: {
       householdId,
-      title: { equals: title, mode: "insensitive" },
+      title: { equals: normalized.title, mode: "insensitive" },
     },
     select: { id: true },
   });
@@ -53,29 +22,40 @@ export async function addRecipe(
     return DomainError.conflict("Recipe title already exists");
   }
 
-  let servings = input.servings ?? 4;
-  if (!Number.isFinite(servings) || servings < 1) {
-    servings = 4;
-  }
-  servings = Math.floor(servings);
-
-  const instructions = steps.join("\n");
+  const instructions = normalized.steps.join("\n");
 
   const recipe = await prisma.recipe.create({
     data: {
       householdId,
-      title,
+      title: normalized.title,
       instructions,
-      servings,
+      servings: normalized.servings,
+      tags: normalized.tags,
+      calories: normalized.calories,
+      proteinG: normalized.proteinG,
+      carbsG: normalized.carbsG,
+      fatG: normalized.fatG,
+      thumbnailUrl: normalized.thumbnailUrl,
       ingredients: {
-        create: ingredients.map((item) => ({
+        create: normalized.ingredients.map((item) => ({
           name: item.name,
           quantity: item.quantity,
           group: item.group,
+          optional: item.optional,
+        })),
+      },
+      steps: {
+        create: normalized.steps.map((text, index) => ({
+          text,
+          optional: normalized.stepOptional[index] ?? false,
+          sortOrder: index,
         })),
       },
     },
-    include: { ingredients: true },
+    include: {
+      ingredients: true,
+      steps: { orderBy: { sortOrder: "asc" } },
+    },
   });
 
   // source_url accepted by callers but not stored in v1

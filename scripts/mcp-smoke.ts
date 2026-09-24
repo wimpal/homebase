@@ -253,6 +253,7 @@ async function main() {
     "homebase.recipes.add",
     "homebase.recipes.get",
     "homebase.recipes.search",
+    "homebase.recipes.update",
     "homebase.shopping_list.add_item",
     "homebase.shopping_list.complete_item",
     "homebase.shopping_list.list",
@@ -260,10 +261,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 17 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 18 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 17 homebase tools");
+  ok("tools/list returns exactly 18 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -678,6 +679,140 @@ async function main() {
     }
   }
   ok("recipes.add → get ingredient group round-trip");
+
+  // T-106: tags, calories, optional ingredient, search by tag, update
+  const taggedTitle = `Smoke Add ${Date.now()}-tags`;
+  const taggedAddResult = await callTool(30, "homebase.recipes.add", {
+    title: taggedTitle,
+    servings: 2,
+    ingredients: [
+      { name: "pasta", quantity: "200 g" },
+      { name: "chili flakes", quantity: "1 tsp", optional: true },
+    ],
+    steps: ["Boil pasta.", "Toss with oil.", "Add chili if desired."],
+    step_optional: [false, false, true],
+    tags: ["Lunch", " quick "],
+    calories: 450,
+    protein_g: 12,
+  });
+  if (taggedAddResult.isError) {
+    fail(
+      `homebase.recipes.add with tags tool error: ${taggedAddResult.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const taggedAdded = parseToolPayload(taggedAddResult) as {
+    id: string;
+    name: string;
+    tags: string[];
+    calories?: number;
+    protein_g?: number;
+    ingredients: { name: string; optional?: boolean }[];
+    step_optional?: boolean[];
+  };
+  if (
+    !Array.isArray(taggedAdded.tags) ||
+    !taggedAdded.tags.includes("lunch") ||
+    !taggedAdded.tags.includes("quick")
+  ) {
+    fail(`expected normalized tags, got ${JSON.stringify(taggedAdded.tags)}`);
+  }
+  if (taggedAdded.calories !== 450 || taggedAdded.protein_g !== 12) {
+    fail(`expected nutrition on add return: ${JSON.stringify(taggedAdded)}`);
+  }
+  const optionalIng = taggedAdded.ingredients.find(
+    (i) => i.name === "chili flakes",
+  );
+  if (!optionalIng?.optional) {
+    fail(`expected optional chili flakes: ${JSON.stringify(taggedAdded.ingredients)}`);
+  }
+  if (
+    !Array.isArray(taggedAdded.step_optional) ||
+    taggedAdded.step_optional[2] !== true
+  ) {
+    fail(`expected step_optional[2]=true: ${JSON.stringify(taggedAdded.step_optional)}`);
+  }
+  ok("recipes.add with tags, calories, optional ingredient/step");
+
+  const tagSearchResult = await callTool(31, "homebase.recipes.search", {
+    tags: ["lunch"],
+  });
+  if (tagSearchResult.isError) {
+    fail("homebase.recipes.search by tag tool error");
+  }
+  const tagHits = parseToolPayload(tagSearchResult) as {
+    id: string;
+    tags: string[];
+    calories?: number;
+  }[];
+  if (!tagHits.some((r) => r.id === taggedAdded.id)) {
+    fail(`search by tag lunch did not find ${taggedTitle}`);
+  }
+  const tagHit = tagHits.find((r) => r.id === taggedAdded.id)!;
+  if (tagHit.calories !== 450) {
+    fail(`search summary missing calories: ${JSON.stringify(tagHit)}`);
+  }
+  ok("recipes.search by tag returns card fields");
+
+  const updateResult = await callTool(32, "homebase.recipes.update", {
+    id: taggedAdded.id,
+    title: taggedTitle,
+    servings: 3,
+    ingredients: [
+      { name: "pasta", quantity: "250 g" },
+      { name: "chili flakes", quantity: "1 tsp", optional: true },
+      { name: "parmesan", quantity: "30 g" },
+    ],
+    steps: ["Boil pasta.", "Toss with oil and cheese."],
+    tags: ["lunch", "dinner"],
+    calories: 500,
+    timers: [{ label: "boil", minutes: 10 }],
+  });
+  if (updateResult.isError) {
+    fail(
+      `homebase.recipes.update tool error: ${updateResult.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const updated = parseToolPayload(updateResult) as {
+    id: string;
+    servings: number;
+    tags: string[];
+    calories?: number;
+    ingredients: { name: string }[];
+    steps: string[];
+  };
+  if (
+    updated.servings !== 3 ||
+    updated.calories !== 500 ||
+    !updated.tags.includes("dinner") ||
+    updated.ingredients.length !== 3 ||
+    updated.steps.length !== 2
+  ) {
+    fail(`recipes.update unexpected payload: ${JSON.stringify(updated)}`);
+  }
+  ok("homebase.recipes.update full-replace");
+
+  const updateGet = await callTool(33, "homebase.recipes.get", {
+    id: taggedAdded.id,
+  });
+  if (updateGet.isError) {
+    fail("homebase.recipes.get after update tool error");
+  }
+  const gotUpdated = parseToolPayload(updateGet) as {
+    servings: number;
+    tags: string[];
+    calories?: number;
+    protein_g?: number;
+  };
+  if (
+    gotUpdated.servings !== 3 ||
+    gotUpdated.calories !== 500 ||
+    gotUpdated.protein_g != null
+  ) {
+    fail(
+      `get after update: cleared protein_g expected, got ${JSON.stringify(gotUpdated)}`,
+    );
+  }
+  ok("recipes.update → get (nutrition omit clears)");
 
   await runLightsSmoke(callTool);
 }

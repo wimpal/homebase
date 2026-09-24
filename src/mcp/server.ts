@@ -3,7 +3,7 @@ import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
 import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
-import { addRecipe, getRecipe, searchRecipes } from "@/domain/recipes";
+import { addRecipe, getRecipe, searchRecipes, updateRecipe } from "@/domain/recipes";
 import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
 import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from "@/domain/smarthome";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
@@ -294,13 +294,22 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.recipes.search",
     {
       description:
-        'Find recipes by name or ingredient. Use for meal planning and "what can I make with what\'s in the house" — combine with homebase.inventory.list.',
+        'Find recipes by name, ingredient or tag. Use for meal planning and "what can I make with what\'s in the house" — combine with homebase.inventory.list.',
       inputSchema: {
-        query: z.string().optional().describe("Search recipe title"),
+        query: z
+          .string()
+          .optional()
+          .describe("Match title (contains) or an exact normalized tag"),
         ingredients: z
           .array(z.string())
           .optional()
           .describe("Only return recipes using all of these ingredients"),
+        tags: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Exact normalized tags; recipe must include every listed tag (AND)",
+          ),
       },
     },
     async (input) => {
@@ -312,7 +321,8 @@ export function createMcpServer(householdId: string): McpServer {
   server.registerTool(
     "homebase.recipes.get",
     {
-      description: "Get a full recipe including steps and quantities.",
+      description:
+        "Get a full recipe including steps, quantities, tags, and optional nutrition.",
       inputSchema: {
         id: z.string().describe("Recipe id"),
       },
@@ -326,11 +336,27 @@ export function createMcpServer(householdId: string): McpServer {
     },
   );
 
+  const recipeIngredientSchema = z.object({
+    name: z.string(),
+    quantity: z.string().describe("Free-text amount, e.g. 250 g"),
+    group: z
+      .string()
+      .max(40)
+      .optional()
+      .describe(
+        "Optional subsection key (dressing, marinade, sauce, …); omit = main list",
+      ),
+    optional: z
+      .boolean()
+      .optional()
+      .describe("When true, ingredient is optional (default false)"),
+  });
+
   server.registerTool(
     "homebase.recipes.add",
     {
       description:
-        'Save a structured recipe into Homebase after the user confirms extracted fields. Callers must send steps[] (one plain sentence per element, no leading "1."). Does not fetch URLs or scrape HTML — Mimir fetches/extracts first. Not for edit or delete.',
+        'Save a structured recipe into Homebase after the user confirms extracted fields. Callers must send steps[] (one plain sentence per element, no leading "1."). Does not fetch URLs or scrape HTML — Mimir fetches/extracts first. Not for edit or delete (use homebase.recipes.update).',
       inputSchema: {
         title: z.string().describe("Recipe title"),
         servings: z
@@ -339,25 +365,29 @@ export function createMcpServer(householdId: string): McpServer {
           .optional()
           .describe("Optional serving count; defaults to 4"),
         ingredients: z
-          .array(
-            z.object({
-              name: z.string(),
-              quantity: z.string().describe("Free-text amount, e.g. 250 g"),
-              group: z
-                .string()
-                .max(40)
-                .optional()
-                .describe(
-                  "Optional subsection key (dressing, marinade, sauce, …); omit = main list",
-                ),
-            }),
-          )
+          .array(recipeIngredientSchema)
           .describe("At least one ingredient"),
         steps: z
           .array(z.string())
           .describe(
             "Ordered cook steps; required, ≥1. No leading step numbers inside each string.",
           ),
+        step_optional: z
+          .array(z.boolean())
+          .optional()
+          .describe("Parallel to steps[]; omit when all required"),
+        tags: z
+          .array(z.string())
+          .optional()
+          .describe("Freeform tags; normalized lowercase"),
+        calories: z.number().optional().describe("Optional kcal; omit when unknown"),
+        protein_g: z.number().optional(),
+        carbs_g: z.number().optional(),
+        fat_g: z.number().optional(),
+        thumbnail_url: z
+          .string()
+          .optional()
+          .describe("Household upload URL; MCP may omit (UI-only in v1)"),
         source_url: z
           .string()
           .optional()
@@ -366,6 +396,44 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async (input) => {
       const result = await addRecipe(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.recipes.update",
+    {
+      description:
+        "Full-replace edit of an existing recipe. Callers must get the recipe, merge deltas into a complete payload, then send full content. Omitting nutrition clears those fields; timers[] replaces all timer rows when provided.",
+      inputSchema: {
+        id: z.string().describe("Existing recipe id"),
+        title: z.string(),
+        servings: z.number().int().optional(),
+        ingredients: z.array(recipeIngredientSchema),
+        steps: z.array(z.string()),
+        step_optional: z.array(z.boolean()).optional(),
+        tags: z.array(z.string()).optional(),
+        calories: z.number().optional(),
+        protein_g: z.number().optional(),
+        carbs_g: z.number().optional(),
+        fat_g: z.number().optional(),
+        thumbnail_url: z.string().nullable().optional(),
+        timers: z
+          .array(
+            z.object({
+              label: z.string(),
+              minutes: z.number().int(),
+            }),
+          )
+          .optional()
+          .describe("Full replace of timers; empty array clears"),
+      },
+    },
+    async (input) => {
+      const result = await updateRecipe(householdId, input);
       if (isDomainError(result)) {
         return toolError(result);
       }
