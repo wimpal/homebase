@@ -897,8 +897,10 @@ model NetworkDevice {
   locationId  String
   notes       String?
   retiredAt   DateTime?
-  /// Normalized aa:bb:cc:dd:ee:ff; unique per household when set. WoL allowlist is T-101.
+  /// Normalized aa:bb:cc:dd:ee:ff; unique per household when set.
   macAddress       String?
+  /// ADMIN wake-allowlist (T-101). Requires macAddress; MCP never returns the MAC.
+  wakeAllowed      Boolean   @default(false)
   lastSeenIp       String?
   lastSeenHostname String?
   lastSeenAt       DateTime?

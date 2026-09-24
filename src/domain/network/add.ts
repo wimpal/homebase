@@ -56,6 +56,17 @@ export async function addNetworkDevice(
   const hasSeen =
     lastSeenIp != null || lastSeenHostname != null || mac != null;
 
+  let wakeAllowed = false;
+  if (input.wake_allowed) {
+    if (!mac) {
+      return DomainError.invalidInput(
+        "MAC address is required to enable wake allowlist.",
+        "wake_requires_mac",
+      );
+    }
+    wakeAllowed = true;
+  }
+
   const name = await allocateUniqueName(householdId, nameRaw);
   const notes = input.notes?.trim() || null;
 
@@ -67,6 +78,7 @@ export async function addNetworkDevice(
       locationId: location.id,
       notes,
       macAddress: mac,
+      wakeAllowed,
       lastSeenIp,
       lastSeenHostname,
       lastSeenAt: hasSeen ? new Date() : null,

@@ -7,13 +7,26 @@ export function normalizeMacAddress(
   if (raw == null) return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
+  // Only hex + common separators — rejects smuggled text that still yields 12 hex digits.
+  if (!/^[0-9a-fA-F:.\-\s]+$/.test(trimmed)) {
+    return DomainError.invalidInput("Invalid MAC address.", "invalid_mac");
+  }
   const hex = trimmed.toLowerCase().replace(/[^0-9a-f]/g, "");
   if (hex.length !== 12) {
     return DomainError.invalidInput("Invalid MAC address.", "invalid_mac");
   }
   const parts: string[] = [];
   for (let i = 0; i < 12; i += 2) parts.push(hex.slice(i, i + 2));
-  return parts.join(":");
+  const normalized = parts.join(":");
+  if (normalized === "00:00:00:00:00:00" || normalized === "ff:ff:ff:ff:ff:ff") {
+    return DomainError.invalidInput("Invalid MAC address.", "invalid_mac");
+  }
+  const firstOctet = parseInt(parts[0], 16);
+  if ((firstOctet & 0x01) !== 0) {
+    // Multicast / group address — not a unicast NIC for WoL.
+    return DomainError.invalidInput("Invalid MAC address.", "invalid_mac");
+  }
+  return normalized;
 }
 
 export function normalizeHostname(

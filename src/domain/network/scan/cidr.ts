@@ -6,6 +6,8 @@ export type ParsedCidr = {
   hosts: string[];
   /** First usable host (.1) used as gateway probe. */
   gateway: string;
+  /** Directed broadcast address for the subnet (e.g. 192.168.1.255). */
+  broadcast: string;
 };
 
 function ipToInt(ip: string): number | null {
@@ -90,6 +92,7 @@ export function parseScanCidr(
     hosts.push(intToIp(network + i));
   }
   const gateway = intToIp(network + 1);
+  const broadcast = intToIp(network + size - 1);
 
-  return { network, prefix, hosts, gateway };
+  return { network, prefix, hosts, gateway, broadcast };
 }

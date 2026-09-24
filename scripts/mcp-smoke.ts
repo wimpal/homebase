@@ -249,6 +249,7 @@ async function main() {
     "homebase.devices.list",
     "homebase.devices.remove",
     "homebase.devices.update",
+    "homebase.devices.wake",
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
@@ -266,7 +267,7 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 23 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 24 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
   ok("tools/list returns exactly 23 homebase tools");
@@ -976,7 +977,193 @@ async function main() {
   }
   ok("homebase.devices.get unknown id refused");
 
+  // --- T-101 Wake-on-LAN ---
+  const wolFixtures = await seedWolSmokeFixtures();
+  assertNoMac(wolFixtures, "wol fixtures meta");
+
+  const listWake = await callTool(43, "homebase.devices.list", {});
+  if (listWake.isError) fail("devices.list before wake tool error");
+  const wakeListed = parseToolPayload(listWake) as {
+    id: string;
+    wake_capable?: boolean;
+  }[];
+  const capableRow = wakeListed.find((d) => d.id === wolFixtures.allowlisted_id);
+  if (!capableRow || capableRow.wake_capable !== true) {
+    fail(
+      `allowlisted fixture should be wake_capable: ${JSON.stringify(capableRow)}`,
+    );
+  }
+  assertNoMac(wakeListed, "devices.list wake_capable");
+  ok("devices.list wake_capable true for allowlisted");
+
+  const wakeOk = await callTool(44, "homebase.devices.wake", {
+    device_id: wolFixtures.allowlisted_id,
+  });
+  if (wakeOk.isError) {
+    fail(
+      `homebase.devices.wake tool error: ${wakeOk.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const woke = parseToolPayload(wakeOk) as {
+    id: string;
+    name: string;
+    status: string;
+  };
+  if (
+    woke.id !== wolFixtures.allowlisted_id ||
+    (woke.status !== "sent" && woke.status !== "dry_run")
+  ) {
+    fail(`devices.wake unexpected: ${JSON.stringify(woke)}`);
+  }
+  assertNoMac(woke, "devices.wake");
+  ok(`homebase.devices.wake (${woke.status})`);
+
+  const wakeRate = await callTool(45, "homebase.devices.wake", {
+    device_id: wolFixtures.allowlisted_id,
+  });
+  if (!wakeRate.isError) {
+    fail("devices.wake rapid repeat should be rate-limited");
+  }
+  assertNoMac(parseToolPayload(wakeRate), "devices.wake rate-limit error");
+  ok("homebase.devices.wake rate-limited");
+
+  const wakeDeny = await callTool(46, "homebase.devices.wake", {
+    device_id: wolFixtures.not_allowed_id,
+  });
+  if (!wakeDeny.isError) {
+    fail("devices.wake non-allowlisted should fail");
+  }
+  assertNoMac(parseToolPayload(wakeDeny), "devices.wake deny error");
+  ok("homebase.devices.wake non-allowlisted refused");
+
+  const wakeRetired = await callTool(47, "homebase.devices.wake", {
+    device_id: wolFixtures.retired_id,
+  });
+  if (!wakeRetired.isError) {
+    fail("devices.wake retired should fail");
+  }
+  assertNoMac(parseToolPayload(wakeRetired), "devices.wake retired error");
+  ok("homebase.devices.wake retired refused");
+
+  const wakeForged = await callTool(48, "homebase.devices.wake", {
+    device_id: wolFixtures.allowlisted_id,
+    mac: "aa:bb:cc:dd:ee:ff",
+    mac_address: "aa:bb:cc:dd:ee:ff",
+  } as Record<string, unknown>);
+  // Extra keys ignored by Zod; still rate-limited from prior wake — either
+  // rate-limit or (if cooldown cleared) would still not accept MAC as target.
+  if (!wakeForged.isError) {
+    const forgedPayload = parseToolPayload(wakeForged);
+    assertNoMac(forgedPayload, "devices.wake forged mac args");
+  } else {
+    assertNoMac(parseToolPayload(wakeForged), "devices.wake forged error");
+  }
+  ok("homebase.devices.wake forged MAC args ignored / no MAC leak");
+
   await runLightsSmoke(callTool);
+}
+
+type WolSmokeFixtures = {
+  allowlisted_id: string;
+  not_allowed_id: string;
+  retired_id: string;
+};
+
+async function seedWolSmokeFixturesLocal(): Promise<WolSmokeFixtures> {
+  const { ensureNetworkCatalogues } = await import(
+    "../src/domain/network/ensure-catalogues"
+  );
+  const prisma = createPrismaClient();
+  try {
+    await ensureNetworkCatalogues(HOUSEHOLD_ID!);
+    const type = await prisma.networkDeviceType.findFirst({
+      where: { householdId: HOUSEHOLD_ID!, slug: "pc" },
+    });
+    const location = await prisma.deviceLocation.findFirst({
+      where: { householdId: HOUSEHOLD_ID!, slug: "unknown" },
+    });
+    if (!type || !location) {
+      fail("wol fixtures: missing pc type or unknown location");
+    }
+    const stamp = Date.now().toString(16).slice(-6).padStart(6, "0");
+    const allowlisted = await prisma.networkDevice.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: `mcp-smoke wol allow ${stamp}`,
+        typeId: type.id,
+        locationId: location.id,
+        macAddress: `02:00:00:${stamp.slice(0, 2)}:${stamp.slice(2, 4)}:${stamp.slice(4, 6)}`,
+        wakeAllowed: true,
+        notes: "mcp-smoke",
+      },
+    });
+    const notAllowed = await prisma.networkDevice.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: `mcp-smoke wol deny ${stamp}`,
+        typeId: type.id,
+        locationId: location.id,
+        macAddress: `02:11:00:${stamp.slice(0, 2)}:${stamp.slice(2, 4)}:${stamp.slice(4, 6)}`,
+        wakeAllowed: false,
+        notes: "mcp-smoke",
+      },
+    });
+    const retired = await prisma.networkDevice.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: `mcp-smoke wol retired ${stamp}`,
+        typeId: type.id,
+        locationId: location.id,
+        macAddress: `02:22:00:${stamp.slice(0, 2)}:${stamp.slice(2, 4)}:${stamp.slice(4, 6)}`,
+        wakeAllowed: true,
+        retiredAt: new Date(),
+        notes: "mcp-smoke",
+      },
+    });
+    return {
+      allowlisted_id: allowlisted.id,
+      not_allowed_id: notAllowed.id,
+      retired_id: retired.id,
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function seedWolSmokeFixtures(): Promise<WolSmokeFixtures> {
+  if (IS_LOCAL) {
+    return seedWolSmokeFixturesLocal();
+  }
+
+  const nasHost = process.env.NAS_HOST?.trim();
+  if (!nasHost) {
+    fail(
+      "remote wol fixture seed requires NAS_HOST (or run mcp:smoke locally)",
+    );
+  }
+  const nasUser = process.env.NAS_USER?.trim() || "wim";
+  const nasPath =
+    process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+  const sshPortRaw = process.env.NAS_SSH_PORT?.trim();
+  const sshPort =
+    sshPortRaw && Number.parseInt(sshPortRaw, 10) > 0
+      ? Number.parseInt(sshPortRaw, 10)
+      : 22;
+  const remote = `${nasUser}@${nasHost}`;
+  const remoteCmd = [
+    "set -eu",
+    `cd ${shellSingleQuote(nasPath)}`,
+    `docker compose exec -T -e MCP_HOUSEHOLD_ID=${shellSingleQuote(HOUSEHOLD_ID!)} worker npx tsx scripts/seed-wol-smoke-fixtures.ts`,
+  ].join(" && ");
+  const out = execFileSync("ssh", ["-p", String(sshPort), remote, remoteCmd], {
+    encoding: "utf8",
+  });
+  const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  try {
+    return JSON.parse(line) as WolSmokeFixtures;
+  } catch {
+    fail(`remote wol fixture seed bad output: ${out}`);
+  }
 }
 
 /**

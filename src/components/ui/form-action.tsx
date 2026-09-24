@@ -11,6 +11,8 @@ type FormActionProps = {
   className?: string;
   diagnosticsFromForm?: (formData: FormData) => Record<string, string> | undefined;
   onSuccess?: () => void;
+  /** Return a confirm message to gate submit, or null to proceed. */
+  confirmIf?: (formData: FormData) => string | null;
 };
 
 /** Native form wired to FormErrorProvider for ActionResult server actions. */
@@ -21,10 +23,15 @@ export function FormAction({
   className,
   diagnosticsFromForm,
   onSuccess,
+  confirmIf,
 }: FormActionProps) {
   const { handleActionResult } = useFormError();
 
   async function wrapped(formData: FormData): Promise<void> {
+    const confirmMsg = confirmIf?.(formData);
+    if (confirmMsg && !window.confirm(confirmMsg)) {
+      return;
+    }
     const result = await action(formData);
     if (
       handleActionResult(

@@ -26,6 +26,7 @@ function assert(cond: unknown, msg: string): asserts cond {
   assert(!(ok instanceof Error) && !isDomainError(ok), "valid /24");
   assert(ok.hosts.length === 254, `expected 254 hosts got ${ok.hosts.length}`);
   assert(ok.gateway === "192.168.1.1", "gateway");
+  assert(ok.broadcast === "192.168.1.255", "broadcast");
 
   assert(isDomainError(parseScanCidr("")), "missing cidr");
   assert(isDomainError(parseScanCidr("8.8.8.0/24")), "public rejected");
@@ -38,6 +39,13 @@ function assert(cond: unknown, msg: string): asserts cond {
   assert(!isDomainError(m) && m === "aa:bb:cc:dd:ee:ff", "mac normalize");
   assert(isDomainError(normalizeMacAddress("bad")), "bad mac");
   assert(normalizeMacAddress("") === null, "empty mac");
+  assert(
+    isDomainError(normalizeMacAddress("not-a-mac-but-has-aabbccddeeff")),
+    "smuggled hex rejected",
+  );
+  assert(isDomainError(normalizeMacAddress("00:00:00:00:00:00")), "zero mac");
+  assert(isDomainError(normalizeMacAddress("ff:ff:ff:ff:ff:ff")), "broadcast mac");
+  assert(isDomainError(normalizeMacAddress("01:00:5e:00:00:01")), "multicast mac");
 }
 
 // Match
@@ -55,7 +63,7 @@ function assert(cond: unknown, msg: string): asserts cond {
       id: "2",
       name: "Old",
       retiredAt: new Date(),
-      macAddress: "11:22:33:44:55:66",
+      macAddress: "12:22:33:44:55:66",
       lastSeenIp: "192.168.1.20",
       lastSeenHostname: null,
     },
@@ -66,7 +74,7 @@ function assert(cond: unknown, msg: string): asserts cond {
     "mac enrolled",
   );
   assert(
-    matchCandidate({ ip: "x", mac: "11:22:33:44:55:66" }, devices).status ===
+    matchCandidate({ ip: "x", mac: "12:22:33:44:55:66" }, devices).status ===
       "retired",
     "mac retired",
   );

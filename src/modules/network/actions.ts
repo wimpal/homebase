@@ -68,6 +68,7 @@ export async function enrollNetworkDeviceAction(
     location: String(formData.get("location") ?? ""),
     notes: String(formData.get("notes") ?? "") || undefined,
     mac_address: mac,
+    wake_allowed: formData.get("wake_allowed") === "on",
   });
   if (isDomainError(result)) return fromDomainError(result);
   revalidatePath("/network");
@@ -87,6 +88,7 @@ export async function updateNetworkDeviceAction(
     location: String(formData.get("location") ?? "") || undefined,
     notes: notesRaw === null ? undefined : String(notesRaw),
     mac_address: macRaw === null ? undefined : String(macRaw),
+    wake_allowed: formData.get("wake_allowed") === "on",
   });
   if (isDomainError(result)) return fromDomainError(result);
   revalidatePath("/network");

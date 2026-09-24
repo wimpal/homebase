@@ -18,6 +18,7 @@ export { getNetworkDevice } from "./get";
 export { addNetworkDevice } from "./add";
 export { updateNetworkDevice } from "./update";
 export { retireNetworkDevice, restoreNetworkDevice } from "./retire";
+export { wakeNetworkDevice } from "./wake";
 export {
   startNetworkScan,
   getScanJob,
@@ -36,6 +37,13 @@ export type {
   ListNetworkDevicesInput,
   AddNetworkDeviceInput,
   UpdateNetworkDeviceInput,
+  WakeNetworkDeviceResult,
 } from "./types";
 export { matchCandidate } from "./match";
 export { normalizeMacAddress } from "./identity";
+export {
+  clearWakeRateLimits,
+  WOL_COOLDOWN_MS,
+  buildMagicPacket,
+  resolveWolBroadcast,
+} from "./wol/packet";

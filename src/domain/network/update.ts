@@ -41,6 +41,7 @@ export async function updateNetworkDevice(
     locationId?: string;
     notes?: string | null;
     macAddress?: string | null;
+    wakeAllowed?: boolean;
     lastSeenIp?: string | null;
     lastSeenHostname?: string | null;
     lastSeenAt?: Date | null;
@@ -74,6 +75,8 @@ export async function updateNetworkDevice(
   }
 
   let touchSeen = false;
+  let nextMac: string | null = existing.macAddress;
+  let macTouched = false;
   if (input.mac_address !== undefined) {
     const mac = normalizeMacAddress(input.mac_address);
     if (isDomainError(mac)) return mac;
@@ -90,6 +93,8 @@ export async function updateNetworkDevice(
       }
     }
     data.macAddress = mac;
+    nextMac = mac;
+    macTouched = true;
     touchSeen = true;
   }
   if (input.last_seen_ip !== undefined) {
@@ -102,6 +107,22 @@ export async function updateNetworkDevice(
   }
   if (touchSeen) {
     data.lastSeenAt = new Date();
+  }
+
+  if (input.wake_allowed !== undefined) {
+    if (input.wake_allowed && !nextMac) {
+      return DomainError.invalidInput(
+        "MAC address is required to enable wake allowlist.",
+        "wake_requires_mac",
+      );
+    }
+    data.wakeAllowed = Boolean(input.wake_allowed && nextMac);
+  } else if (
+    macTouched &&
+    (!nextMac || nextMac !== existing.macAddress)
+  ) {
+    // Clearing or changing MAC without an explicit allowlist flag clears it.
+    data.wakeAllowed = false;
   }
 
   const row = await prisma.networkDevice.update({

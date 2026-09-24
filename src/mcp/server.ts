@@ -12,6 +12,7 @@ import {
   listNetworkDevices,
   retireNetworkDevice,
   updateNetworkDevice,
+  wakeNetworkDevice,
 } from "@/domain/network";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
@@ -549,6 +550,26 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ id }) => {
       const result = await retireNetworkDevice(householdId, id);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.wake",
+    {
+      description:
+        'Send a Wake-on-LAN magic packet for an ADMIN-allowlisted Network device. Use after devices.list when the user asks to wake a NAS/PC/TV by name. device_id only — never a MAC.',
+      inputSchema: {
+        device_id: z
+          .string()
+          .describe("Network device id from devices.list / devices.get"),
+      },
+    },
+    async ({ device_id }) => {
+      const result = await wakeNetworkDevice(householdId, device_id);
       if (isDomainError(result)) {
         return toolError(result);
       }

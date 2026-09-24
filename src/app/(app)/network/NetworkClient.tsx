@@ -115,16 +115,27 @@ export function NetworkClient({
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>{t("mac")}</Label>
-                  <Input
-                    name="mac"
-                    placeholder={t("macPlaceholder")}
-                    maxLength={17}
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                </div>
+                  <div>
+                    <Label>{t("mac")}</Label>
+                    <Input
+                      name="mac"
+                      placeholder={t("macPlaceholder")}
+                      maxLength={17}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 md:col-span-2">
+                    <input
+                      type="checkbox"
+                      id="enroll-wake"
+                      name="wake_allowed"
+                      className="h-4 w-4 rounded border-zinc-300"
+                    />
+                    <Label htmlFor="enroll-wake" className="font-normal">
+                      {t("wakeAllowlist")}
+                    </Label>
+                  </div>
                 <div>
                   <Label>{t("notes")}</Label>
                   <Input
@@ -160,6 +171,7 @@ export function NetworkClient({
                   <p className="text-sm text-zinc-500">
                     {d.type.name} · {d.location.name}
                     {d.mac_address ? ` · ${d.mac_address}` : ""}
+                    {d.wake_allowed ? ` · ${t("wakeCapableBadge")}` : ""}
                     {d.last_seen_ip ? ` · ${d.last_seen_ip}` : ""}
                   </p>
                   {d.notes && (
@@ -215,6 +227,13 @@ export function NetworkClient({
                   actionName="updateNetworkDevice"
                   onSuccess={() => setEditingId(null)}
                   className="grid gap-3 border-t border-zinc-100 pt-3 md:grid-cols-2 dark:border-zinc-800"
+                  confirmIf={(fd) => {
+                    const mac = String(fd.get("mac") ?? "").trim();
+                    const wake = fd.get("wake_allowed") === "on";
+                    if (d.mac_address && !mac) return t("confirmClearMac");
+                    if (d.wake_allowed && !wake) return t("confirmClearWake");
+                    return null;
+                  }}
                 >
                   <input type="hidden" name="id" value={d.id} />
                   <div>
@@ -273,6 +292,21 @@ export function NetworkClient({
                       maxLength={500}
                     />
                   </div>
+                  <div className="flex items-center gap-2 md:col-span-2">
+                    <input
+                      type="checkbox"
+                      id={`wake-${d.id}`}
+                      name="wake_allowed"
+                      defaultChecked={d.wake_allowed}
+                      className="h-4 w-4 rounded border-zinc-300"
+                    />
+                    <Label htmlFor={`wake-${d.id}`} className="font-normal">
+                      {t("wakeAllowlist")}
+                    </Label>
+                  </div>
+                  <p className="text-xs text-zinc-500 md:col-span-2">
+                    {t("wakeAllowlistHint")}
+                  </p>
                   <Button type="submit">{t("saveChanges")}</Button>
                 </FormAction>
               )}

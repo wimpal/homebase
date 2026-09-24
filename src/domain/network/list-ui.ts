@@ -47,6 +47,7 @@ export async function listNetworkDevicesForUi(
 
   return rows.map((row) => {
     const detail = toNetworkDeviceDetail(row) as NetworkDeviceUiRow;
+    detail.wake_allowed = row.wakeAllowed;
     if (row.macAddress) detail.mac_address = row.macAddress;
     if (row.lastSeenIp) detail.last_seen_ip = row.lastSeenIp;
     if (row.lastSeenHostname) detail.last_seen_hostname = row.lastSeenHostname;
