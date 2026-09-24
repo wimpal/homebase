@@ -37,3 +37,29 @@ export async function bumpStockOnPurchase(
     });
   }
 }
+
+/** Reverse a prior purchase bump; clamps quantity at 0. */
+export async function reduceStockAfterUnbuy(
+  householdId: string,
+  productId: string,
+  delta: number,
+): Promise<void> {
+  if (delta <= 0) return;
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, householdId },
+    include: { stockItems: true },
+  });
+
+  if (!product || product.stockItems.length === 0) {
+    return;
+  }
+
+  const primary = pickPrimaryStockItem(product.stockItems);
+  if (primary) {
+    await prisma.stockItem.update({
+      where: { id: primary.id },
+      data: { quantity: Math.max(0, primary.quantity - delta) },
+    });
+  }
+}

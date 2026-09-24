@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireHousehold } from "@/core/auth/session";
 import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
 export default async function ShoppingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string }>;
+  searchParams: Promise<{ store?: string; mode?: string }>;
 }) {
   const { householdId } = await requireHousehold();
   await requireModule(householdId, ModuleId.SHOPPING);
@@ -37,13 +38,15 @@ export default async function ShoppingPage({
   }
 
   return (
-    <ShoppingClient
-      listId={list.id}
-      listName={list.name}
-      catalog={catalog}
-      items={items}
-      stores={stores}
-      storeFilter={storeFilter}
-    />
+    <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <ShoppingClient
+        listId={list.id}
+        listName={list.name}
+        catalog={catalog}
+        items={items}
+        stores={stores}
+        storeFilter={storeFilter}
+      />
+    </Suspense>
   );
 }

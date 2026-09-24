@@ -1,331 +1,85 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
-import { FormAction } from "@/components/ui/form-action";
-import { EmptyState } from "@/components/ui/empty-state";
-import {
-  addShoppingItem,
-  createStore,
-  markItemBought,
-  markProductNeededAction,
-  removeShoppingItem,
-  deleteStore,
-} from "@/modules/shopping/actions";
-import type { CatalogProduct } from "@/domain/shopping";
+import { ShoppingPlanningView } from "./ShoppingPlanningView";
+import { ShoppingTripView } from "./ShoppingTripView";
+import { clearTripBought } from "./trip-storage";
+import type { ShoppingViewProps } from "./types";
 
-interface Store {
-  id: string;
-  name: string;
-}
-
-interface NeededItem {
-  id: string;
-  name: string;
-  quantity: number;
-  checked: boolean;
-  autoAdded: boolean;
-  tags: string[];
-  store: { name: string } | null;
-}
-
-function CatalogPanel({
-  catalog,
-  listId,
-  catalogQuery,
-  setCatalogQuery,
-  filteredCatalog,
-}: {
-  catalog: CatalogProduct[];
-  listId: string;
-  catalogQuery: string;
-  setCatalogQuery: (v: string) => void;
-  filteredCatalog: CatalogProduct[];
-}) {
+export function ShoppingClient(props: ShoppingViewProps) {
   const t = useTranslations("shopping");
-  return (
-    <Card className="lg:col-span-1">
-      <CardHeader>
-        <CardTitle className="text-base">{t("catalog")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Input
-          placeholder={t("searchProducts")}
-          value={catalogQuery}
-          onChange={(e) => setCatalogQuery(e.target.value)}
-        />
-        <div className="max-h-[28rem] space-y-2 overflow-y-auto">
-          {filteredCatalog.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t("noProductsMatch")}</p>
-          ) : (
-            filteredCatalog.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-lg border p-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{p.name}</p>
-                  {p.category && (
-                    <p className="truncate text-xs text-zinc-400">{p.category}</p>
-                  )}
-                </div>
-                {p.needed ? (
-                  <span className="ml-2 text-xs text-emerald-600">{t("onList")}</span>
-                ) : (
-                  <FormAction
-                    action={markProductNeededAction}
-                    actionName="markProductNeeded"
-                  >
-                    <input type="hidden" name="listId" value={listId} />
-                    <input type="hidden" name="productId" value={p.id} />
-                    <Button type="submit" size="sm" variant="outline">
-                      {t("need")}
-                    </Button>
-                  </FormAction>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode") === "trip" ? "trip" : "shop";
 
-export function ShoppingClient({
-  listId,
-  listName,
-  catalog,
-  items,
-  stores,
-  storeFilter,
-}: {
-  listId: string;
-  listName: string;
-  catalog: CatalogProduct[];
-  items: NeededItem[];
-  stores: Store[];
-  storeFilter?: string;
-}) {
-  const t = useTranslations("shopping");
-  const tc = useTranslations("common");
-  const [catalogQuery, setCatalogQuery] = useState("");
-  const [quickQuery, setQuickQuery] = useState("");
+  useEffect(() => {
+    if (mode === "shop") {
+      clearTripBought(props.listId);
+    }
+  }, [mode, props.listId]);
 
-  const filteredCatalog = useMemo(() => {
-    const q = catalogQuery.trim().toLowerCase();
-    if (!q) return catalog;
-    return catalog.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.category?.toLowerCase().includes(q) ?? false),
-    );
-  }, [catalog, catalogQuery]);
-
-  const typeaheadMatches = useMemo(() => {
-    const q = quickQuery.trim().toLowerCase();
-    if (!q) return [];
-    return catalog.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [catalog, quickQuery]);
+  function setMode(next: "shop" | "trip") {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "trip") {
+      params.set("mode", "trip");
+    } else {
+      params.delete("mode");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1">
-          <CatalogPanel
-            catalog={catalog}
-            listId={listId}
-            catalogQuery={catalogQuery}
-            setCatalogQuery={setCatalogQuery}
-            filteredCatalog={filteredCatalog}
-          />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-zinc-500">
+            {mode === "trip" ? t("subtitleTrip") : t("subtitlePlanning")}
+          </p>
         </div>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">{t("addItem")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormAction
-              action={addShoppingItem}
-              actionName="addShoppingItem"
-              className="space-y-3"
-              diagnosticsFromForm={(fd) => ({
-                name: String(fd.get("name") ?? ""),
-                quantity: String(fd.get("quantity") ?? ""),
-              })}
-            >
-              <input type="hidden" name="listId" value={listId} />
-              <div>
-                <Label>{t("item")}</Label>
-                <Input
-                  name="name"
-                  required
-                  value={quickQuery}
-                  onChange={(e) => setQuickQuery(e.target.value)}
-                  placeholder={t("searchOrType")}
-                  autoComplete="off"
-                />
-                {typeaheadMatches.length > 0 && quickQuery.trim() && (
-                  <ul className="mt-1 rounded-md border bg-white dark:bg-zinc-900">
-                    {typeaheadMatches.map((p) => (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          onClick={() => setQuickQuery(p.name)}
-                        >
-                          {p.name}
-                          {p.needed && (
-                            <span className="ml-2 text-xs text-emerald-600">
-                              {t("onList").toLowerCase()}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <Label>{tc("quantity")}</Label>
-                <Input name="quantity" type="number" min="1" defaultValue="1" />
-              </div>
-              <div>
-                <Label>{t("tagsComma")}</Label>
-                <Input name="tags" placeholder="dairy, urgent" />
-              </div>
-              <div>
-                <Label>{t("store")}</Label>
-                <select
-                  name="storeId"
-                  className="flex h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
-                >
-                  <option value="">{t("anyStore")}</option>
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button type="submit">{t("addToList")}</Button>
-            </FormAction>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">{t("stores")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={createStore} className="flex gap-2">
-              <Input name="name" placeholder={t("storeName")} required />
-              <Button type="submit">{tc("add")}</Button>
-            </form>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <a
-                href="/shopping"
-                className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
-              >
-                {t("all")}
-              </a>
-              {stores.map((s) => (
-                <div key={s.id} className="flex items-center gap-1">
-                  <a
-                    href={`/shopping?store=${s.id}`}
-                    className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
-                  >
-                    {s.name}
-                  </a>
-                  <ConfirmFormAction
-                    action={deleteStore}
-                    actionName="deleteStore"
-                    message={t("confirmDeleteStore")}
-                  >
-                    <input type="hidden" name="id" value={s.id} />
-                    <Button type="submit" variant="ghost" size="sm" className="h-6 px-1 text-xs">
-                      {tc("delete")}
-                    </Button>
-                  </ConfirmFormAction>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div
+          className="inline-flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900"
+          role="tablist"
+          aria-label={`${t("planning")} / ${t("trip")}`}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "shop"}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+              mode === "shop"
+                ? "bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
+                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            }`}
+            onClick={() => setMode("shop")}
+          >
+            {t("planning")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "trip"}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+              mode === "trip"
+                ? "bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
+                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            }`}
+            onClick={() => setMode("trip")}
+          >
+            {t("trip")}
+          </button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{listName}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-            <EmptyState message={t("nothingNeeded")} />
-          ) : (
-            <ul className="space-y-2">
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <FormAction action={markItemBought} actionName="markItemBought">
-                      <input type="hidden" name="id" value={item.id} />
-                      <Button type="submit" size="sm" variant="outline">
-                        {t("markBought")}
-                      </Button>
-                    </FormAction>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {item.name} x{item.quantity}
-                      </p>
-                      {item.autoAdded && (
-                        <span className="text-xs text-amber-600">{t("autoAdded")}</span>
-                      )}
-                      {item.store && (
-                        <span className="text-xs text-zinc-400"> @ {item.store.name}</span>
-                      )}
-                      {item.tags.length > 0 && (
-                        <div className="mt-1 flex gap-1">
-                          {item.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded bg-zinc-100 px-1.5 text-xs dark:bg-zinc-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <ConfirmFormAction
-                    action={removeShoppingItem}
-                    actionName="removeShoppingItem"
-                    message={t("confirmRemoveItem")}
-                  >
-                    <input type="hidden" name="id" value={item.id} />
-                    <Button type="submit" variant="destructive" size="sm">
-                      {tc("remove")}
-                    </Button>
-                  </ConfirmFormAction>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {mode === "trip" ? (
+        <ShoppingTripView {...props} />
+      ) : (
+        <ShoppingPlanningView {...props} />
+      )}
     </div>
   );
 }

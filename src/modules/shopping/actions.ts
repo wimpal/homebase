@@ -8,6 +8,7 @@ import {
   listCatalogProducts,
   markProductNeeded,
   markShoppingItemBought,
+  unmarkShoppingItemBought,
 } from "@/domain/shopping";
 import { isDomainError } from "@/domain/error";
 import {
@@ -108,6 +109,21 @@ export async function markItemBought(
     update_inventory: true,
     source: "manual",
   });
+  if (isDomainError(result)) {
+    return fromDomainError(result);
+  }
+  revalidatePath("/shopping");
+  revalidatePath("/inventory");
+  return okResult();
+}
+
+export async function unmarkItemBought(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await requireMutationAccess(ModuleId.SHOPPING);
+  const id = formData.get("id") as string;
+  if (!id) return okResult();
+  const result = await unmarkShoppingItemBought(householdId, id);
   if (isDomainError(result)) {
     return fromDomainError(result);
   }
