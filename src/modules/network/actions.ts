@@ -61,11 +61,13 @@ export async function enrollNetworkDeviceAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const { householdId } = await adminNetwork();
+  const mac = String(formData.get("mac") ?? "").trim() || undefined;
   const result = await addNetworkDevice(householdId, {
     name: String(formData.get("name") ?? ""),
     type: String(formData.get("type") ?? ""),
     location: String(formData.get("location") ?? ""),
     notes: String(formData.get("notes") ?? "") || undefined,
+    mac_address: mac,
   });
   if (isDomainError(result)) return fromDomainError(result);
   revalidatePath("/network");
@@ -77,12 +79,14 @@ export async function updateNetworkDeviceAction(
 ): Promise<ActionResult> {
   const { householdId } = await adminNetwork();
   const notesRaw = formData.get("notes");
+  const macRaw = formData.get("mac");
   const result = await updateNetworkDevice(householdId, {
     id: String(formData.get("id") ?? ""),
     name: String(formData.get("name") ?? "") || undefined,
     type: String(formData.get("type") ?? "") || undefined,
     location: String(formData.get("location") ?? "") || undefined,
     notes: notesRaw === null ? undefined : String(notesRaw),
+    mac_address: macRaw === null ? undefined : String(macRaw),
   });
   if (isDomainError(result)) return fromDomainError(result);
   revalidatePath("/network");

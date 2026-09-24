@@ -123,7 +123,9 @@ export function NetworkScanPanel({ types, locations }: Props) {
 
   async function enrollCandidate(c: ScanCandidateDto, form: FormData) {
     form.set("ip", c.ip);
-    if (c.mac) form.set("mac", c.mac);
+    if (!String(form.get("mac") ?? "").trim() && c.mac) {
+      form.set("mac", c.mac);
+    }
     if (c.hostname) form.set("hostname", c.hostname);
     const result = await enrollFromScanCandidateAction(form);
     if (handleActionResult(result, "enrollFromScan")) return;
@@ -213,7 +215,7 @@ export function NetworkScanPanel({ types, locations }: Props) {
                 </div>
                 {c.status === "new" || c.status === "ambiguous" ? (
                   <form
-                    className="mt-2 grid gap-2 md:grid-cols-4"
+                    className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
                     action={async (fd) => {
                       await enrollCandidate(c, fd);
                     }}
@@ -224,6 +226,17 @@ export function NetworkScanPanel({ types, locations }: Props) {
                         name="name"
                         defaultValue={c.hostname || c.ip}
                         maxLength={200}
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("mac")}</Label>
+                      <Input
+                        name="mac"
+                        defaultValue={c.mac ?? ""}
+                        placeholder={t("macPlaceholder")}
+                        maxLength={17}
+                        autoComplete="off"
+                        spellCheck={false}
                       />
                     </div>
                     <div>

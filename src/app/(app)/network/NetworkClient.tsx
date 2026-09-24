@@ -116,6 +116,16 @@ export function NetworkClient({
                   </select>
                 </div>
                 <div>
+                  <Label>{t("mac")}</Label>
+                  <Input
+                    name="mac"
+                    placeholder={t("macPlaceholder")}
+                    maxLength={17}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+                <div>
                   <Label>{t("notes")}</Label>
                   <Input
                     name="notes"
@@ -149,6 +159,8 @@ export function NetworkClient({
                   </p>
                   <p className="text-sm text-zinc-500">
                     {d.type.name} · {d.location.name}
+                    {d.mac_address ? ` · ${d.mac_address}` : ""}
+                    {d.last_seen_ip ? ` · ${d.last_seen_ip}` : ""}
                   </p>
                   {d.notes && (
                     <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -241,6 +253,17 @@ export function NetworkClient({
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <Label>{t("mac")}</Label>
+                    <Input
+                      name="mac"
+                      defaultValue={d.mac_address ?? ""}
+                      placeholder={t("macPlaceholder")}
+                      maxLength={17}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
                   </div>
                   <div>
                     <Label>{t("notes")}</Label>

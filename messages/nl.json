@@ -744,6 +744,8 @@
     "enroll": "Apparaat toevoegen",
     "enrollBtn": "Toevoegen",
     "name": "Naam",
+    "mac": "MAC-adres",
+    "macPlaceholder": "aa:bb:cc:dd:ee:ff (optioneel)",
     "type": "Type",
     "location": "Locatie",
     "notes": "Notities",

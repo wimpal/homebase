@@ -744,6 +744,8 @@
     "enroll": "Enroll device",
     "enrollBtn": "Enroll",
     "name": "Name",
+    "mac": "MAC address",
+    "macPlaceholder": "aa:bb:cc:dd:ee:ff (optional)",
     "type": "Type",
     "location": "Location",
     "notes": "Notes",
