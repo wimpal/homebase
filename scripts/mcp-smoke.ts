@@ -244,6 +244,11 @@ async function main() {
   const expected = [
     "homebase.changes.list",
     "homebase.changes.revert",
+    "homebase.devices.add",
+    "homebase.devices.get",
+    "homebase.devices.list",
+    "homebase.devices.remove",
+    "homebase.devices.update",
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
@@ -261,10 +266,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 18 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 23 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 18 homebase tools");
+  ok("tools/list returns exactly 23 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -813,6 +818,153 @@ async function main() {
     );
   }
   ok("recipes.update → get (nutrition omit clears)");
+
+  // --- T-108 Network devices ---
+  function assertNoMac(payload: unknown, label: string) {
+    const text = JSON.stringify(payload);
+    if (/"mac"/i.test(text) || /mac_address/i.test(text) || /macAddress/.test(text)) {
+      fail(`${label}: MAC leak in payload: ${text}`);
+    }
+  }
+
+  const deviceName = `Smoke Add Device ${Date.now()}`;
+  const deviceAdd = await callTool(34, "homebase.devices.add", {
+    name: deviceName,
+    type: "nas",
+    location: "unknown",
+    notes: "mcp-smoke",
+  });
+  if (deviceAdd.isError) {
+    fail(
+      `homebase.devices.add tool error: ${deviceAdd.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const addedDevice = parseToolPayload(deviceAdd) as {
+    id: string;
+    name: string;
+    type: { slug: string };
+    location: { slug: string };
+    notes?: string;
+  };
+  if (
+    !addedDevice.id ||
+    addedDevice.name !== deviceName ||
+    addedDevice.type?.slug !== "nas" ||
+    addedDevice.location?.slug !== "unknown"
+  ) {
+    fail(`devices.add unexpected: ${JSON.stringify(addedDevice)}`);
+  }
+  assertNoMac(addedDevice, "devices.add");
+  ok("homebase.devices.add");
+
+  const deviceDup = await callTool(35, "homebase.devices.add", {
+    name: deviceName,
+    type: "nas",
+    location: "portable",
+  });
+  if (deviceDup.isError) {
+    fail(
+      `homebase.devices.add duplicate tool error: ${deviceDup.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const dupDevice = parseToolPayload(deviceDup) as { id: string; name: string };
+  if (dupDevice.name !== `${deviceName} (2)`) {
+    fail(`expected auto-suffix Name (2), got ${JSON.stringify(dupDevice)}`);
+  }
+  assertNoMac(dupDevice, "devices.add dup");
+  ok("homebase.devices.add auto-suffix duplicate");
+
+  const deviceGet = await callTool(36, "homebase.devices.get", {
+    id: addedDevice.id,
+  });
+  if (deviceGet.isError) {
+    fail("homebase.devices.get tool error");
+  }
+  const gotDevice = parseToolPayload(deviceGet) as { id: string };
+  if (gotDevice.id !== addedDevice.id) {
+    fail(`devices.get mismatch: ${JSON.stringify(gotDevice)}`);
+  }
+  assertNoMac(gotDevice, "devices.get");
+  ok("homebase.devices.get");
+
+  const deviceList = await callTool(37, "homebase.devices.list", {
+    type: "nas",
+  });
+  if (deviceList.isError) {
+    fail("homebase.devices.list tool error");
+  }
+  const listed = parseToolPayload(deviceList) as { id: string; name: string }[];
+  if (!Array.isArray(listed) || !listed.some((d) => d.id === addedDevice.id)) {
+    fail(`devices.list missing added device: ${JSON.stringify(listed)}`);
+  }
+  assertNoMac(listed, "devices.list");
+  ok("homebase.devices.list");
+
+  const deviceUpdate = await callTool(38, "homebase.devices.update", {
+    id: addedDevice.id,
+    notes: "mcp-smoke updated",
+    location: "portable",
+  });
+  if (deviceUpdate.isError) {
+    fail(
+      `homebase.devices.update tool error: ${deviceUpdate.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const updatedDevice = parseToolPayload(deviceUpdate) as {
+    notes?: string;
+    location: { slug: string };
+  };
+  if (
+    updatedDevice.notes !== "mcp-smoke updated" ||
+    updatedDevice.location?.slug !== "portable"
+  ) {
+    fail(`devices.update unexpected: ${JSON.stringify(updatedDevice)}`);
+  }
+  assertNoMac(updatedDevice, "devices.update");
+  ok("homebase.devices.update patch");
+
+  const deviceRemove = await callTool(39, "homebase.devices.remove", {
+    id: addedDevice.id,
+  });
+  if (deviceRemove.isError) {
+    fail(
+      `homebase.devices.remove tool error: ${deviceRemove.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const retiredDevice = parseToolPayload(deviceRemove) as {
+    retired_at?: string;
+  };
+  if (!retiredDevice.retired_at) {
+    fail(`devices.remove expected retired_at: ${JSON.stringify(retiredDevice)}`);
+  }
+  assertNoMac(retiredDevice, "devices.remove");
+  ok("homebase.devices.remove soft-retire");
+
+  const listActive = await callTool(40, "homebase.devices.list", {});
+  if (listActive.isError) fail("devices.list after retire tool error");
+  const activeList = parseToolPayload(listActive) as { id: string }[];
+  if (activeList.some((d) => d.id === addedDevice.id)) {
+    fail("retired device still in default list");
+  }
+  ok("devices.list hides retired by default");
+
+  const listRetired = await callTool(41, "homebase.devices.list", {
+    include_retired: true,
+  });
+  if (listRetired.isError) fail("devices.list include_retired tool error");
+  const retiredList = parseToolPayload(listRetired) as { id: string }[];
+  if (!retiredList.some((d) => d.id === addedDevice.id)) {
+    fail("include_retired missing retired device");
+  }
+  ok("devices.list include_retired");
+
+  const unknownGet = await callTool(42, "homebase.devices.get", {
+    id: "nonexistent-device-id",
+  });
+  if (!unknownGet.isError) {
+    fail("devices.get unknown id should be error");
+  }
+  ok("homebase.devices.get unknown id refused");
 
   await runLightsSmoke(callTool);
 }

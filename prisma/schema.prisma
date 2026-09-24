@@ -26,6 +26,7 @@ enum ModuleId {
   DELIVERY
   SMART_HOME
   MESSAGING
+  HOME_NETWORK
 }
 
 enum NotificationType {
@@ -188,15 +189,18 @@ model Household {
   eventLogs        EventLog[]
   recipes          Recipe[]
   leftovers        Leftover[]
-  devices          Device[]
-  lightAutomations LightAutomation[]
-  sensorReadings   SensorReading[]
-  messages         Message[]
-  requests         Request[]
-  visitorPrefs     VisitorPreference[]
-  deliveries       DeliveryPackage[]
-  mcpChangeLogs    McpChangeLog[]
-  purchaseEvents   PurchaseEvent[]
+  devices              Device[]
+  lightAutomations     LightAutomation[]
+  sensorReadings       SensorReading[]
+  messages             Message[]
+  requests             Request[]
+  visitorPrefs         VisitorPreference[]
+  deliveries           DeliveryPackage[]
+  mcpChangeLogs        McpChangeLog[]
+  purchaseEvents       PurchaseEvent[]
+  networkDeviceTypes   NetworkDeviceType[]
+  deviceLocations      DeviceLocation[]
+  networkDevices       NetworkDevice[]
 }
 
 model McpChangeLog {
@@ -845,6 +849,64 @@ model Device {
   enabled     Boolean    @default(true)
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+/// Network device type catalogue (Home network). Household-scoped; seeded slugs + ADMIN adds.
+model NetworkDeviceType {
+  id          String   @id @default(cuid())
+  householdId String
+  slug        String
+  name        String
+  /// Seeded system types; slug is immutable.
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  devices   NetworkDevice[]
+
+  @@unique([householdId, slug])
+  @@index([householdId])
+}
+
+/// Device location (Home network room/label). Not inventory Location; not GPS.
+model DeviceLocation {
+  id          String   @id @default(cuid())
+  householdId String
+  slug        String
+  name        String
+  /// Reserved unknown / portable — not deletable or renamable slug.
+  isReserved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  devices   NetworkDevice[]
+
+  @@unique([householdId, slug])
+  @@index([householdId])
+}
+
+/// Network device inventory (IT gear). Soft-retire via retiredAt. MAC deferred to T-101.
+model NetworkDevice {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  typeId      String
+  locationId  String
+  notes       String?
+  retiredAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  household Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  type      NetworkDeviceType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  location  DeviceLocation    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([householdId, retiredAt])
+  @@index([householdId, name])
+  @@index([typeId])
+  @@index([locationId])
 }
 
 /// IKEA light Automation (M4c): schedule and/or sensor-edge. Not a chore Routine.

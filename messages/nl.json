@@ -56,6 +56,10 @@
       "name": "Berichten",
       "description": "Huishoudelijke groepsberichten"
     },
+    "home_network": {
+      "name": "Thuisnetwerk",
+      "description": "Netwerkapparaten en hun locatie"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -733,6 +737,36 @@
     "statusException": "PROBLEEM",
     "confirmDelete": "Dit pakket verwijderen?",
     "noPackages": "Nog geen pakketten."
+  },
+  "network": {
+    "title": "Thuisnetwerk",
+    "subtitle": "Netwerkapparaten en hun locatie catalogiseren",
+    "enroll": "Apparaat toevoegen",
+    "enrollBtn": "Toevoegen",
+    "name": "Naam",
+    "type": "Type",
+    "location": "Locatie",
+    "notes": "Notities",
+    "notesPlaceholder": "Optionele notities",
+    "noDevices": "Nog geen netwerkapparaten.",
+    "showRetired": "Toon uitgeschakelde",
+    "hideRetired": "Verberg uitgeschakelde",
+    "retired": "Uitgeschakeld",
+    "retire": "Uitschakelen",
+    "restore": "Herstellen",
+    "confirmRetire": "Dit apparaat uitschakelen? Het verdwijnt uit de standaardlijst.",
+    "edit": "Bewerken",
+    "saveChanges": "Opslaan",
+    "adminOnly": "Alleen admins kunnen apparaten toevoegen of bewerken.",
+    "manageTypes": "Apparaattypes",
+    "addType": "Type toevoegen",
+    "typeName": "Typenaam",
+    "manageLocations": "Locaties",
+    "addLocation": "Locatie toevoegen",
+    "locationName": "Locatienaam",
+    "rename": "Hernoemen",
+    "reserved": "Gereserveerd",
+    "system": "Systeem"
   },
   "messages": {
     "title": "Berichten",

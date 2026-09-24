@@ -56,6 +56,10 @@
       "name": "Messages",
       "description": "Household group messaging"
     },
+    "home_network": {
+      "name": "Home network",
+      "description": "Network devices and where they live"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -733,6 +737,36 @@
     "statusException": "EXCEPTION",
     "confirmDelete": "Delete this package?",
     "noPackages": "No packages yet."
+  },
+  "network": {
+    "title": "Home network",
+    "subtitle": "Catalogue network devices and where they live",
+    "enroll": "Enroll device",
+    "enrollBtn": "Enroll",
+    "name": "Name",
+    "type": "Type",
+    "location": "Location",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "noDevices": "No network devices yet.",
+    "showRetired": "Show retired",
+    "hideRetired": "Hide retired",
+    "retired": "Retired",
+    "retire": "Retire",
+    "restore": "Restore",
+    "confirmRetire": "Retire this device? It will be hidden from the default list.",
+    "edit": "Edit",
+    "saveChanges": "Save changes",
+    "adminOnly": "Only admins can enroll or edit devices.",
+    "manageTypes": "Device types",
+    "addType": "Add type",
+    "typeName": "Type name",
+    "manageLocations": "Locations",
+    "addLocation": "Add location",
+    "locationName": "Location name",
+    "rename": "Rename",
+    "reserved": "Reserved",
+    "system": "System"
   },
   "messages": {
     "title": "Messages",

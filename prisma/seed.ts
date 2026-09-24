@@ -72,6 +72,12 @@ async function main() {
     skipDuplicates: true,
   });
 
+  // T-108 Home network catalogues (idempotent)
+  const { ensureNetworkCatalogues } = await import(
+    "../src/domain/network/ensure-catalogues"
+  );
+  await ensureNetworkCatalogues(householdId);
+
   await prisma.routineTemplate.create({
     data: {
       householdId,

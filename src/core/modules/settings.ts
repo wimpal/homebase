@@ -3,6 +3,8 @@ import { prisma } from "@/core/db";
 import { ALL_MODULE_IDS, MODULE_REGISTRY } from "./registry";
 
 export async function getEnabledModules(householdId: string) {
+  await ensureModuleSettings(householdId);
+
   const settings = await prisma.moduleSetting.findMany({
     where: { householdId },
   });
@@ -12,13 +14,15 @@ export async function getEnabledModules(householdId: string) {
   }
 
   const enabledIds = new Set(
-    settings.filter((s) => s.enabled).map((s) => s.moduleId)
+    settings.filter((s) => s.enabled).map((s) => s.moduleId),
   );
 
   return MODULE_REGISTRY.filter((m) => enabledIds.has(m.id));
 }
 
 export async function isModuleEnabled(householdId: string, moduleId: ModuleId) {
+  await ensureModuleSettings(householdId);
+
   const setting = await prisma.moduleSetting.findUnique({
     where: { householdId_moduleId: { householdId, moduleId } },
   });
@@ -31,23 +35,39 @@ export async function isModuleEnabled(householdId: string, moduleId: ModuleId) {
   return setting.enabled;
 }
 
-export async function initializeModuleSettings(householdId: string) {
-  const existing = await prisma.moduleSetting.count({ where: { householdId } });
-  if (existing > 0) return;
+/**
+ * Ensure every known ModuleId has a ModuleSetting row.
+ * Upserts missing ids with registry defaultEnabled; never overwrites existing toggles.
+ */
+export async function ensureModuleSettings(householdId: string) {
+  const existing = await prisma.moduleSetting.findMany({
+    where: { householdId },
+    select: { moduleId: true },
+  });
+  const have = new Set(existing.map((r) => r.moduleId));
+  const missing = ALL_MODULE_IDS.filter((id) => !have.has(id));
+  if (missing.length === 0) return;
 
   await prisma.moduleSetting.createMany({
-    data: ALL_MODULE_IDS.map((moduleId) => ({
+    data: missing.map((moduleId) => ({
       householdId,
       moduleId,
-      enabled: MODULE_REGISTRY.find((m) => m.id === moduleId)?.defaultEnabled ?? true,
+      enabled:
+        MODULE_REGISTRY.find((m) => m.id === moduleId)?.defaultEnabled ?? true,
     })),
+    skipDuplicates: true,
   });
+}
+
+/** @deprecated Prefer ensureModuleSettings — kept for create-household call sites. */
+export async function initializeModuleSettings(householdId: string) {
+  await ensureModuleSettings(householdId);
 }
 
 export async function toggleModule(
   householdId: string,
   moduleId: ModuleId,
-  enabled: boolean
+  enabled: boolean,
 ) {
   await prisma.moduleSetting.upsert({
     where: { householdId_moduleId: { householdId, moduleId } },

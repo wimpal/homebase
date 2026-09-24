@@ -117,6 +117,10 @@ export async function createHousehold(
     });
 
     await initializeModuleSettings(result.householdId);
+    const { ensureNetworkCatalogues } = await import(
+      "@/domain/network/ensure-catalogues"
+    );
+    await ensureNetworkCatalogues(result.householdId);
     return result;
   } catch (e) {
     if (isDomainError(e)) return e;

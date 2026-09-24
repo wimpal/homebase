@@ -8,6 +8,7 @@ import {
   Home,
   Lightbulb,
   MessageSquare,
+  Network,
   Package,
   Repeat,
   ShoppingCart,
@@ -124,6 +125,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     descriptionKey: "messaging",
     icon: MessageSquare,
     href: "/messages",
+    defaultEnabled: true,
+  },
+  {
+    id: ModuleId.HOME_NETWORK,
+    nameKey: "home_network",
+    descriptionKey: "home_network",
+    icon: Network,
+    href: "/network",
     defaultEnabled: true,
   },
 ];

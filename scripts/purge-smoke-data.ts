@@ -113,6 +113,10 @@ async function main() {
   printSection("Chore (title starts with mcp-smoke)", matches.chores);
   printSection('Recipe (title starts with "Smoke Add ")', matches.recipes);
   printSection(
+    'NetworkDevice (name starts with "Smoke Add " or mcp-smoke)',
+    matches.networkDevices,
+  );
+  printSection(
     "Notification (title or message contains mcp-smoke)",
     matches.notifications,
   );

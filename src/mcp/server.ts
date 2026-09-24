@@ -6,6 +6,13 @@ import { getInventory, listInventory, updateInventory } from "@/domain/inventory
 import { addRecipe, getRecipe, searchRecipes, updateRecipe } from "@/domain/recipes";
 import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
 import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from "@/domain/smarthome";
+import {
+  addNetworkDevice,
+  getNetworkDevice,
+  listNetworkDevices,
+  retireNetworkDevice,
+  updateNetworkDevice,
+} from "@/domain/network";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
 
 function toolJson(value: unknown) {
@@ -434,6 +441,114 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async (input) => {
       const result = await updateRecipe(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.list",
+    {
+      description:
+        'List Network devices (NAS, PCs, phones, routers, …) and where they live. Use for "where\'s the NAS" or "what\'s in the office". Not for IKEA lights (homebase.lights.*) or cameras.',
+      inputSchema: {
+        location: z
+          .string()
+          .optional()
+          .describe("Device location id or slug"),
+        type: z
+          .string()
+          .optional()
+          .describe("Network device type id or slug (nas, pc, …)"),
+        include_retired: z
+          .boolean()
+          .optional()
+          .describe("Include soft-retired devices; default false"),
+      },
+    },
+    async (input) => {
+      const result = await listNetworkDevices(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.get",
+    {
+      description:
+        "Get one Network device by id with type and Device location. Not for Dirigera lamp ids.",
+      inputSchema: {
+        id: z.string().describe("Network device id"),
+      },
+    },
+    async ({ id }) => {
+      const result = await getNetworkDevice(householdId, id);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.add",
+    {
+      description:
+        "Enroll a Network device (name + type + existing Device location). Duplicate names auto-suffix. Does not create locations. Never accepts MAC.",
+      inputSchema: {
+        name: z.string().describe("Display name; auto-suffixed if duplicate"),
+        type: z.string().describe("Existing type id or slug"),
+        location: z.string().describe("Existing location id or slug"),
+        notes: z.string().optional().describe("Optional free-text notes"),
+      },
+    },
+    async (input) => {
+      const result = await addNetworkDevice(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.update",
+    {
+      description:
+        "Patch an existing Network device. Omit fields to leave unchanged. Never accepts MAC.",
+      inputSchema: {
+        id: z.string().describe("Existing Network device id"),
+        name: z.string().optional(),
+        type: z.string().optional().describe("Existing type id or slug"),
+        location: z.string().optional().describe("Existing location id or slug"),
+        notes: z.string().optional(),
+      },
+    },
+    async (input) => {
+      const result = await updateNetworkDevice(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.remove",
+    {
+      description:
+        "Soft-retire a Network device (hidden from default list). Does not hard-delete. Restore is UI-only.",
+      inputSchema: {
+        id: z.string().describe("Network device id to retire"),
+      },
+    },
+    async ({ id }) => {
+      const result = await retireNetworkDevice(householdId, id);
       if (isDomainError(result)) {
         return toolError(result);
       }
