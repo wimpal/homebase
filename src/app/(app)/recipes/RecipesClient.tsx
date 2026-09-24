@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   addRecipeToShoppingAction,
+  clearRecipeThumbnail,
   createRecipeWithState,
   deleteRecipe,
   addLeftover,
@@ -79,6 +80,11 @@ const GROUP_LABEL_KEYS: Record<string, string> = {
 
 const initialFormState: RecipeFormState = {};
 
+const listText = "text-sm text-zinc-700 dark:text-zinc-300";
+const optionalText = "italic text-zinc-500 dark:text-zinc-400";
+const mutedText = "text-sm text-zinc-600 dark:text-zinc-400";
+const headingText = "font-medium text-zinc-800 dark:text-zinc-200";
+
 function resolveSteps(recipe: Recipe): { text: string; optional: boolean }[] {
   if (recipe.steps && recipe.steps.length > 0) {
     return [...recipe.steps]
@@ -97,19 +103,24 @@ function normalizeGroup(group: string | null | undefined): string | null {
   return trimmed || null;
 }
 
-function ingredientsToFormValue(ingredients: RecipeIngredient[]): string {
-  return ingredients
-    .map((ing) => {
-      const parts = [ing.name, ing.quantity || "1"];
-      if (ing.group || ing.optional) {
-        parts.push(ing.group?.trim() || "");
-      }
-      if (ing.optional) {
-        parts.push("1");
-      }
-      return parts.join("|");
-    })
-    .join("\n");
+function ingredientLine(ing: RecipeIngredient): string {
+  const parts = [ing.name, ing.quantity || "1"];
+  if (ing.group) parts.push(ing.group.trim());
+  return parts.join("|");
+}
+
+function ingredientsToFormValues(ingredients: RecipeIngredient[]): {
+  main: string;
+  optional: string;
+} {
+  const main: string[] = [];
+  const optional: string[] = [];
+  for (const ing of ingredients) {
+    const line = ingredientLine(ing);
+    if (ing.optional) optional.push(line);
+    else main.push(line);
+  }
+  return { main: main.join("\n"), optional: optional.join("\n") };
 }
 
 function stepsToFormValues(steps: { text: string; optional: boolean }[]): {
@@ -122,19 +133,99 @@ function stepsToFormValues(steps: { text: string; optional: boolean }[]): {
   };
 }
 
+function IngredientList({
+  ingredients,
+  showOptionalOnly,
+}: {
+  ingredients: RecipeIngredient[];
+  showOptionalOnly: boolean;
+}) {
+  const t = useTranslations("recipes");
+  const filtered = ingredients.filter((ing) =>
+    showOptionalOnly ? Boolean(ing.optional) : !ing.optional,
+  );
+  if (filtered.length === 0) return null;
+
+  return (
+    <ul className={cn("list-disc pl-5", listText)}>
+      {filtered.map((ing, i) => {
+        const group = normalizeGroup(ing.group);
+        const prevGroup = normalizeGroup(filtered[i - 1]?.group);
+        const showHeading = Boolean(group) && group !== prevGroup;
+        const labelKey = group ? GROUP_LABEL_KEYS[group] : undefined;
+        const heading =
+          group && labelKey ? t(labelKey as "groupDressing") : group;
+        return (
+          <Fragment key={`${ing.name}-${i}`}>
+            {showHeading && (
+              <li
+                className={cn(
+                  "mt-2 -ml-5 list-none first:mt-0",
+                  headingText,
+                )}
+              >
+                {heading}
+              </li>
+            )}
+            <li className={cn(ing.optional && optionalText)}>
+              {ing.quantity} {ing.name}
+              {ing.optional ? ` ${t("optionalMark")}` : ""}
+              {ing.product
+                ? ` ${t("inStock", { name: ing.product.name })}`
+                : ""}
+            </li>
+          </Fragment>
+        );
+      })}
+    </ul>
+  );
+}
+
 function RecipeFormFields({
   recipe,
   timersDefault,
+  allTags,
+  thumbnailUrl,
+  layout = "stacked",
 }: {
   recipe?: Recipe;
   timersDefault?: string;
+  allTags: string[];
+  thumbnailUrl?: string | null;
+  layout?: "stacked" | "split";
 }) {
   const t = useTranslations("recipes");
   const tc = useTranslations("common");
   const steps = recipe ? resolveSteps(recipe) : [];
   const stepForm = stepsToFormValues(steps);
+  const ingredientForms = recipe
+    ? ingredientsToFormValues(recipe.ingredients)
+    : { main: "", optional: "" };
 
-  return (
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    () => recipe?.tags ?? [],
+  );
+  const [newTag, setNewTag] = useState("");
+
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag],
+    );
+  }
+
+  function addNewTag() {
+    const tag = newTag.trim().toLowerCase();
+    if (!tag) return;
+    setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
+    setNewTag("");
+  }
+
+  const chipTags = useMemo(() => {
+    const set = new Set([...allTags, ...selectedTags]);
+    return [...set].sort();
+  }, [allTags, selectedTags]);
+
+  const left = (
     <>
       <div>
         <Label>{tc("title")}</Label>
@@ -149,12 +240,86 @@ function RecipeFormFields({
         />
       </div>
       <div>
-        <Label>{t("tagsLabel")}</Label>
-        <Input
-          name="tags"
-          placeholder={t("tagsPlaceholder")}
-          defaultValue={recipe?.tags?.join(", ") ?? ""}
+        <Label>{t("ingredientsPerLine")}</Label>
+        <p className="mb-1 text-xs text-zinc-500">{t("ingredientsHint")}</p>
+        <Textarea
+          name="ingredients"
+          rows={8}
+          className="min-h-[10rem]"
+          placeholder={t("ingredientsPlaceholder")}
+          defaultValue={ingredientForms.main || undefined}
         />
+      </div>
+      <div>
+        <Label>{t("optionalIngredientsLabel")}</Label>
+        <p className="mb-1 text-xs text-zinc-500">
+          {t("optionalIngredientsHint")}
+        </p>
+        <Textarea
+          name="optionalIngredients"
+          rows={3}
+          className="min-h-[4.5rem]"
+          placeholder={t("optionalIngredientsPlaceholder")}
+          defaultValue={ingredientForms.optional || undefined}
+        />
+      </div>
+      <div>
+        <Label>{t("stepsPerLine")}</Label>
+        <p className="mb-1 text-xs text-zinc-500">{t("stepsOptionalHint")}</p>
+        <Textarea
+          name="instructions"
+          rows={8}
+          className="min-h-[10rem]"
+          placeholder={t("stepsPlaceholder")}
+          required
+          defaultValue={stepForm.instructions || undefined}
+        />
+      </div>
+    </>
+  );
+
+  const right = (
+    <>
+      <div>
+        <Label>{t("tagsLabel")}</Label>
+        {chipTags.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            <span className="w-full text-xs text-zinc-500">
+              {t("existingTags")}
+            </span>
+            {chipTags.map((tag) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <Button
+                  key={tag}
+                  type="button"
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {tag}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            placeholder={t("addTagPlaceholder")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addNewTag();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={addNewTag}>
+            {t("addTag")}
+          </Button>
+        </div>
+        <input type="hidden" name="tags" value={selectedTags.join(", ")} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -203,29 +368,6 @@ function RecipeFormFields({
         </div>
       </div>
       <div>
-        <Label>{t("ingredientsPerLine")}</Label>
-        <p className="mb-1 text-xs text-zinc-500">{t("ingredientsHint")}</p>
-        <Textarea
-          name="ingredients"
-          placeholder={t("ingredientsPlaceholder")}
-          required
-          defaultValue={
-            recipe ? ingredientsToFormValue(recipe.ingredients) : undefined
-          }
-        />
-      </div>
-      <div>
-        <Label>{t("stepsPerLine")}</Label>
-        <p className="mb-1 text-xs text-zinc-500">{t("stepsOptionalHint")}</p>
-        <Textarea
-          name="instructions"
-          rows={5}
-          placeholder={t("stepsPlaceholder")}
-          required
-          defaultValue={stepForm.instructions || undefined}
-        />
-      </div>
-      <div>
         <Label>{t("timersPerLine")}</Label>
         <Textarea
           name="timers"
@@ -233,10 +375,24 @@ function RecipeFormFields({
           defaultValue={timersDefault}
         />
       </div>
-      {recipe?.thumbnailUrl ? (
-        <input type="hidden" name="thumbnailUrl" value={recipe.thumbnailUrl} />
-      ) : null}
+      <input type="hidden" name="thumbnailUrl" value={thumbnailUrl ?? ""} />
     </>
+  );
+
+  if (layout === "split") {
+    return (
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-3">{left}</div>
+        <div className="space-y-3">{right}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {left}
+      {right}
+    </div>
   );
 }
 
@@ -262,6 +418,9 @@ export function RecipesClient({
   const [shopFeedback, setShopFeedback] = useState<string | null>(null);
   const [shopPending, startShopTransition] = useTransition();
   const [uploadPending, startUploadTransition] = useTransition();
+  const [overlayThumbnailUrl, setOverlayThumbnailUrl] = useState<
+    string | null
+  >(null);
 
   const [createState, createAction, createPending] = useActionState(
     createRecipeWithState,
@@ -310,6 +469,14 @@ export function RecipesClient({
     }
   }, [updateState.ok]);
 
+  useEffect(() => {
+    if (selected) {
+      setOverlayThumbnailUrl(selected.thumbnailUrl);
+    } else {
+      setOverlayThumbnailUrl(null);
+    }
+  }, [selected?.id, selected?.thumbnailUrl]);
+
   function clearTimerInterval(id: string) {
     const handle = intervalRefs.current[id];
     if (handle) {
@@ -356,6 +523,7 @@ export function RecipesClient({
       setEditing(false);
       setShopFeedback(null);
       setIncludeOptional(false);
+      setOverlayThumbnailUrl(null);
     }
   }
 
@@ -389,7 +557,20 @@ export function RecipesClient({
     fd.set("id", selected.id);
     fd.set("file", file);
     startUploadTransition(async () => {
-      await uploadRecipeThumbnail(fd);
+      const result = await uploadRecipeThumbnail(fd);
+      if (result.url) {
+        setOverlayThumbnailUrl(result.url);
+      }
+    });
+  }
+
+  function onRemoveThumbnail() {
+    if (!selected) return;
+    startUploadTransition(async () => {
+      const result = await clearRecipeThumbnail(selected.id);
+      if (result.ok) {
+        setOverlayThumbnailUrl(null);
+      }
     });
   }
 
@@ -397,10 +578,12 @@ export function RecipesClient({
     ? selected.timers.map((tm) => `${tm.label}|${tm.minutes}`).join("\n")
     : "";
 
+  const displayThumb = overlayThumbnailUrl;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2yl font-bold">{t("title")}</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-zinc-500">{t("subtitle")}</p>
       </div>
 
@@ -422,7 +605,7 @@ export function RecipesClient({
               </CardHeader>
               <CardContent>
                 <form action={createAction} className="space-y-3">
-                  <RecipeFormFields />
+                  <RecipeFormFields allTags={allTags} thumbnailUrl={null} />
                   {createState.error && (
                     <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
                       {createState.error}
@@ -509,7 +692,7 @@ export function RecipesClient({
                         {recipe.title}
                       </CardTitle>
                       {(recipe.tags?.length ?? 0) > 0 && (
-                        <p className="line-clamp-1 text-xs text-zinc-500">
+                        <p className={cn("line-clamp-1 text-xs", mutedText)}>
                           {recipe.tags.join(" · ")}
                         </p>
                       )}
@@ -599,7 +782,7 @@ export function RecipesClient({
 
       <Dialog open={!!selected} onOpenChange={closeOverlay}>
         {selected && (
-          <DialogContent className="w-[min(96vw,40rem)]">
+          <DialogContent className="w-[min(96vw,56rem)] max-w-none">
             <DialogHeader>
               <DialogTitle>{selected.title}</DialogTitle>
               <DialogDescription>
@@ -614,8 +797,12 @@ export function RecipesClient({
               <form action={updateAction} className="space-y-3">
                 <input type="hidden" name="id" value={selected.id} />
                 <RecipeFormFields
+                  key={`${selected.id}-${displayThumb ?? "none"}`}
                   recipe={selected}
                   timersDefault={timersDefaultForEdit}
+                  allTags={allTags}
+                  thumbnailUrl={displayThumb}
+                  layout="split"
                 />
                 {updateState.error && (
                   <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
@@ -636,193 +823,214 @@ export function RecipesClient({
                 </div>
               </form>
             ) : (
-              <div className="space-y-4">
-                <div className="aspect-[16/9] overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
-                  {selected.thumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={selected.thumbnailUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium">{t("ingredients")}</p>
+                    <IngredientList
+                      ingredients={selected.ingredients}
+                      showOptionalOnly={false}
                     />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-zinc-400">
-                      <ImageIcon className="h-12 w-12 opacity-40" />
+                  </div>
+                  {selected.ingredients.some((ing) => ing.optional) && (
+                    <div>
+                      <p className="text-sm font-medium">
+                        {t("optionalIngredientsLabel")}
+                      </p>
+                      <IngredientList
+                        ingredients={selected.ingredients}
+                        showOptionalOnly
+                      />
                     </div>
                   )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <label className="inline-flex cursor-pointer">
-                    <span className="inline-flex h-8 items-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900">
-                      {uploadPending ? t("uploading") : t("uploadPhoto")}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="hidden"
-                      disabled={uploadPending}
-                      onChange={(e) => {
-                        onUploadThumbnail(e.target.files?.[0] ?? null);
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditing(true)}
-                  >
-                    {t("editRecipe")}
-                  </Button>
-                  <ConfirmForm
-                    action={deleteRecipe}
-                    message={t("confirmDelete")}
-                  >
-                    <input type="hidden" name="id" value={selected.id} />
-                    <Button type="submit" variant="destructive" size="sm">
-                      {t("deleteRecipe")}
-                    </Button>
-                  </ConfirmForm>
-                </div>
-
-                {(selected.tags?.length ?? 0) > 0 && (
-                  <p className="text-sm text-zinc-600">
-                    {selected.tags.join(" · ")}
-                  </p>
-                )}
-
-                <div>
-                  <p className="text-sm font-medium">{t("ingredients")}</p>
-                  <ul className="list-disc pl-5 text-sm text-zinc-600">
-                    {selected.ingredients.map((ing, i) => {
-                      const group = normalizeGroup(ing.group);
-                      const prevGroup = normalizeGroup(
-                        selected.ingredients[i - 1]?.group,
-                      );
-                      const showHeading =
-                        Boolean(group) && group !== prevGroup;
-                      const labelKey = group
-                        ? GROUP_LABEL_KEYS[group]
-                        : undefined;
-                      const heading =
-                        group && labelKey
-                          ? t(labelKey as "groupDressing")
-                          : group;
+                  <div>
+                    <p className="text-sm font-medium">{t("steps")}</p>
+                    {(() => {
+                      const steps = resolveSteps(selected);
+                      if (steps.length === 0) {
+                        return (
+                          <p className={mutedText}>{tc("emDash")}</p>
+                        );
+                      }
                       return (
-                        <Fragment key={i}>
-                          {showHeading && (
-                            <li className="mt-2 -ml-5 list-none font-medium text-zinc-800 first:mt-0">
-                              {heading}
-                            </li>
+                        <ol
+                          className={cn(
+                            "list-decimal space-y-1 pl-5",
+                            listText,
                           )}
-                          <li
-                            className={cn(
-                              ing.optional && "italic text-zinc-400",
-                            )}
-                          >
-                            {ing.quantity} {ing.name}
-                            {ing.optional ? ` ${t("optionalMark")}` : ""}
-                            {ing.product
-                              ? ` ${t("inStock", { name: ing.product.name })}`
-                              : ""}
-                          </li>
-                        </Fragment>
-                      );
-                    })}
-                  </ul>
-                </div>
-
-                {selected.timers.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selected.timers.map((timer) => {
-                      const running = activeTimers[timer.id] != null;
-                      return (
-                        <div key={timer.id} className="flex gap-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              startTimer(timer.id, timer.minutes)
-                            }
-                            disabled={running}
-                          >
-                            <Timer className="mr-1 h-3 w-3" />
-                            {timer.label} (
-                            {running
-                              ? formatTimer(activeTimers[timer.id])
-                              : `${timer.minutes}m`}
-                            )
-                          </Button>
-                          {running && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => stopTimer(timer.id)}
+                        >
+                          {steps.map((step, i) => (
+                            <li
+                              key={i}
+                              className={cn(step.optional && optionalText)}
                             >
-                              <X className="mr-1 h-3 w-3" />
-                              {t("stopTimer")}
-                            </Button>
-                          )}
-                        </div>
+                              {step.text}
+                              {step.optional ? ` ${t("optionalMark")}` : ""}
+                            </li>
+                          ))}
+                        </ol>
                       );
-                    })}
+                    })()}
                   </div>
-                )}
-
-                <div>
-                  <p className="text-sm font-medium">{t("steps")}</p>
-                  {(() => {
-                    const steps = resolveSteps(selected);
-                    if (steps.length === 0) {
-                      return (
-                        <p className="text-sm text-zinc-500">{tc("emDash")}</p>
-                      );
-                    }
-                    return (
-                      <ol className="list-decimal space-y-1 pl-5 text-sm text-zinc-600">
-                        {steps.map((step, i) => (
-                          <li
-                            key={i}
-                            className={cn(
-                              step.optional && "italic text-zinc-400",
-                            )}
-                          >
-                            {step.text}
-                            {step.optional ? ` ${t("optionalMark")}` : ""}
-                          </li>
-                        ))}
-                      </ol>
-                    );
-                  })()}
                 </div>
 
-                <div className="space-y-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={includeOptional}
-                      onChange={(e) => setIncludeOptional(e.target.checked)}
-                    />
-                    {t("includeOptional")}
-                  </label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={shopPending}
-                    onClick={onAddToShopping}
-                  >
-                    <ShoppingCart className="mr-1 h-3 w-3" />
-                    {t("addToShopping")}
-                  </Button>
-                  {shopFeedback && (
-                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                      {shopFeedback}
+                <div className="space-y-4">
+                  <div className="aspect-[16/9] overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
+                    {displayThumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={displayThumb}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-zinc-400">
+                        <ImageIcon className="h-12 w-12 opacity-40" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <label className="inline-flex cursor-pointer">
+                      <span className="inline-flex h-8 items-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900">
+                        {uploadPending
+                          ? t("uploading")
+                          : displayThumb
+                            ? t("changePhoto")
+                            : t("uploadPhoto")}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={uploadPending}
+                        onChange={(e) => {
+                          onUploadThumbnail(e.target.files?.[0] ?? null);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {displayThumb && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadPending}
+                        onClick={onRemoveThumbnail}
+                      >
+                        {t("removePhoto")}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(true)}
+                    >
+                      {t("editRecipe")}
+                    </Button>
+                    <ConfirmForm
+                      action={deleteRecipe}
+                      message={t("confirmDelete")}
+                    >
+                      <input type="hidden" name="id" value={selected.id} />
+                      <Button type="submit" variant="destructive" size="sm">
+                        {t("deleteRecipe")}
+                      </Button>
+                    </ConfirmForm>
+                  </div>
+
+                  {(selected.tags?.length ?? 0) > 0 && (
+                    <p className={mutedText}>{selected.tags.join(" · ")}</p>
+                  )}
+
+                  {(selected.calories != null ||
+                    selected.proteinG != null ||
+                    selected.carbsG != null ||
+                    selected.fatG != null) && (
+                    <p className={mutedText}>
+                      {[
+                        selected.calories != null
+                          ? t("caloriesValue", { count: selected.calories })
+                          : null,
+                        selected.proteinG != null
+                          ? `${t("proteinG")}: ${selected.proteinG}`
+                          : null,
+                        selected.carbsG != null
+                          ? `${t("carbsG")}: ${selected.carbsG}`
+                          : null,
+                        selected.fatG != null
+                          ? `${t("fatG")}: ${selected.fatG}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   )}
+
+                  {selected.timers.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selected.timers.map((timer) => {
+                        const running = activeTimers[timer.id] != null;
+                        return (
+                          <div key={timer.id} className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                startTimer(timer.id, timer.minutes)
+                              }
+                              disabled={running}
+                            >
+                              <Timer className="mr-1 h-3 w-3" />
+                              {timer.label} (
+                              {running
+                                ? formatTimer(activeTimers[timer.id])
+                                : `${timer.minutes}m`}
+                              )
+                            </Button>
+                            {running && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => stopTimer(timer.id)}
+                              >
+                                <X className="mr-1 h-3 w-3" />
+                                {t("stopTimer")}
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="space-y-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={includeOptional}
+                        onChange={(e) => setIncludeOptional(e.target.checked)}
+                      />
+                      {t("includeOptional")}
+                    </label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={shopPending}
+                      onClick={onAddToShopping}
+                    >
+                      <ShoppingCart className="mr-1 h-3 w-3" />
+                      {t("addToShopping")}
+                    </Button>
+                    {shopFeedback && (
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        {shopFeedback}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

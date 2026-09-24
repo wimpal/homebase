@@ -437,7 +437,7 @@
     "carbsG": "Koolhydraten (g)",
     "fatG": "Vet (g)",
     "optionalBlank": "Leeg laten indien onbekend",
-    "ingredientsHint": "Één per regel: naam|hoeveelheid of naam|hoeveelheid|groep of naam|hoeveelheid|groep|1 (1 = optioneel)",
+    "ingredientsHint": "Één per regel: naam|hoeveelheid of naam|hoeveelheid|groep (verplichte ingrediënten).",
     "stepsOptionalHint": "Één stap per regel. Optioneel markeren met |1 aan het eind (bijv. Voeg chili toe naar smaak|1).",
     "filterByTag": "Filter op tag",
     "clearFilter": "Alles",
@@ -450,7 +450,15 @@
     "stopTimer": "Stop",
     "includeOptional": "Optionele ingrediënten meenemen",
     "addToShopping": "Op boodschappenlijst",
-    "shoppingResult": "{added} toegevoegd, {skipped} overgeslagen (stonden al op de lijst)"
+    "shoppingResult": "{added} toegevoegd, {skipped} overgeslagen (stonden al op de lijst)",
+    "optionalIngredientsLabel": "Optionele ingrediënten",
+    "optionalIngredientsHint": "Één per regel: naam|hoeveelheid of naam|hoeveelheid|groep. Altijd optioneel.",
+    "optionalIngredientsPlaceholder": "Chilivlokken|1 tl\nCitroenrasp|1",
+    "existingTags": "Bestaande tags",
+    "addTagPlaceholder": "Nieuwe tag…",
+    "addTag": "Toevoegen",
+    "changePhoto": "Foto wijzigen",
+    "removePhoto": "Foto verwijderen"
   },
   "smartHome": {
     "title": "Smart Home",

@@ -37,41 +37,61 @@ export async function getRecipes() {
 
 export type RecipeFormState = { error?: string; ok?: boolean };
 
+function parseIngredientLine(line: string, forceOptional?: boolean) {
+  const parts = line.split("|").map((s) => s.trim());
+  const name = parts[0] ?? "";
+  const quantity = parts[1] || "1";
+  const group = parts[2] || undefined;
+  const optionalFlag = parts[3] ?? "";
+  const optional =
+    forceOptional === true
+      ? true
+      : optionalFlag === "1" || optionalFlag === "true";
+  return {
+    name,
+    quantity,
+    group: group || undefined,
+    optional,
+  };
+}
+
 function parseRecipeForm(formData: FormData) {
   const title = (formData.get("title") as string) || "";
   const instructions = (formData.get("instructions") as string) || "";
   const servings = parseInt((formData.get("servings") as string) || "4", 10);
   const ingredientsRaw = (formData.get("ingredients") as string) || "";
+  const optionalIngredientsRaw =
+    (formData.get("optionalIngredients") as string) || "";
   const tagsRaw = (formData.get("tags") as string) || "";
   const timersRaw = (formData.get("timers") as string) || "";
-  const thumbnailUrl = (formData.get("thumbnailUrl") as string) || undefined;
+  const thumbnailUrlRaw = formData.get("thumbnailUrl");
+  const thumbnailUrl =
+    thumbnailUrlRaw === null
+      ? undefined
+      : String(thumbnailUrlRaw).trim() || undefined;
 
   const caloriesRaw = (formData.get("calories") as string)?.trim() ?? "";
   const proteinRaw = (formData.get("protein_g") as string)?.trim() ?? "";
   const carbsRaw = (formData.get("carbs_g") as string)?.trim() ?? "";
   const fatRaw = (formData.get("fat_g") as string)?.trim() ?? "";
 
-  // Line: name|quantity|group?|optional(1)?
-  const ingredients = ingredientsRaw
+  const mainIngredients = ingredientsRaw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((s) => s.trim());
-      const name = parts[0] ?? "";
-      const quantity = parts[1] || "1";
-      const group = parts[2] || undefined;
-      const optionalFlag = parts[3] ?? "";
-      return {
-        name,
-        quantity,
-        group: group || undefined,
-        optional: optionalFlag === "1" || optionalFlag === "true",
-      };
-    })
+    .map((line) => parseIngredientLine(line, false))
+    .filter((item) => item.name)
+    .map((item) => ({ ...item, optional: false }));
+
+  const optionalIngredients = optionalIngredientsRaw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => parseIngredientLine(line, true))
     .filter((item) => item.name);
 
-  // Steps: one per line; optional via trailing |1 (e.g. "Add chili|1")
+  const ingredients = [...mainIngredients, ...optionalIngredients];
+
   const steps: string[] = [];
   const stepOptional: boolean[] = [];
   for (const line of instructions.split("\n")) {
@@ -112,7 +132,7 @@ function parseRecipeForm(formData: FormData) {
     protein_g: parseNum(proteinRaw),
     carbs_g: parseNum(carbsRaw),
     fat_g: parseNum(fatRaw),
-    thumbnail_url: thumbnailUrl || undefined,
+    thumbnail_url: thumbnailUrl,
     timersRaw,
   };
 }
@@ -148,6 +168,10 @@ export async function createRecipe(formData: FormData) {
   const timers = parseTimerLines(parsed.timersRaw);
   if (isDomainError(timers)) {
     throw new Error(timers.message);
+  }
+
+  if (parsed.ingredients.length === 0) {
+    throw new Error("Invalid recipe payload");
   }
 
   const result = await addRecipe(householdId, {
@@ -205,6 +229,10 @@ export async function updateRecipeAction(formData: FormData) {
   const timers = parseTimerLines(parsed.timersRaw);
   if (isDomainError(timers)) {
     throw new Error(timers.message);
+  }
+
+  if (parsed.ingredients.length === 0) {
+    throw new Error("Invalid recipe payload");
   }
 
   const result = await updateRecipe(householdId, {
@@ -279,6 +307,31 @@ export async function uploadRecipeThumbnail(
       error: err instanceof Error ? err.message : "Upload failed",
     };
   }
+}
+
+
+export async function clearRecipeThumbnail(
+  recipeId: string,
+): Promise<{ ok?: boolean; error?: string }> {
+  const { householdId } = await requireMutationAccess(ModuleId.RECIPES);
+  if (!recipeId) return { error: "Invalid recipe payload" };
+  await assertRecipe(householdId, recipeId);
+
+  const existing = await prisma.recipe.findFirst({
+    where: { id: recipeId, householdId },
+    select: { thumbnailUrl: true },
+  });
+  if (!existing) return { error: "Recipe not found" };
+
+  await prisma.recipe.update({
+    where: { id: recipeId },
+    data: { thumbnailUrl: null },
+  });
+  if (existing.thumbnailUrl) {
+    await deleteUploadByUrl(existing.thumbnailUrl);
+  }
+  revalidatePath("/recipes");
+  return { ok: true };
 }
 
 export async function addRecipeToShoppingAction(

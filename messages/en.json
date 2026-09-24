@@ -437,7 +437,7 @@
     "carbsG": "Carbs (g)",
     "fatG": "Fat (g)",
     "optionalBlank": "Leave blank if unknown",
-    "ingredientsHint": "One per line: name|quantity or name|quantity|group or name|quantity|group|1 (1 = optional)",
+    "ingredientsHint": "One per line: name|quantity or name|quantity|group (required ingredients).",
     "stepsOptionalHint": "One step per line. Mark optional with trailing |1 (e.g. Add chili if desired|1).",
     "filterByTag": "Filter by tag",
     "clearFilter": "All",
@@ -450,7 +450,15 @@
     "stopTimer": "Stop",
     "includeOptional": "Include optional ingredients",
     "addToShopping": "Add to shopping list",
-    "shoppingResult": "Added {added}, skipped {skipped} (already on list)"
+    "shoppingResult": "Added {added}, skipped {skipped} (already on list)",
+    "optionalIngredientsLabel": "Optional ingredients",
+    "optionalIngredientsHint": "One per line: name|quantity or name|quantity|group. Always treated as optional.",
+    "optionalIngredientsPlaceholder": "Chili flakes|1 tsp\nLemon zest|1",
+    "existingTags": "Existing tags",
+    "addTagPlaceholder": "New tag…",
+    "addTag": "Add",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo"
   },
   "smartHome": {
     "title": "Smart Home",
