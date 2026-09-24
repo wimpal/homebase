@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { FormAction } from "@/components/ui/form-action";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useFormError } from "@/components/ui/form-error-context";
 import {
   Dialog,
   DialogContent,
@@ -25,11 +26,16 @@ import {
 } from "@/modules/shopping/actions";
 import {
   appendTripBought,
+  clearTripBought,
   readTripBought,
   removeTripBought,
   writeTripBought,
 } from "./trip-storage";
-import { shoppingHref, type ShoppingNeededItem, type ShoppingViewProps } from "./types";
+import {
+  shoppingHref,
+  type ShoppingNeededItem,
+  type ShoppingViewProps,
+} from "./types";
 
 export function ShoppingTripView({
   listId,
@@ -41,27 +47,35 @@ export function ShoppingTripView({
 }: ShoppingViewProps) {
   const t = useTranslations("shopping");
   const tc = useTranslations("common");
+  const { handleActionResult } = useFormError();
+  const [, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [storeManageOpen, setStoreManageOpen] = useState(false);
-  const [tripBought, setTripBought] = useState<ShoppingNeededItem[]>([]);
+  const [tripBought, setTripBought] = useState<ShoppingNeededItem[]>(() =>
+    readTripBought(listId),
+  );
   const [hydrated, setHydrated] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     setTripBought(readTripBought(listId));
     setHydrated(true);
   }, [listId]);
 
-  // Drop trip-bought entries that reappeared as needed (server caught up).
+  // Drop trip-bought entries that reappeared as needed (undo caught up).
   useEffect(() => {
     if (!hydrated) return;
     const neededIds = new Set(items.map((i) => i.id));
-    const pruned = tripBought.filter((i) => !neededIds.has(i.id));
-    if (pruned.length !== tripBought.length) {
-      setTripBought(pruned);
-      writeTripBought(listId, pruned);
-    }
-  }, [items, listId, tripBought, hydrated]);
+    setTripBought((prev) => {
+      const pruned = prev.filter((i) => !neededIds.has(i.id));
+      if (pruned.length !== prev.length) {
+        writeTripBought(listId, pruned);
+        return pruned;
+      }
+      return prev;
+    });
+  }, [items, listId, hydrated]);
 
   const displayItems = useMemo(() => {
     const neededIds = new Set(items.map((i) => i.id));
@@ -71,6 +85,8 @@ export function ShoppingTripView({
       ...boughtOnly.map((i) => ({ ...i, checked: true as boolean })),
     ];
   }, [items, tripBought]);
+
+  const boughtCount = displayItems.filter((i) => i.checked).length;
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,19 +111,83 @@ export function ShoppingTripView({
     setQuery("");
   }
 
+  function refreshTripBought() {
+    setTripBought(readTripBought(listId));
+  }
+
+  function setItemPending(id: string, on: boolean) {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function buyItem(item: ShoppingNeededItem) {
+    if (pendingIds.has(item.id)) return;
+    // Optimistic: write before server round-trip so strike-through survives revalidate remount.
+    appendTripBought(listId, item);
+    refreshTripBought();
+    setItemPending(item.id, true);
+
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("id", item.id);
+      const result = await markItemBought(fd);
+      if (handleActionResult(result, "markItemBought")) {
+        removeTripBought(listId, item.id);
+        refreshTripBought();
+      }
+      setItemPending(item.id, false);
+    });
+  }
+
+  function unbuyItem(item: ShoppingNeededItem) {
+    if (pendingIds.has(item.id)) return;
+    removeTripBought(listId, item.id);
+    refreshTripBought();
+    setItemPending(item.id, true);
+
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("id", item.id);
+      const result = await unmarkItemBought(fd);
+      if (handleActionResult(result, "unmarkItemBought")) {
+        appendTripBought(listId, item);
+        refreshTripBought();
+      }
+      setItemPending(item.id, false);
+    });
+  }
+
+  function finishTrip() {
+    clearTripBought(listId);
+    setTripBought([]);
+  }
+
   return (
     <div className="relative mx-auto max-w-lg space-y-4 pb-28">
-      <div className="flex items-end justify-between gap-3">
-        <h2 className="text-lg font-semibold">{listName}</h2>
-        <span className="text-sm tabular-nums text-zinc-400">
-          {items.length}
-          {tripBought.length > 0 && (
-            <span className="text-zinc-300">
-              {" "}
-              · {tripBought.length}✓
-            </span>
-          )}
-        </span>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{listName}</h2>
+          <p className="text-sm tabular-nums text-zinc-400">
+            {t("tripProgress", {
+              needed: items.length,
+              bought: boughtCount,
+            })}
+          </p>
+        </div>
+        {boughtCount > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={finishTrip}
+          >
+            {t("finishTrip")}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -169,80 +249,62 @@ export function ShoppingTripView({
               className="group flex items-center gap-1 rounded-xl px-1 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
             >
               {item.checked ? (
-                <FormAction
-                  action={unmarkItemBought}
-                  actionName="unmarkItemBought"
-                  className="min-w-0 flex-1"
-                  onSuccess={() => {
-                    removeTripBought(listId, item.id);
-                    setTripBought(readTripBought(listId));
-                  }}
+                <button
+                  type="button"
+                  disabled={pendingIds.has(item.id)}
+                  onClick={() => unbuyItem(item)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-3 text-left"
+                  aria-label={t("markNeededAgain")}
                 >
-                  <input type="hidden" name="id" value={item.id} />
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left"
-                    aria-label={t("markNeededAgain")}
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-500 text-xs text-white"
+                    aria-hidden
                   >
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-500 text-xs text-white"
-                      aria-hidden
-                    >
-                      ✓
+                    ✓
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-base font-medium leading-snug text-zinc-400 line-through">
+                      {item.name}
+                      {item.quantity !== 1 && (
+                        <span className="ml-1">×{item.quantity}</span>
+                      )}
                     </span>
-                    <span className="min-w-0">
-                      <span className="block text-base font-medium leading-snug text-zinc-400 line-through">
-                        {item.name}
-                        {item.quantity !== 1 && (
-                          <span className="ml-1">×{item.quantity}</span>
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                </FormAction>
+                  </span>
+                </button>
               ) : (
                 <>
-                  <FormAction
-                    action={markItemBought}
-                    actionName="markItemBought"
-                    className="min-w-0 flex-1"
-                    onSuccess={() => {
-                      appendTripBought(listId, item);
-                      setTripBought(readTripBought(listId));
-                    }}
+                  <button
+                    type="button"
+                    disabled={pendingIds.has(item.id)}
+                    onClick={() => buyItem(item)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-3 text-left"
+                    aria-label={t("markBought")}
                   >
-                    <input type="hidden" name="id" value={item.id} />
-                    <button
-                      type="submit"
-                      className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left"
-                      aria-label={t("markBought")}
-                    >
-                      <span
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-zinc-300 group-hover:border-emerald-500 dark:border-zinc-600"
-                        aria-hidden
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-base font-medium leading-snug">
-                          {item.name}
-                          {item.quantity !== 1 && (
-                            <span className="ml-1 text-zinc-400">
-                              ×{item.quantity}
-                            </span>
-                          )}
-                        </span>
-                        {(item.autoAdded ||
-                          item.store ||
-                          item.tags.length > 0) && (
-                          <span className="mt-0.5 block text-xs text-zinc-400">
-                            {item.autoAdded && t("autoAdded")}
-                            {item.store && ` @ ${item.store.name}`}
-                            {item.tags.length > 0 &&
-                              ` · ${item.tags.join(", ")}`}
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-zinc-300 group-hover:border-emerald-500 dark:border-zinc-600"
+                      aria-hidden
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-base font-medium leading-snug">
+                        {item.name}
+                        {item.quantity !== 1 && (
+                          <span className="ml-1 text-zinc-400">
+                            ×{item.quantity}
                           </span>
                         )}
                       </span>
-                    </button>
-                  </FormAction>
+                      {(item.autoAdded ||
+                        item.store ||
+                        item.tags.length > 0) && (
+                        <span className="mt-0.5 block text-xs text-zinc-400">
+                          {item.autoAdded && t("autoAdded")}
+                          {item.store && ` @ ${item.store.name}`}
+                          {item.tags.length > 0 &&
+                            ` · ${item.tags.join(", ")}`}
+                        </span>
+                      )}
+                    </span>
+                  </button>
                   <ConfirmFormAction
                     action={removeShoppingItem}
                     actionName="removeShoppingItem"

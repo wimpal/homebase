@@ -336,7 +336,9 @@
     "confirmDeleteStore": "Deze winkel verwijderen?",
     "browse": "Bladeren",
     "needTab": "Nodig ({count})",
-    "hideStores": "Winkels verbergen"
+    "hideStores": "Winkels verbergen",
+    "finishTrip": "Trip afronden",
+    "tripProgress": "{needed} nodig · {bought} gekocht"
   },
   "inventory": {
     "title": "Voorraad",

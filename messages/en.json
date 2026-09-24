@@ -336,7 +336,9 @@
     "confirmDeleteStore": "Delete this store?",
     "browse": "Browse",
     "needTab": "Need ({count})",
-    "hideStores": "Hide stores"
+    "hideStores": "Hide stores",
+    "finishTrip": "Finish trip",
+    "tripProgress": "{needed} needed · {bought} bought"
   },
   "inventory": {
     "title": "Inventory",
