@@ -84,6 +84,44 @@ type ToolResult = {
   content?: { type: string; text: string }[];
 };
 
+/** Keep-alive sockets go stale across long SSH/docker gaps → ECONNRESET. */
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientFetchError(err: unknown): boolean {
+  const codes = new Set([
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "EPIPE",
+    "ETIMEDOUT",
+    "EHOSTUNREACH",
+    "ENETUNREACH",
+    "UND_ERR_SOCKET",
+    "UND_ERR_CONNECT_TIMEOUT",
+  ]);
+  let cur: unknown = err;
+  for (let depth = 0; depth < 4 && cur; depth++) {
+    if (cur instanceof Error) {
+      const code = (cur as NodeJS.ErrnoException).code;
+      if (code && codes.has(code)) return true;
+      const msg = cur.message.toLowerCase();
+      if (
+        msg.includes("fetch failed") ||
+        msg.includes("econnreset") ||
+        msg.includes("socket hang up") ||
+        msg.includes("other side closed")
+      ) {
+        return true;
+      }
+      cur = cur.cause;
+      continue;
+    }
+    break;
+  }
+  return false;
+}
+
 async function mcpPost(
   body: string,
   token?: string,
@@ -95,13 +133,30 @@ async function mcpPost(
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(`${BASE_URL}/mcp`, {
-    method: "POST",
-    headers,
-    body,
-  });
-  const text = await res.text();
-  return { status: res.status, body: text };
+  const maxAttempts = 4;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}/mcp`, {
+        method: "POST",
+        headers,
+        body,
+      });
+      const text = await res.text();
+      return { status: res.status, body: text };
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientFetchError(err) || attempt === maxAttempts) {
+        throw err;
+      }
+      const delayMs = 250 * 2 ** (attempt - 1);
+      console.log(
+        `NOTE: MCP fetch transient error (attempt ${attempt}/${maxAttempts}), retry in ${delayMs}ms`,
+      );
+      await sleepMs(delayMs);
+    }
+  }
+  throw lastErr;
 }
 
 function parseJson(body: string): unknown {
@@ -270,7 +325,7 @@ async function main() {
   if (names.length !== 24 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 23 homebase tools");
+  ok("tools/list returns exactly 24 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -978,8 +1033,11 @@ async function main() {
   ok("homebase.devices.get unknown id refused");
 
   // --- T-101 Wake-on-LAN ---
+  // Remote seed uses SSH + docker exec (~10–20s). mcpPost retries cover the
+  // post-gap ECONNRESET from a stale keep-alive socket.
   const wolFixtures = await seedWolSmokeFixtures();
   assertNoMac(wolFixtures, "wol fixtures meta");
+  ok("wol smoke fixtures seeded");
 
   const listWake = await callTool(43, "homebase.devices.list", {});
   if (listWake.isError) fail("devices.list before wake tool error");
@@ -1159,11 +1217,15 @@ async function seedWolSmokeFixtures(): Promise<WolSmokeFixtures> {
     encoding: "utf8",
   });
   const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  let fixtures: WolSmokeFixtures;
   try {
-    return JSON.parse(line) as WolSmokeFixtures;
+    fixtures = JSON.parse(line) as WolSmokeFixtures;
   } catch {
     fail(`remote wol fixture seed bad output: ${out}`);
   }
+  // Brief settle so the next MCP fetch is not racing a just-closed keep-alive.
+  await sleepMs(500);
+  return fixtures;
 }
 
 /**
