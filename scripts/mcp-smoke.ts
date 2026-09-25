@@ -1125,8 +1125,11 @@ async function main() {
   ok("homebase.devices.wake forged MAC args ignored / no MAC leak");
 
   // --- T-112 webOS SSAP ---
-  const ssapFixtures = await seedSsapSmokeFixturesLocal();
+  // Remote seed via SSH (same as WoL) — never Prisma against local DB when
+  // MCP target is NAS.
+  const ssapFixtures = await seedSsapSmokeFixtures();
   assertNoMac(ssapFixtures, "ssap fixtures meta");
+  ok("ssap smoke fixtures seeded");
 
   const goUnpaired = await callTool(49, "homebase.devices.go_home", {
     device_id: ssapFixtures.unpaired_id,
@@ -1243,6 +1246,45 @@ async function seedSsapSmokeFixturesLocal(): Promise<SsapSmokeFixtures> {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+async function seedSsapSmokeFixtures(): Promise<SsapSmokeFixtures> {
+  if (IS_LOCAL) {
+    return seedSsapSmokeFixturesLocal();
+  }
+
+  const nasHost = process.env.NAS_HOST?.trim();
+  if (!nasHost) {
+    fail(
+      "remote ssap fixture seed requires NAS_HOST (or run mcp:smoke locally)",
+    );
+  }
+  const nasUser = process.env.NAS_USER?.trim() || "wim";
+  const nasPath =
+    process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+  const sshPortRaw = process.env.NAS_SSH_PORT?.trim();
+  const sshPort =
+    sshPortRaw && Number.parseInt(sshPortRaw, 10) > 0
+      ? Number.parseInt(sshPortRaw, 10)
+      : 22;
+  const remote = `${nasUser}@${nasHost}`;
+  const remoteCmd = [
+    "set -eu",
+    `cd ${shellSingleQuote(nasPath)}`,
+    `docker compose exec -T -e MCP_HOUSEHOLD_ID=${shellSingleQuote(HOUSEHOLD_ID!)} worker npx tsx scripts/seed-ssap-smoke-fixtures.ts`,
+  ].join(" && ");
+  const out = execFileSync("ssh", ["-p", String(sshPort), remote, remoteCmd], {
+    encoding: "utf8",
+  });
+  const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  let fixtures: SsapSmokeFixtures;
+  try {
+    fixtures = JSON.parse(line) as SsapSmokeFixtures;
+  } catch {
+    fail(`remote ssap fixture seed bad output: ${out}`);
+  }
+  await sleepMs(500);
+  return fixtures;
 }
 
 type WolSmokeFixtures = {
