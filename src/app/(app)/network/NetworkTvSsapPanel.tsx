@@ -130,6 +130,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
             autoComplete="off"
             spellCheck={false}
           />
+          <p className="mt-1 text-xs text-zinc-500">{t("jellyfinAppIdHint")}</p>
         </div>
         <Button type="submit" size="sm" className="md:col-span-2 w-fit">
           {t("ssapSaveSettings")}

@@ -33,6 +33,8 @@ must resolve the pending request (not wait for the 15s timeout).
 2. Ensure the TV is on and reachable (last-seen IP or set SSAP host).
 3. Edit device → **Pair TV** → accept the prompt on the TV remote.
 4. **List apps** → pick Jellyfin (or paste app id) → **Save TV settings**.
+   Catalog prefers `listLaunchPoints`, then `listApps`. If list fails, paste
+   **`org.jellyfin.webos`** (usual Content Store Jellyfin id) into Jellyfin app id.
 5. Badge shows **TV** when paired. The client key is never displayed after save.
 
 ## MCP tools

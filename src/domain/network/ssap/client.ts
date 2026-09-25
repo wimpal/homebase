@@ -418,26 +418,69 @@ export async function ssapSwitchInput(
   }
 }
 
-export async function ssapListApps(
-  session: SsapSession,
-): Promise<Array<{ id: string; title: string }>> {
-  const payload = await session.request(
-    "ssap://com.webos.applicationManager/listApps",
-    {},
-  );
-  const apps = (payload.apps ?? payload) as unknown;
-  if (!Array.isArray(apps)) return [];
-  const out: Array<{ id: string; title: string }> = [];
-  for (const raw of apps) {
+/**
+ * Normalize listLaunchPoints / listApps payloads into {id, title} rows.
+ * Prefer launchPoints[], then apps[], then a bare array.
+ */
+export function normalizeSsapAppCatalog(
+  payload: Record<string, unknown> | unknown,
+): Array<{ id: string; title: string }> {
+  if (!payload || typeof payload !== "object") return [];
+  const body = payload as Record<string, unknown>;
+  const candidates: unknown[] = [];
+  if (Array.isArray(body.launchPoints)) {
+    candidates.push(...body.launchPoints);
+  }
+  if (Array.isArray(body.apps)) {
+    candidates.push(...body.apps);
+  }
+  if (Array.isArray(payload)) {
+    candidates.push(...payload);
+  }
+  const byId = new Map<string, { id: string; title: string }>();
+  for (const raw of candidates) {
     if (!raw || typeof raw !== "object") continue;
     const row = raw as Record<string, unknown>;
     const id = String(row.id ?? row.appId ?? "").trim();
     if (!id) continue;
-    const title = String(row.title ?? row.name ?? id);
-    out.push({ id, title });
+    const title = String(row.title ?? row.name ?? id).trim() || id;
+    if (!byId.has(id)) {
+      byId.set(id, { id, title });
+    }
   }
-  out.sort((a, b) => a.title.localeCompare(b.title));
-  return out;
+  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
+ * Catalog installed / launchable apps. Prefer listLaunchPoints (retail webOS);
+ * fall back to listApps. Throws only if both requests fail.
+ */
+export async function ssapListApps(
+  session: SsapSession,
+): Promise<Array<{ id: string; title: string }>> {
+  let lastErr: unknown;
+  try {
+    const payload = await session.request(
+      "ssap://com.webos.applicationManager/listLaunchPoints",
+      {},
+    );
+    const apps = normalizeSsapAppCatalog(payload);
+    if (apps.length > 0) return apps;
+  } catch (err) {
+    lastErr = err;
+  }
+  try {
+    const payload = await session.request(
+      "ssap://com.webos.applicationManager/listApps",
+      {},
+    );
+    const apps = normalizeSsapAppCatalog(payload);
+    if (apps.length > 0) return apps;
+  } catch (err) {
+    lastErr = err;
+  }
+  if (lastErr) throw lastErr;
+  return [];
 }
 
 export function isSsapDryRun(): boolean {

@@ -18,6 +18,7 @@ import {
   clearSsapTransportPreferences,
   ssapEndpointCandidates,
   isSsapPairingPromptAck,
+  normalizeSsapAppCatalog,
 } from "../src/domain/network";
 import { isDomainError } from "../src/domain/error";
 
@@ -77,6 +78,29 @@ async function main() {
       false,
     );
     ok("pairing prompt ack vs launch success");
+  }
+
+  {
+    const fromLaunch = normalizeSsapAppCatalog({
+      launchPoints: [
+        { id: "org.jellyfin.webos", title: "Jellyfin" },
+        { id: "com.webos.app.home", name: "Home" },
+        { id: "org.jellyfin.webos", title: "Jellyfin dup" },
+      ],
+    });
+    assert.equal(fromLaunch.length, 2);
+    assert.equal(fromLaunch[0]?.id, "com.webos.app.home");
+    assert.equal(fromLaunch[1]?.id, "org.jellyfin.webos");
+    assert.equal(fromLaunch[1]?.title, "Jellyfin");
+
+    const fromApps = normalizeSsapAppCatalog({
+      apps: [{ appId: "com.example.app", title: "Example" }],
+    });
+    assert.equal(fromApps.length, 1);
+    assert.equal(fromApps[0]?.id, "com.example.app");
+
+    assert.deepEqual(normalizeSsapAppCatalog({}), []);
+    ok("normalizeSsapAppCatalog launchPoints + apps");
   }
 
   {
