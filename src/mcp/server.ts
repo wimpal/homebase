@@ -14,6 +14,7 @@ import {
   isTvLaunchTarget,
   launchAppNetworkDevice,
   listNetworkDevices,
+  powerOffNetworkDevice,
   retireNetworkDevice,
   setInputNetworkDevice,
   updateNetworkDevice,
@@ -677,6 +678,26 @@ export function createMcpServer(householdId: string): McpServer {
         input,
         Boolean(wake_if_needed),
       );
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.power_off",
+    {
+      description:
+        "Request remote-equivalent power-off on a paired LG webOS Network TV via SSAP. device_id only.",
+      inputSchema: {
+        device_id: z
+          .string()
+          .describe("Network device id from devices.list / devices.get"),
+      },
+    },
+    async ({ device_id }) => {
+      const result = await powerOffNetworkDevice(householdId, device_id);
       if (isDomainError(result)) {
         return toolError(result);
       }

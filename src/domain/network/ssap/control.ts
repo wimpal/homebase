@@ -18,6 +18,7 @@ import {
   openSsapSession,
   probeSsapPort,
   ssapLaunchApp,
+  ssapPowerOff,
   ssapSwitchInput,
   type SsapSession,
 } from "./client";
@@ -194,5 +195,17 @@ export async function setInputNetworkDevice(
 
   return executeSsap(householdId, row, "set_input", wakeIfNeeded, (session) =>
     ssapSwitchInput(session, switchId, fallback),
+  );
+}
+
+export async function powerOffNetworkDevice(
+  householdId: string,
+  deviceId: string,
+): Promise<TvControlResult | DomainError> {
+  const row = await loadPairedRow(householdId, deviceId);
+  if (isDomainError(row)) return row;
+
+  return executeSsap(householdId, row, "power_off", false, (session) =>
+    ssapPowerOff(session),
   );
 }

@@ -35,6 +35,7 @@ export {
   goHomeNetworkDevice,
   launchAppNetworkDevice,
   setInputNetworkDevice,
+  powerOffNetworkDevice,
 } from "./ssap/control";
 export {
   pairNetworkDeviceSsap,
@@ -67,6 +68,7 @@ export {
   ssapEndpointCandidates,
   isSsapPairingPromptAck,
   normalizeSsapAppCatalog,
+  SSAP_TURN_OFF_URI,
 } from "./ssap/client";
 export type { SsapTransport } from "./ssap/client";
 export type {

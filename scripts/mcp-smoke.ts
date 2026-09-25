@@ -304,6 +304,7 @@ async function main() {
     "homebase.devices.go_home",
     "homebase.devices.launch_app",
     "homebase.devices.list",
+    "homebase.devices.power_off",
     "homebase.devices.remove",
     "homebase.devices.set_input",
     "homebase.devices.update",
@@ -1183,7 +1184,44 @@ async function main() {
   assertNoMac(badInputPayload, "devices.set_input invalid");
   ok("homebase.devices.set_input invalid input refused");
 
-  const tvList = await callTool(53, "homebase.devices.list", {});
+  // --- T-113 SSAP power_off ---
+  const powerOffUnpaired = await callTool(54, "homebase.devices.power_off", {
+    device_id: ssapFixtures.unpaired_id,
+  });
+  if (!powerOffUnpaired.isError) {
+    fail("devices.power_off unpaired should fail");
+  }
+  assertNoMac(
+    parseToolPayload(powerOffUnpaired),
+    "devices.power_off unpaired error",
+  );
+  ok("homebase.devices.power_off unpaired refused");
+
+  const powerOffForged = await callTool(55, "homebase.devices.power_off", {
+    device_id: ssapFixtures.paired_dry_id,
+    client_key: "forged-secret",
+    ssapClientKey: "forged-secret",
+  } as Record<string, unknown>);
+  assertNoMac(
+    parseToolPayload(powerOffForged),
+    "devices.power_off forged key args",
+  );
+  if (!powerOffForged.isError) {
+    const offPayload = parseToolPayload(powerOffForged) as {
+      status?: string;
+      action?: string;
+    };
+    if (offPayload.action !== "power_off" || offPayload.status !== "dry_run") {
+      fail(
+        `devices.power_off dry-run expected action power_off status dry_run, got ${JSON.stringify(offPayload)}`,
+      );
+    }
+    ok("homebase.devices.power_off dry-run ok");
+  } else {
+    ok("homebase.devices.power_off forged key args ignored / no key leak");
+  }
+
+  const tvList = await callTool(56, "homebase.devices.list", {});
   if (tvList.isError) fail("devices.list after ssap fixtures");
   const tvListed = parseToolPayload(tvList) as {
     id: string;

@@ -398,11 +398,18 @@ export async function openSsapSession(
   };
 }
 
+/** LG webOS remote-equivalent power-off (HA webostv turn_off family). */
+export const SSAP_TURN_OFF_URI = "ssap://system/turnOff";
+
 export async function ssapLaunchApp(
   session: SsapSession,
   appId: string,
 ): Promise<void> {
   await session.request("ssap://system.launcher/launch", { id: appId });
+}
+
+export async function ssapPowerOff(session: SsapSession): Promise<void> {
+  await session.request(SSAP_TURN_OFF_URI, {});
 }
 
 export async function ssapSwitchInput(

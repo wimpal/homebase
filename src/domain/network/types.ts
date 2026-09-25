@@ -81,7 +81,7 @@ export type TvControlResult = {
   id: string;
   name: string;
   status: "ok" | "woke_and_ok" | "dry_run";
-  action: "go_home" | "launch_app" | "set_input";
+  action: "go_home" | "launch_app" | "set_input" | "power_off";
 };
 
 export type SsapAppListItem = {

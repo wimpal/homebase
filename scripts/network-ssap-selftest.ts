@@ -15,6 +15,7 @@ import {
   SSAP_WAKE_FLOOR_MS,
   SSAP_POLL_INTERVAL_MS,
   SSAP_READY_TIMEOUT_MS,
+  SSAP_TURN_OFF_URI,
   clearSsapTransportPreferences,
   ssapEndpointCandidates,
   isSsapPairingPromptAck,
@@ -128,6 +129,11 @@ async function main() {
     assert.equal(isTvInputId("hdmi1"), true);
     assert.equal(isTvInputId("hdmi9"), false);
     ok("type guards");
+  }
+
+  {
+    assert.equal(SSAP_TURN_OFF_URI, "ssap://system/turnOff");
+    ok("SSAP_TURN_OFF_URI");
   }
 
   {

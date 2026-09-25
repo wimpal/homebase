@@ -1,11 +1,12 @@
-# LG webOS SSAP control (T-112)
+# LG webOS SSAP control (T-112 / T-113)
 
 ADMIN pairs an LG webOS TV on `/network` (Home network). Mimir / MCP then calls
-`homebase.devices.go_home`, `launch_app`, or `set_input` with **device id only** —
-never a MAC or SSAP client key.
+`homebase.devices.go_home`, `launch_app`, `set_input`, or `power_off` with
+**device id only** — never a MAC or SSAP client key.
 
 Depends on Wake-on-LAN ([docs/wake-on-lan.md](wake-on-lan.md)) for power-on.
-Ready-wait after wake is owned by Homebase (`wake_if_needed`).
+Ready-wait after wake is owned by Homebase (`wake_if_needed` on launch/input
+tools). Power-off is SSAP-only (WoL cannot sleep a set).
 
 ## Configure
 
@@ -37,6 +38,9 @@ must resolve the pending request (not wait for the 15s timeout).
    **`org.jellyfin.webos`** (usual Content Store Jellyfin id) into Jellyfin app id.
 5. Badge shows **TV** when paired. The client key is never displayed after save.
 
+There is **no ADMIN power-off button** — pair / key storage from T-112 is enough;
+MCP `devices.power_off` is the write path.
+
 ## MCP tools
 
 | Tool | Purpose |
@@ -44,9 +48,17 @@ must resolve the pending request (not wait for the 15s timeout).
 | `devices.go_home` | Open webOS Home |
 | `devices.launch_app` | `target: home \| jellyfin` |
 | `devices.set_input` | `hdmi1`–`hdmi4` \| `live_tv` |
+| `devices.power_off` | Remote-equivalent off (`ssap://system/turnOff`) |
 
-All accept optional `wake_if_needed`: WoL (if allowlisted) → 8s floor → poll SSAP
-up to 90s → action. List/get expose `tv_capable` (paired + not retired) only.
+`go_home` / `launch_app` / `set_input` accept optional `wake_if_needed`: WoL (if
+allowlisted) → 8s floor → poll SSAP up to 90s → action. `power_off` does **not**
+wake (no WoL to turn off). List/get expose `tv_capable` (paired + not retired)
+only.
+
+**Power-off semantics:** standby / Always Ready OK (not a mains cut; does not
+disable Always Ready). WoL must still work afterward. Unpaired → clear error;
+unreachable / already asleep → clear `ssap_unreachable`-style error — **no silent
+success** in v1.
 
 Household console is **HDMI 1**.
 
@@ -54,7 +66,7 @@ Household console is **HDMI 1**.
 
 ```bash
 npm run network:ssap-selftest   # pure unit — no TV
-# mcp-smoke: unpaired → clear error; dry-run when HOMEBASE_SSAP_DRY_RUN=1
+# mcp-smoke: unpaired go_home / power_off → clear error; dry-run when HOMEBASE_SSAP_DRY_RUN=1
 ```
 
 ## Live verify
@@ -63,4 +75,6 @@ npm run network:ssap-selftest   # pure unit — no TV
 2. Chat: wake + open Home (`wake_if_needed`) — lands on Home, not blank HDMI.
 3. Launch Jellyfin when app id is set.
 4. `set_input` `hdmi1` for the console.
-5. Note the date in the T-112 task Notes.
+5. `power_off` with TV on — screen goes remote-equivalent off; then wake→Home
+   still works.
+6. Note dates in T-112 / T-113 task Notes.
