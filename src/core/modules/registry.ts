@@ -3,6 +3,7 @@ import {
   Box,
   Calendar,
   ChefHat,
+  Clapperboard,
   Dog,
   Flower2,
   Home,
@@ -133,6 +134,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     descriptionKey: "home_network",
     icon: Network,
     href: "/network",
+    defaultEnabled: true,
+  },
+  {
+    id: ModuleId.PROTOCOLS,
+    nameKey: "protocols",
+    descriptionKey: "protocols",
+    icon: Clapperboard,
+    href: "/protocols",
     defaultEnabled: true,
   },
 ];

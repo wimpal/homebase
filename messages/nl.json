@@ -60,6 +60,10 @@
       "name": "Thuisnetwerk",
       "description": "Netwerkapparaten en hun locatie"
     },
+    "protocols": {
+      "name": "Protocollen",
+      "description": "Genoemde huishoudrituelen zoals Cinema"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -1030,5 +1034,31 @@
         "fix": "Wacht een paar minuten voordat je opnieuw meldt."
       }
     }
+  },
+  "protocols": {
+    "title": "Protocollen",
+    "subtitle": "Genoemde huishoudrituelen die Mimir in één stap kan starten",
+    "adminOnly": "Alleen beheerders kunnen Protocol-instellingen wijzigen.",
+    "cinemaTitle": "Cinema",
+    "cinemaHint": "Wekt de TV, start Jellyfin, en dimt optioneel geselecteerde lampen na de avondgrens. Alias: bioscoop.",
+    "emptyHint": "Voeg een wake-capable gekoppelde TV toe onder Thuisnetwerk, en zorg dat Dirigera-lampen beschikbaar zijn.",
+    "tv": "TV",
+    "tvNone": "Niet ingesteld",
+    "tvHint": "Alleen gekoppelde, wake-allowlisted TV's staan hier. Cinema wekt altijd indien nodig.",
+    "deviceLocation": "Apparaatlocatie",
+    "dirigeraRoom": "Dirigera-kamer",
+    "mapNone": "Niet gekoppeld",
+    "mapHint": "Expliciete map — apparaallocatie is niet hetzelfde als een Dirigera-kamer. Vereist voordat lampen kunnen draaien.",
+    "dim": "Dimhelderheid",
+    "cutoff": "Avondgrens",
+    "cutoffHint": "Lampen draaien alleen wanneer het nu op of na deze tijd is in {timezone}.",
+    "sunsetLink": "Zonsondergang-link",
+    "sunsetLinkHint": "Dagelijkse adjuster herschrijft de opgeslagen grens vanaf lokale zonsondergang minus de offset. Run vergelijkt alleen de opgeslagen HH:MM — geen live sunset-API.",
+    "minutesBeforeSunset": "Minuten voor zonsondergang",
+    "sunsetAdjustFailed": "Laatste sunset-adjust mislukt: {detail}",
+    "sunsetAdjustOk": "Laatste sunset-adjust: {detail}",
+    "lamps": "Lampen",
+    "lampsHint": "Ter gemak gefilterd op de gemapte Dirigera-kamer. Lege selectie slaat lampen over (TV draait nog steeds).",
+    "noLamps": "Geen lampen matchen de gemapte kamer (of Dirigera is niet beschikbaar)."
   }
 }

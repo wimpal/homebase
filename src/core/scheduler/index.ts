@@ -6,6 +6,7 @@ import {
   adjustSunsetLinkedAutomations,
   evaluateLightAutomations,
 } from "@/domain/automations";
+import { adjustSunsetLinkedCinemaCutoff } from "@/domain/protocols";
 import { markProductNeeded } from "@/domain/shopping";
 import { addDays, isBefore, subMinutes } from "date-fns";
 
@@ -66,6 +67,24 @@ async function runSunsetAdjust() {
   } catch (err) {
     console.error(
       "[scheduler] sunset-adjust failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  try {
+    const cinema = await adjustSunsetLinkedCinemaCutoff();
+    if (
+      cinema.considered > 0 ||
+      cinema.rewritten > 0 ||
+      cinema.failed > 0
+    ) {
+      console.log(
+        `[scheduler] cinema-sunset-adjust: considered=${cinema.considered} rewritten=${cinema.rewritten} skipped=${cinema.skipped} failed=${cinema.failed}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      "[scheduler] cinema-sunset-adjust failed:",
       err instanceof Error ? err.message : err,
     );
   }

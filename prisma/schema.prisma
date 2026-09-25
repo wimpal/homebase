@@ -27,6 +27,7 @@ enum ModuleId {
   SMART_HOME
   MESSAGING
   HOME_NETWORK
+  PROTOCOLS
 }
 
 enum NotificationType {
@@ -198,9 +199,10 @@ model Household {
   deliveries           DeliveryPackage[]
   mcpChangeLogs        McpChangeLog[]
   purchaseEvents       PurchaseEvent[]
-  networkDeviceTypes   NetworkDeviceType[]
-  deviceLocations      DeviceLocation[]
-  networkDevices       NetworkDevice[]
+  networkDeviceTypes      NetworkDeviceType[]
+  deviceLocations         DeviceLocation[]
+  networkDevices          NetworkDevice[]
+  protocolCinemaSettings  ProtocolCinemaSettings?
 }
 
 model McpChangeLog {
@@ -882,6 +884,7 @@ model DeviceLocation {
 
   household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   devices   NetworkDevice[]
+  cinemaSettings ProtocolCinemaSettings[]
 
   @@unique([householdId, slug])
   @@index([householdId])
@@ -917,12 +920,49 @@ model NetworkDevice {
   household Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
   type      NetworkDeviceType @relation(fields: [typeId], references: [id], onDelete: Restrict)
   location  DeviceLocation    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  cinemaSettings ProtocolCinemaSettings[]
 
   @@unique([householdId, macAddress])
   @@index([householdId, retiredAt])
   @@index([householdId, name])
   @@index([typeId])
   @@index([locationId])
+}
+
+/// Cinema Protocol ADMIN settings (T-115). One row per household. Not a step editor.
+model ProtocolCinemaSettings {
+  id          String @id @default(cuid())
+  householdId String @unique
+
+  /// Target TV Network device (must be tv_capable + wake_capable when set).
+  networkDeviceId String?
+  /// Explicit Device location → Dirigera room map (ADR-021). Both null or both set.
+  deviceLocationId  String?
+  dirigeraRoomName  String?
+
+  /// Dirigera light device ids selected for Cinema dim step.
+  selectedLightIds String[] @default([])
+  /// Dim brightness 0–100 (default 30).
+  dimBrightness Int @default(30)
+  /// Evening cutoff HH:MM; lights step only when now >= this (household TZ).
+  cutoffHhMm String @default("18:00")
+
+  /// Sunset link (ADR-024): daily adjuster rewrites cutoffHhMm.
+  sunsetLinkEnabled      Boolean   @default(false)
+  minutesBeforeSunset    Int?
+  sunsetLastAdjustAt     DateTime?
+  sunsetLastAdjustResult String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  household      Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  networkDevice  NetworkDevice?  @relation(fields: [networkDeviceId], references: [id], onDelete: SetNull)
+  deviceLocation DeviceLocation? @relation(fields: [deviceLocationId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([networkDeviceId])
+  @@index([deviceLocationId])
 }
 
 /// IKEA light Automation (M4c): schedule and/or sensor-edge. Not a chore Routine.

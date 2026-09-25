@@ -315,6 +315,8 @@ async function main() {
     "homebase.lights.list",
     "homebase.lights.party_mode",
     "homebase.lights.set_state",
+    "homebase.protocols.list",
+    "homebase.protocols.run",
     "homebase.recipes.add",
     "homebase.recipes.get",
     "homebase.recipes.search",
@@ -326,10 +328,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 28 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 30 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 28 homebase tools");
+  ok("tools/list returns exactly 30 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -1237,6 +1239,52 @@ async function main() {
   }
   assertNoMac(tvListed, "devices.list tv_capable");
   ok("devices.list tv_capable");
+
+  // --- T-115 Protocols (list + unknown-name only; never fire Cinema live) ---
+  const protocolsList = await callTool(57, "homebase.protocols.list", {});
+  if (protocolsList.isError) {
+    fail(
+      `homebase.protocols.list tool error: ${protocolsList.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const protocolRows = parseToolPayload(protocolsList) as {
+    id: string;
+    name: string;
+    aliases?: string[];
+  }[];
+  const cinema = protocolRows.find((p) => p.id === "cinema" || p.name === "Cinema");
+  if (!cinema) {
+    fail(`protocols.list missing Cinema: ${JSON.stringify(protocolRows)}`);
+  }
+  if (!cinema.aliases?.some((a) => a.toLowerCase() === "bioscoop")) {
+    fail(`Cinema missing bioscoop alias: ${JSON.stringify(cinema)}`);
+  }
+  ok("homebase.protocols.list includes Cinema + bioscoop");
+
+  const unknownProtocol = await callTool(58, "homebase.protocols.run", {
+    name: "mcp-smoke-unknown-protocol-xyz",
+  });
+  if (!unknownProtocol.isError) {
+    const payload = parseToolPayload(unknownProtocol) as {
+      status?: string;
+      success?: boolean;
+    };
+    if (payload.success !== false && payload.status !== "not_found") {
+      fail(
+        `protocols.run unknown should fail / not_found, got ${JSON.stringify(payload)}`,
+      );
+    }
+  } else {
+    const errPayload = parseToolPayload(unknownProtocol) as {
+      error?: { code?: string };
+    };
+    if (errPayload.error?.code !== "not_found") {
+      fail(
+        `protocols.run unknown expected not_found, got ${JSON.stringify(errPayload)}`,
+      );
+    }
+  }
+  ok("homebase.protocols.run unknown name refused (Cinema not fired)");
 
   await runLightsSmoke(callTool);
 }

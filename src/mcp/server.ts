@@ -21,6 +21,7 @@ import {
   wakeNetworkDevice,
 } from "@/domain/network";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
+import { listProtocols, runProtocol } from "@/domain/protocols";
 
 function toolJson(value: unknown) {
   return {
@@ -700,6 +701,47 @@ export function createMcpServer(householdId: string): McpServer {
       const result = await powerOffNetworkDevice(householdId, device_id);
       if (isDomainError(result)) {
         return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.protocols.list",
+    {
+      description:
+        "List seeded household Protocols (canonical name + aliases) for chat routing. Not ADMIN Cinema settings.",
+      inputSchema: {},
+    },
+    async () => {
+      const result = await listProtocols(householdId);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.protocols.run",
+    {
+      description:
+        'Run a named Protocol by canonical name or alias (e.g. "Cinema", "bioscoop"). Homebase executes the stored recipe. Use only when the user asked for a Protocol.',
+      inputSchema: {
+        name: z
+          .string()
+          .describe("Canonical Protocol name or alias from protocols.list"),
+      },
+    },
+    async ({ name }) => {
+      const result = await runProtocol(householdId, name);
+      if (!result.success && result.status === "not_found") {
+        return toolError(DomainError.notFound(result.error ?? "Unknown Protocol."));
+      }
+      if (!result.success && result.status === "already_running") {
+        return toolError(
+          DomainError.conflict(result.error ?? "Protocol already running."),
+        );
       }
       return toolJson(result);
     },

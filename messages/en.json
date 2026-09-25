@@ -60,6 +60,10 @@
       "name": "Home network",
       "description": "Network devices and where they live"
     },
+    "protocols": {
+      "name": "Protocols",
+      "description": "Named household rituals like Cinema"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -1030,5 +1034,31 @@
         "fix": "Wait a few minutes before reporting again."
       }
     }
+  },
+  "protocols": {
+    "title": "Protocols",
+    "subtitle": "Named household rituals Mimir can run in one step",
+    "adminOnly": "Only household admins can change Protocol settings.",
+    "cinemaTitle": "Cinema",
+    "cinemaHint": "Wake the TV, launch Jellyfin, and optionally dim selected lamps after the evening cutoff. Alias: bioscoop.",
+    "emptyHint": "Add a wake-capable paired TV under Home network, and ensure Dirigera lights are available.",
+    "tv": "TV",
+    "tvNone": "Not set",
+    "tvHint": "Only paired, wake-allowlisted TVs are listed. Cinema always wakes if needed.",
+    "deviceLocation": "Device location",
+    "dirigeraRoom": "Dirigera room",
+    "mapNone": "Not mapped",
+    "mapHint": "Explicit map — Device location is not the same as a Dirigera room. Required before lights can run.",
+    "dim": "Dim brightness",
+    "cutoff": "Evening cutoff",
+    "cutoffHint": "Lights run only when now is at or after this time in {timezone}.",
+    "sunsetLink": "Sunset link",
+    "sunsetLinkHint": "Daily adjuster rewrites the stored cutoff from local sunset minus the offset. Run compares the stored HH:MM only — no live sunset API.",
+    "minutesBeforeSunset": "Minutes before sunset",
+    "sunsetAdjustFailed": "Last sunset adjust failed: {detail}",
+    "sunsetAdjustOk": "Last sunset adjust: {detail}",
+    "lamps": "Lamps",
+    "lampsHint": "Convenience-filtered to the mapped Dirigera room. Empty selection skips lights (TV still runs).",
+    "noLamps": "No lamps match the mapped room (or Dirigera is unavailable)."
   }
 }
