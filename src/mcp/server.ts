@@ -620,8 +620,8 @@ export function createMcpServer(householdId: string): McpServer {
           .string()
           .describe("Network device id from devices.list / devices.get"),
         target: z
-          .enum(["home", "jellyfin"])
-          .describe("Named TV launch target"),
+          .string()
+          .describe("Named TV launch target: home | jellyfin"),
         wake_if_needed: z
           .boolean()
           .optional()
@@ -657,8 +657,8 @@ export function createMcpServer(householdId: string): McpServer {
           .string()
           .describe("Network device id from devices.list / devices.get"),
         input: z
-          .enum(["hdmi1", "hdmi2", "hdmi3", "hdmi4", "live_tv"])
-          .describe("Allowlisted TV input id"),
+          .string()
+          .describe("Allowlisted TV input id: hdmi1|hdmi2|hdmi3|hdmi4|live_tv"),
         wake_if_needed: z
           .boolean()
           .optional()

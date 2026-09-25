@@ -1172,7 +1172,15 @@ async function main() {
   if (!badInput.isError) {
     fail("devices.set_input invalid enum should fail");
   }
-  assertNoMac(parseToolPayload(badInput), "devices.set_input invalid");
+  const badInputPayload = parseToolPayload(badInput) as {
+    error?: { code?: string };
+  };
+  if (badInputPayload.error?.code !== "invalid_input") {
+    fail(
+      `devices.set_input invalid expected invalid_input, got ${JSON.stringify(badInputPayload)}`,
+    );
+  }
+  assertNoMac(badInputPayload, "devices.set_input invalid");
   ok("homebase.devices.set_input invalid input refused");
 
   const tvList = await callTool(53, "homebase.devices.list", {});
