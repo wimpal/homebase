@@ -118,7 +118,8 @@ After changing SMTP env vars: `docker compose up -d` (or redeploy) so the app co
 From the repo root on Windows (NAS share reachable + SSH key auth working):
 
 ```powershell
-npm run deploy:nas
+npm run deploy:nas          # fast (default): pull + rebuild + migrate + health
+npm run deploy:nas:full     # release gate: local build + smoke + purge
 ```
 
 Optional `.env` on your **Windows** machine (gitignored):
@@ -134,25 +135,32 @@ Optional `.env` on your **Windows** machine (gitignored):
 Variants:
 
 ```powershell
-npm run deploy:nas -- -Push      # git push origin first
-npm run deploy:nas -- -UseScp    # no share: tarball via scp
+npm run deploy:nas -- -Push       # git push origin first
+npm run deploy:nas -- -UseScp     # no share: tarball via scp
+npm run deploy:nas -- -Full       # same as deploy:nas:full
 ```
 
-Git Bash: `./scripts/deploy-nas.sh` (same flow).
+Git Bash: `./scripts/deploy-nas.sh` (fast) or `./scripts/deploy-nas.sh --full`.
 
-The script:
+**Fast deploy** (default):
 
 1. `git pull --ff-only` on the NAS SMB share (aborts if the share has uncommitted edits — review before discarding)
 2. SSH → `docker compose up --build -d`
 3. `npx tsx scripts/migrate-shopping-slots.ts` then `npx tsx scripts/migrate-project-work-items.ts` then `prisma db push --accept-data-loss` inside the **worker** container (shopping backfill + ProjectStep → work items before push)
 4. Curl `/health` on port 3000
-5. **Smoke purge (pre)** — household-scoped `purge-smoke-data.ts --apply` on the worker (clears historical `mcp-smoke*` / `Smoke Add *` junk). Skipped if `HOMEBASE_SMOKE_KEEP_DATA=1`.
-6. **Post-deploy `mcp:smoke`** against `http://<NAS>:3000` (unless `-SkipSmoke` / `--skip-smoke`). Lights stay list-only on remote.
-7. **Smoke purge (post)** — same purge again (and smoke self-cleans after success/failure). Residual rows fail the purge CLI and thus the deploy.
 
-Credentials come from the **running app container** (`SERVICE_TOKEN` / `MCP_HOUSEHOLD_ID`), falling back to the NAS share `.env` only. Local Windows `.env` is not used for remote smoke (avoids purging the wrong household).
+**Full deploy** (`deploy:nas:full` / `-Full`) also:
 
-`./scripts/deploy.sh` on the NAS itself rebuilds only — no smoke/purge. Use PC `deploy:nas` / `deploy-nas.sh` for that.
+5. Local `npm run build` preflight (stops a Node listener on port 3000 if needed)
+6. **Smoke purge (pre)** — household-scoped `purge-smoke-data.ts --apply` on the worker. Skipped if `HOMEBASE_SMOKE_KEEP_DATA=1`.
+7. **Post-deploy `mcp:smoke`** against `http://<NAS>:3000` (unless `-SkipSmoke` / `--skip-smoke`). Lights stay list-only on remote.
+8. **Smoke purge (post)** — same purge again (and smoke self-cleans after success/failure). Residual rows fail the purge CLI and thus the deploy.
+
+Credentials for full mode come from the **running app container** (`SERVICE_TOKEN` / `MCP_HOUSEHOLD_ID`), falling back to the NAS share `.env` only. Local Windows `.env` is not used for remote smoke (avoids purging the wrong household).
+
+Share mode pulls **committed** code from `origin` — push first (`-Push` or a normal `git push`) or the NAS will not see your local commits.
+
+`./scripts/deploy.sh` on the NAS itself rebuilds only — no smoke/purge. Use PC `deploy:nas:full` / `deploy-nas.sh --full` for that.
 Legacy alternative (SSH + on-NAS `deploy.sh` only):
 
 ```powershell
@@ -176,7 +184,7 @@ git pull
 4. `prisma db push --accept-data-loss` — apply schema changes
 5. `ensure-product-ci-index.ts` — case-insensitive unique product names per household
 
-**Does not** run `mcp:smoke` or smoke purge. For those, redeploy from a PC with `npm run deploy:nas` / `./scripts/deploy-nas.sh`.
+**Does not** run `mcp:smoke` or smoke purge. For those, redeploy from a PC with `npm run deploy:nas:full` / `./scripts/deploy-nas.sh --full`.
 
 Your **database and uploads are preserved** in Docker volumes across redeploys.
 
@@ -193,17 +201,18 @@ Remote inventory smoke may briefly mutate a **real** stocked product and revert 
 - **Local** MCP target (`localhost` / `127.0.0.1`) — Prisma purge against `DATABASE_URL`.
 - **Remote** MCP target (e.g. post-deploy against the NAS) — **always** SSH into the
   NAS worker and run the purge there. Local Prisma is never used for remote smoke
-  (it would clean the wrong database). `deploy:nas` / `deploy-nas.sh` export `NAS_HOST` /
+  (it would clean the wrong database). `deploy:nas:full` / `deploy-nas.sh --full` export `NAS_HOST` /
   `NAS_USER` / `NAS_PATH` / `NAS_SSH_PORT` for this path.
-- Deploy also runs household-scoped purge **before and after** smoke (and when
-  `-SkipSmoke`), so historical junk is cleared even if smoke is skipped.
+- Deploy (`deploy:nas:full` / `--full`) also runs household-scoped purge **before and after**
+  smoke (and when `-SkipSmoke` / `--skip-smoke` on a full deploy), so historical junk is
+  cleared. Fast `deploy:nas` skips smoke and purge.
 - Cleanup runs after smoke success **and** failure; `--apply` **verifies** zero
   residuals and exits nonzero if any remain (or if `MCP_HOUSEHOLD_ID` is not a
   real household row — scoped purge must not silently no-op).
 - McpChangeLog orphans after revert match `payloadJson` text containing
   `mcp-smoke` / `Smoke Add`.
 - Skip purge with `HOMEBASE_SMOKE_KEEP_DATA=1`.
-- Remote cleanup failure **fails the smoke** (and thus `deploy:nas`).
+- Remote cleanup failure **fails the smoke** (and thus `deploy:nas:full`).
 
 **Ops note:** never strip CR from household ids with busybox `tr -d "\r"` (double
 quotes) — some NAS shells treat that as “delete letter r” and corrupt the id.
@@ -223,7 +232,7 @@ household rows without those prefixes.
 The worker purges Home Feed rows daily at 03:15 (`read` older than 30 days; any
 row older than 90 days). New schema fields (`Notification.dedupeKey`,
 `NotificationTypeSetting`) need a `prisma db push` on deploy (already part of
-`deploy.sh` / `deploy:nas`).
+`deploy.sh` / `deploy:nas` / `deploy:nas:full`).
 
 ---
 

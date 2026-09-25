@@ -137,7 +137,8 @@ From the **service repo** (not `project-control-heim`):
 
 ```powershell
 cd D:\Dev\Projects\Homebase
-npm run deploy:nas
+npm run deploy:nas          # fast (default)
+npm run deploy:nas:full     # local build + mcp:smoke + purge
 ```
 
 ```powershell
@@ -148,11 +149,12 @@ npm run deploy:nas
 Variants:
 
 ```powershell
-npm run deploy:nas -- -Push      # git push origin first
-npm run deploy:nas -- -UseScp    # no SMB share: tarball via scp
+npm run deploy:nas -- -Push       # git push origin first
+npm run deploy:nas -- -UseScp     # no SMB share: tarball via scp
+npm run deploy:nas -- -Full       # same as deploy:nas:full
 ```
 
-Git Bash: `./scripts/deploy-nas.sh` (same env vars).
+Git Bash: `./scripts/deploy-nas.sh` (fast) or `./scripts/deploy-nas.sh --full`.
 
 ---
 
@@ -177,4 +179,5 @@ Git Bash: `./scripts/deploy-nas.sh` (same env vars).
 - [ ] NAS user in `docker` group (`groups` shows `docker`)
 - [ ] `docker compose ps` works over SSH in project path
 - [ ] Optional `.env` with `NAS_*` paths
-- [ ] `npm run deploy:nas` from correct repo — finishes without prompts
+- [ ] `npm run deploy:nas` from correct repo — finishes without prompts (fast path)
+- [ ] Optional: `npm run deploy:nas:full` when you want the smoke gate

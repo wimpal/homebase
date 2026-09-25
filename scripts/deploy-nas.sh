@@ -1,13 +1,16 @@
 #!/usr/bin/env sh
 # Deploy via NAS SMB share + SSH (Git Bash). Same flow as Explorer \\NAS\docker\homebase.
 #
-#   ./scripts/deploy-nas.sh
-#   ./scripts/deploy-nas.sh --push
-#   ./scripts/deploy-nas.sh --scp    # fallback without share
-#   ./scripts/deploy-nas.sh --skip-smoke
+# Default (fast / dev): pull + docker compose + migrate + health.
+# No mcp:smoke, no smoke purge.
 #
-# After rebuild: household-scoped smoke purge (pre + post), then optional mcp:smoke
-# when Node is available locally. Set HOMEBASE_SMOKE_KEEP_DATA=1 to skip purge.
+#   ./scripts/deploy-nas.sh
+#   ./scripts/deploy-nas.sh --full     # smoke + purge (release gate)
+#   ./scripts/deploy-nas.sh --push
+#   ./scripts/deploy-nas.sh --scp      # fallback without share
+#   ./scripts/deploy-nas.sh --full --skip-smoke   # purge only (no smoke)
+#
+# Set HOMEBASE_SMOKE_KEEP_DATA=1 to skip purge when --full.
 
 set -eu
 
@@ -19,15 +22,19 @@ NAS_BRANCH="${NAS_BRANCH:-main}"
 NAS_SSH_PORT="${NAS_SSH_PORT:-22}"
 PUSH=0
 USE_SCP=0
+FULL=0
 SKIP_SMOKE=0
 
 for arg in "$@"; do
   case "$arg" in
     --push) PUSH=1 ;;
     --scp) USE_SCP=1 ;;
+    --full) FULL=1 ;;
     --skip-smoke) SKIP_SMOKE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--push] [--scp] [--skip-smoke]"
+      echo "Usage: $0 [--full] [--push] [--scp] [--skip-smoke]"
+      echo "  Default: fast deploy (no smoke/purge)."
+      echo "  --full: release gate (smoke + purge)."
       echo "Env: NAS_HOST NAS_USER NAS_PATH NAS_SHARE NAS_BRANCH NAS_SSH_PORT"
       echo "     HOMEBASE_SMOKE_KEEP_DATA=1 skips purge"
       exit 0
@@ -50,6 +57,18 @@ fi
 
 REMOTE="${NAS_USER}@${NAS_HOST}"
 DOCKER_CMD="set -eu && cd '$NAS_PATH' && echo '==> Building and restarting HomeBase...' && docker compose up --build -d && echo '==> Migrating shopping slots (T-035)...' && docker compose exec -T worker npx tsx scripts/migrate-shopping-slots.ts && echo '==> Migrating project work items (T-082)...' && docker compose exec -T worker npx tsx scripts/migrate-project-work-items.ts && echo '==> Applying database schema (prisma db push)...' && docker compose exec -T worker npx prisma db push --accept-data-loss && echo '==> Ensuring product name index...' && docker compose exec -T worker npx tsx scripts/ensure-product-ci-index.ts && docker compose logs --tail=30 && sleep 2 && echo '==> Health check...' && curl -sf http://127.0.0.1:3000/health"
+
+RUN_SMOKE=0
+RUN_PURGE=0
+if [ "$FULL" -eq 1 ]; then
+  RUN_PURGE=1
+  if [ "$SKIP_SMOKE" -eq 0 ]; then
+    RUN_SMOKE=1
+  fi
+  echo "Deploy mode: FULL (smoke=$RUN_SMOKE, purge=$RUN_PURGE)"
+else
+  echo "Deploy mode: FAST (no mcp:smoke). Use --full for the release gate."
+fi
 
 shell_quote() {
   # Single-quote for remote sh.
@@ -119,9 +138,11 @@ else
   ssh -p "$NAS_SSH_PORT" "$REMOTE" "$DOCKER_CMD"
 fi
 
-if load_mcp_creds_from_app; then
+if [ "$RUN_PURGE" -eq 0 ] && [ "$RUN_SMOKE" -eq 0 ]; then
+  echo "Skipping MCP smoke and purge (fast deploy). Use --full before trusting a release."
+elif load_mcp_creds_from_app; then
   nas_smoke_purge "pre-smoke"
-  if [ "$SKIP_SMOKE" -eq 0 ]; then
+  if [ "$RUN_SMOKE" -eq 1 ]; then
     if command -v npm >/dev/null 2>&1; then
       echo "Post-deploy MCP smoke (http://${NAS_HOST}:3000)..."
       export MCP_BASE_URL="http://${NAS_HOST}:3000"
@@ -139,7 +160,7 @@ if load_mcp_creds_from_app; then
       echo "npm not found — skipping mcp:smoke; ran pre-smoke purge only."
     fi
   else
-    echo "Skipping post-deploy MCP smoke (--skip-smoke)."
+    echo "Skipping post-deploy MCP smoke (--skip-smoke); pre-smoke purge already ran."
   fi
 else
   echo "Warning: could not load SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app — skipping smoke and purge." >&2

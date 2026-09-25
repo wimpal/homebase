@@ -88,7 +88,8 @@ docker compose exec worker npx prisma db push
 
 ```powershell
 cd D:\Dev\Projects\Homebase
-npm run deploy:nas
+npm run deploy:nas          # fast (default)
+npm run deploy:nas:full     # preflight + smoke + purge
 ```
 
 ## Roadmap

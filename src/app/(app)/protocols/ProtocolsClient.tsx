@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Clapperboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,19 @@ type Props = {
   isAdmin: boolean;
 };
 
+function settingsFingerprint(s: CinemaSettingsDto): string {
+  return [
+    s.networkDeviceId ?? "",
+    s.deviceLocationId ?? "",
+    s.dirigeraRoomName ?? "",
+    s.selectedLightIds.join(","),
+    String(s.dimBrightness),
+    s.cutoffHhMm,
+    s.sunsetLinkEnabled ? "1" : "0",
+    String(s.minutesBeforeSunset ?? ""),
+  ].join("|");
+}
+
 export function ProtocolsClient({
   settings,
   tvOptions,
@@ -33,6 +47,8 @@ export function ProtocolsClient({
 }: Props) {
   const t = useTranslations("protocols");
   const tc = useTranslations("common");
+  const router = useRouter();
+  const formKey = settingsFingerprint(settings);
 
   const [sunsetLinkEnabled, setSunsetLinkEnabled] = useState(
     settings.sunsetLinkEnabled,
@@ -41,6 +57,27 @@ export function ProtocolsClient({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(settings.selectedLightIds),
   );
+  const [tvId, setTvId] = useState(settings.networkDeviceId ?? "");
+  const [locationId, setLocationId] = useState(settings.deviceLocationId ?? "");
+  const [dimBrightness, setDimBrightness] = useState(
+    String(settings.dimBrightness),
+  );
+  const [cutoffHhMm, setCutoffHhMm] = useState(settings.cutoffHhMm);
+  const [minutesBeforeSunset, setMinutesBeforeSunset] = useState(
+    String(settings.minutesBeforeSunset ?? 30),
+  );
+
+  // Keep local state in sync when server props change after a successful save.
+  useEffect(() => {
+    setSunsetLinkEnabled(settings.sunsetLinkEnabled);
+    setRoomName(settings.dirigeraRoomName ?? "");
+    setSelected(new Set(settings.selectedLightIds));
+    setTvId(settings.networkDeviceId ?? "");
+    setLocationId(settings.deviceLocationId ?? "");
+    setDimBrightness(String(settings.dimBrightness));
+    setCutoffHhMm(settings.cutoffHhMm);
+    setMinutesBeforeSunset(String(settings.minutesBeforeSunset ?? 30));
+  }, [formKey, settings]);
 
   const filteredLights = useMemo(() => {
     const room = roomName.trim();
@@ -85,16 +122,21 @@ export function ProtocolsClient({
             <EmptyState message={t("emptyHint")} />
           ) : (
             <FormAction
+              key={formKey}
               action={saveCinemaSettingsAction}
               actionName="saveCinemaSettings"
               className="grid gap-4 md:grid-cols-2"
+              onSuccess={() => {
+                router.refresh();
+              }}
             >
               <div className="md:col-span-2">
                 <Label htmlFor="networkDeviceId">{t("tv")}</Label>
                 <select
                   id="networkDeviceId"
                   name="networkDeviceId"
-                  defaultValue={settings.networkDeviceId ?? ""}
+                  value={tvId}
+                  onChange={(e) => setTvId(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
                 >
                   <option value="">{t("tvNone")}</option>
@@ -112,7 +154,8 @@ export function ProtocolsClient({
                 <select
                   id="deviceLocationId"
                   name="deviceLocationId"
-                  defaultValue={settings.deviceLocationId ?? ""}
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
                 >
                   <option value="">{t("mapNone")}</option>
@@ -151,8 +194,9 @@ export function ProtocolsClient({
                   type="number"
                   min={0}
                   max={100}
-                  defaultValue={settings.dimBrightness}
                   required
+                  value={dimBrightness}
+                  onChange={(e) => setDimBrightness(e.target.value)}
                 />
               </div>
 
@@ -162,8 +206,9 @@ export function ProtocolsClient({
                   id="cutoffHhMm"
                   name="cutoffHhMm"
                   type="time"
-                  defaultValue={settings.cutoffHhMm}
                   required
+                  value={cutoffHhMm}
+                  onChange={(e) => setCutoffHhMm(e.target.value)}
                 />
                 <p className="mt-1 text-xs text-zinc-500">
                   {t("cutoffHint", { timezone: settings.timezone })}
@@ -199,7 +244,8 @@ export function ProtocolsClient({
                       min={0}
                       max={180}
                       required
-                      defaultValue={settings.minutesBeforeSunset ?? 30}
+                      value={minutesBeforeSunset}
+                      onChange={(e) => setMinutesBeforeSunset(e.target.value)}
                     />
                   </div>
                 ) : null}
@@ -245,7 +291,6 @@ export function ProtocolsClient({
                     ))}
                   </ul>
                 )}
-                {/* Keep selected lamps outside filtered room so they still submit */}
                 {[...selected]
                   .filter((id) => !filteredLights.some((l) => l.id === id))
                   .map((id) => (

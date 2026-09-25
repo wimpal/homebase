@@ -115,7 +115,10 @@ export async function saveCinemaSettingsAction(
   const dirigeraRoomName = String(formData.get("dirigeraRoomName") ?? "").trim();
 
   const dimRaw = Number.parseInt(String(formData.get("dimBrightness") ?? "30"), 10);
-  const cutoffHhMm = String(formData.get("cutoffHhMm") ?? "18:00").trim();
+  // HTML type=time may submit HH:MM:SS — normalize like Automations (T-066).
+  const cutoffRaw = String(formData.get("cutoffHhMm") ?? "18:00").trim();
+  const cutoffHhMm =
+    cutoffRaw.length >= 5 ? cutoffRaw.slice(0, 5) : cutoffRaw;
 
   const result = await upsertCinemaSettings(householdId, {
     networkDeviceId: networkDeviceId || null,

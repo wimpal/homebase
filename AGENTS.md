@@ -430,14 +430,16 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 10. **Smart home** — IKEA / Dirigera for lights and automations; Reolink cameras via
     UI + FFmpeg snapshot (NAS must reach camera RTSP). See `docs/reolink-camera.md`.
 
-11. **MCP smoke leftovers (T-094)** — Post-deploy `mcp:smoke` writes live household
-    rows (`mcp-smoke*`, `Smoke Add *`). Cleanup is **not** optional: `deploy:nas` /
-    `deploy-nas.sh` purge before and after smoke; `mcp-smoke.ts` self-cleans; purge
-    CLI exits nonzero on residual rows or a nonexistent `MCP_HOUSEHOLD_ID`. Do not
-    weaken residual verify, skip household existence checks, or fall back to a local
-    Windows `.env` household id for remote smoke. Never Synology `tr -d "\r"` (double
-    quotes) — it can strip `r` from cuids. Manual: `docs/nas-deploy.md` § Purge MCP
-    smoke leftovers. Skip only with `HOMEBASE_SMOKE_KEEP_DATA=1` (debug).
+11. **MCP smoke leftovers (T-094)** — `mcp:smoke` writes live household rows
+    (`mcp-smoke*`, `Smoke Add *`). On **`deploy:nas:full`** / `deploy-nas.sh --full`,
+    cleanup is **not** optional: purge before and after smoke; `mcp-smoke.ts`
+    self-cleans; purge CLI exits nonzero on residual rows or a nonexistent
+    `MCP_HOUSEHOLD_ID`. Fast `deploy:nas` skips smoke and purge. Do not weaken
+    residual verify, skip household existence checks, or fall back to a local
+    Windows `.env` household id for remote smoke. Never Synology `tr -d "\r"`
+    (double quotes) — it can strip `r` from cuids. Manual: `docs/nas-deploy.md`
+    § Purge MCP smoke leftovers. Skip only with `HOMEBASE_SMOKE_KEEP_DATA=1`
+    (debug).
 
 ---
 

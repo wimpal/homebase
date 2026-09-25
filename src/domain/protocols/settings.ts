@@ -149,7 +149,8 @@ async function validateCinemaSettingsInput(
   }
 
   const cutoff = (input.cutoffHhMm ?? "").trim();
-  if (!isValidCutoffHhMm(cutoff)) {
+  const cutoffNorm = cutoff.length >= 5 ? cutoff.slice(0, 5) : cutoff;
+  if (!isValidCutoffHhMm(cutoffNorm)) {
     return DomainError.invalidInput(
       "Cutoff must be HH:MM in 24-hour format.",
       "invalid_cutoff",
@@ -243,7 +244,7 @@ async function validateCinemaSettingsInput(
     dirigeraRoomName: roomName,
     selectedLightIds,
     dimBrightness: dim,
-    cutoffHhMm: cutoff,
+    cutoffHhMm: cutoffNorm,
     sunsetLinkEnabled,
     minutesBeforeSunset,
   };

@@ -26,5 +26,5 @@ echo "==> Ensuring product name index..."
 docker compose exec -T worker npx tsx scripts/ensure-product-ci-index.ts
 
 echo "==> Done. App should be live at ${AUTH_URL:-http://localhost:3000}"
-echo "    (No mcp:smoke here — use deploy:nas / deploy-nas.sh from a PC for smoke + purge.)"
+echo "    (No mcp:smoke here — use npm run deploy:nas:full / deploy-nas.sh --full from a PC.)"
 docker compose ps

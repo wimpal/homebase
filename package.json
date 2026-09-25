@@ -31,7 +31,8 @@
     "recipes:backfill-steps": "tsx scripts/backfill-recipe-steps.ts",
     "household:id": "tsx scripts/print-household-id.ts",
     "household:list": "tsx scripts/list-households.ts",
-    "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-preflight.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1 -SkipPreflight",
+    "deploy:nas": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1",
+    "deploy:nas:full": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-nas.ps1 -Full",
     "postinstall": "prisma generate"
   },
   "dependencies": {

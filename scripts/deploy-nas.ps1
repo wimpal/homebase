@@ -1,17 +1,18 @@
 # Deploy Homebase to the NAS.
 #
-# Default: git pull on the NAS SMB share, then docker compose via SSH.
+# Default (fast / dev): git pull on the NAS SMB share, docker compose via SSH,
+# migrations + health. No local preflight build, no mcp:smoke, no smoke purge.
 # PC setup (SSH key, docker group): docs/nas-pc-setup.md
 #
-# npm run deploy:nas runs deploy-preflight.ps1 (build) then this script with -SkipPreflight.
-# Post-deploy: household-scoped smoke purge (pre + post), then mcp:smoke against
-# http://<NAS>:3000 when SERVICE_TOKEN + MCP_HOUSEHOLD_ID are available from the app.
+# Full (release gate): local npm run build, then deploy + household-scoped smoke
+# purge (pre + post) + mcp:smoke against http://<NAS>:3000.
 #
-#   npm run deploy:nas
+#   npm run deploy:nas              # fast (default)
+#   npm run deploy:nas:full         # preflight + smoke + purge
+#   npm run deploy:nas -- -Full     # same as deploy:nas:full
 #   npm run deploy:nas -- -Push
-#   npm run deploy:nas -- -SkipPreflight -SkipSmoke
 #   npm run deploy:nas -- -UseScp
-#   HOMEBASE_SMOKE_KEEP_DATA=1  # skip purge (debug)
+#   HOMEBASE_SMOKE_KEEP_DATA=1      # skip purge when -Full (debug)
 param(
     [string]$NasHost,
     [string]$NasUser,
@@ -20,6 +21,7 @@ param(
     [string]$Branch,
     [switch]$Push,
     [switch]$UseScp,
+    [switch]$Full,
     [switch]$SkipPreflight,
     [switch]$SkipSmoke,
     [int]$SshPort = 0
@@ -223,7 +225,20 @@ if (-not $UseScp -and $env:NAS_USE_SCP -match '^(1|true|yes)$') {
 $remote = "${NasUser}@${NasHost}"
 $useShare = (-not $UseScp) -and (Test-NasShareReady $NasShare)
 
-if (-not $SkipPreflight) {
+# Fast is default. -Full enables local preflight + smoke/purge gate.
+$runPreflight = $Full -and -not $SkipPreflight
+$runSmoke = $Full -and -not $SkipSmoke
+# Purge only around a full gate (pre always on Full; post when smoke runs).
+$runPurge = $Full
+
+if ($Full) {
+    Write-Host "Deploy mode: FULL (preflight=$runPreflight, smoke=$runSmoke, purge=$runPurge)"
+}
+else {
+    Write-Host "Deploy mode: FAST (no local build, no mcp:smoke). Use -Full / npm run deploy:nas:full for the release gate."
+}
+
+if ($runPreflight) {
     Write-Host "Running pre-deploy build (deploy-preflight.ps1)..."
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "deploy-preflight.ps1")
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -310,56 +325,60 @@ else {
     }
 }
 
-# Load MCP credentials from the running app (required for smoke + household-scoped purge).
-$smokeCredsOk = Import-McpSmokeEnvFromContainer -Remote $remote -SshPort $SshPort -NasPath $NasPath
-if (-not $smokeCredsOk) {
-    Write-Host "Container credential load failed; trying NAS share .env (same file compose reads)..."
-    $smokeCredsOk = Import-McpSmokeEnv -NasShare $NasShare -RepoRoot $repoRoot
-}
-if (-not $smokeCredsOk -or -not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
-    Write-Warning "No SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app container or NAS share .env - skipping smoke and scoped purge."
+if (-not $runPurge -and -not $runSmoke) {
+    Write-Host "Skipping MCP smoke and purge (fast deploy). Run npm run deploy:nas:full before trusting a release."
 }
 else {
-    # Clear historical smoke junk before (and after) smoke; also when -SkipSmoke.
-    Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
-        -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "pre-smoke"
-
-    if (-not $SkipSmoke) {
-        Write-Host "Post-deploy MCP smoke (http://${NasHost}:3000)..."
-        Push-Location $repoRoot
-        $smokeFailed = $false
-        try {
-            $prevBase = $env:MCP_BASE_URL
-            $env:MCP_BASE_URL = "http://${NasHost}:3000"
-            $env:HOMEBASE_SMOKE_SKIP_DOTENV = "1"
-            # Ensure remote smoke cleanup SSH targets the same NAS as this deploy.
-            $env:NAS_HOST = $NasHost
-            $env:NAS_USER = $NasUser
-            $env:NAS_PATH = $NasPath
-            $env:NAS_SSH_PORT = "$SshPort"
-            # lights smoke is list-only on remote (T-038)
-            & npm run mcp:smoke
-            if ($LASTEXITCODE -ne 0) {
-                $smokeFailed = $true
-                Write-Error "Post-deploy mcp:smoke failed."
-            }
-            else {
-                Write-Host "Post-deploy MCP smoke OK."
-            }
-        }
-        finally {
-            if ($null -ne $prevBase) { $env:MCP_BASE_URL = $prevBase }
-            else { Remove-Item Env:MCP_BASE_URL -ErrorAction SilentlyContinue }
-            Remove-Item Env:HOMEBASE_SMOKE_SKIP_DOTENV -ErrorAction SilentlyContinue
-            Pop-Location
-            # Always purge after smoke attempt (smoke also self-cleans; this catches Skip failures).
-            Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
-                -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "post-smoke"
-        }
-        if ($smokeFailed) { exit 1 }
+    # Load MCP credentials from the running app (required for smoke + household-scoped purge).
+    $smokeCredsOk = Import-McpSmokeEnvFromContainer -Remote $remote -SshPort $SshPort -NasPath $NasPath
+    if (-not $smokeCredsOk) {
+        Write-Host "Container credential load failed; trying NAS share .env (same file compose reads)..."
+        $smokeCredsOk = Import-McpSmokeEnv -NasShare $NasShare -RepoRoot $repoRoot
+    }
+    if (-not $smokeCredsOk -or -not $env:SERVICE_TOKEN -or -not $env:MCP_HOUSEHOLD_ID) {
+        Write-Warning "No SERVICE_TOKEN / MCP_HOUSEHOLD_ID from app container or NAS share .env - skipping smoke and scoped purge."
     }
     else {
-        Write-Host "Skipping post-deploy MCP smoke (-SkipSmoke); post-smoke purge already covered by pre-smoke."
+        Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
+            -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "pre-smoke"
+
+        if ($runSmoke) {
+            Write-Host "Post-deploy MCP smoke (http://${NasHost}:3000)..."
+            Push-Location $repoRoot
+            $smokeFailed = $false
+            try {
+                $prevBase = $env:MCP_BASE_URL
+                $env:MCP_BASE_URL = "http://${NasHost}:3000"
+                $env:HOMEBASE_SMOKE_SKIP_DOTENV = "1"
+                # Ensure remote smoke cleanup SSH targets the same NAS as this deploy.
+                $env:NAS_HOST = $NasHost
+                $env:NAS_USER = $NasUser
+                $env:NAS_PATH = $NasPath
+                $env:NAS_SSH_PORT = "$SshPort"
+                # lights smoke is list-only on remote (T-038)
+                & npm run mcp:smoke
+                if ($LASTEXITCODE -ne 0) {
+                    $smokeFailed = $true
+                    Write-Error "Post-deploy mcp:smoke failed."
+                }
+                else {
+                    Write-Host "Post-deploy MCP smoke OK."
+                }
+            }
+            finally {
+                if ($null -ne $prevBase) { $env:MCP_BASE_URL = $prevBase }
+                else { Remove-Item Env:MCP_BASE_URL -ErrorAction SilentlyContinue }
+                Remove-Item Env:HOMEBASE_SMOKE_SKIP_DOTENV -ErrorAction SilentlyContinue
+                Pop-Location
+                # Always purge after smoke attempt (smoke also self-cleans; this catches failures).
+                Invoke-NasSmokePurge -Remote $remote -SshPort $SshPort -NasPath $NasPath `
+                    -HouseholdId $env:MCP_HOUSEHOLD_ID -Label "post-smoke"
+            }
+            if ($smokeFailed) { exit 1 }
+        }
+        else {
+            Write-Host "Skipping post-deploy MCP smoke (-SkipSmoke); pre-smoke purge already ran."
+        }
     }
 }
 
