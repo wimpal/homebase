@@ -1,12 +1,17 @@
 import { createSocket } from "node:dgram";
 import { DomainError } from "@/domain/error";
-import { buildMagicPacket, resolveWolBroadcast } from "./packet";
+import { buildMagicPacket, resolveWolTargets } from "./packet";
 
 const WOL_PORTS = [9, 7] as const;
 
+export type SendMagicPacketOptions = {
+  /** Last-seen LAN IPs (server-side only). Tried before broadcast. */
+  unicastIps?: Array<string | null | undefined>;
+};
+
 function sendOnce(
   packet: Buffer,
-  broadcast: string,
+  host: string,
   port: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -22,7 +27,7 @@ function sendOnce(
     socket.bind(() => {
       try {
         socket.setBroadcast(true);
-        socket.send(packet, port, broadcast, (err) => {
+        socket.send(packet, port, host, (err) => {
           try {
             socket.close();
           } catch {
@@ -44,23 +49,29 @@ function sendOnce(
 }
 
 /**
- * Send a Wake-on-LAN magic packet to the configured broadcast address.
+ * Send a Wake-on-LAN magic packet.
+ * Tries unicast last-seen IPs then directed broadcast; succeeds if any UDP send works.
  * Does not log or return the MAC.
  */
 export async function sendMagicPacket(
   macNormalized: string,
+  opts?: SendMagicPacketOptions,
 ): Promise<void | DomainError> {
   const packet = buildMagicPacket(macNormalized);
-  const broadcast = resolveWolBroadcast();
+  const targets = resolveWolTargets(opts?.unicastIps);
   const errors: string[] = [];
-  for (const port of WOL_PORTS) {
-    try {
-      await sendOnce(packet, broadcast, port);
-      return;
-    } catch (err) {
-      errors.push(
-        err instanceof Error ? err.message : `port ${port} send failed`,
-      );
+  for (const host of targets) {
+    for (const port of WOL_PORTS) {
+      try {
+        await sendOnce(packet, host, port);
+        return;
+      } catch (err) {
+        errors.push(
+          err instanceof Error
+            ? err.message
+            : `${host}:${port} send failed`,
+        );
+      }
     }
   }
   return DomainError.unavailable(

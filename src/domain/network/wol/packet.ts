@@ -36,6 +36,18 @@ export function clearWakeRateLimits(): void {
   lastWakeByDeviceKey.clear();
 }
 
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+
+/** Return canonical IPv4 string or null if invalid. */
+export function parseIpv4(raw: string | null | undefined): string | null {
+  const s = (raw ?? "").trim();
+  const m = IPV4_RE.exec(s);
+  if (!m) return null;
+  const octets = m.slice(1).map(Number);
+  if (!octets.every((n) => n <= 255)) return null;
+  return octets.join(".");
+}
+
 /**
  * Resolve UDP broadcast target:
  * 1. HOME_NETWORK_WOL_BROADCAST if set
@@ -43,17 +55,30 @@ export function clearWakeRateLimits(): void {
  * 3. 255.255.255.255
  */
 export function resolveWolBroadcast(): string {
-  const explicit = process.env.HOME_NETWORK_WOL_BROADCAST?.trim();
-  if (explicit) {
-    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(explicit);
-    if (m) {
-      const octets = m.slice(1).map(Number);
-      if (octets.every((n) => n <= 255)) return octets.join(".");
-    }
-  }
+  const explicit = parseIpv4(process.env.HOME_NETWORK_WOL_BROADCAST);
+  if (explicit) return explicit;
   const cidr = parseScanCidr(process.env.HOME_NETWORK_SCAN_CIDR);
   if (!isDomainError(cidr)) return cidr.broadcast;
   return "255.255.255.255";
+}
+
+/**
+ * UDP destinations for a wake: unicast last-seen IPs first (Docker bridge
+ * often cannot forward directed broadcast), then the configured broadcast.
+ * Dedupes; invalid IPs ignored.
+ */
+export function resolveWolTargets(unicastIps?: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of unicastIps ?? []) {
+    const ip = parseIpv4(raw);
+    if (!ip || seen.has(ip)) continue;
+    seen.add(ip);
+    out.push(ip);
+  }
+  const broadcast = resolveWolBroadcast();
+  if (!seen.has(broadcast)) out.push(broadcast);
+  return out;
 }
 
 export function isWolDryRun(): boolean {

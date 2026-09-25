@@ -45,5 +45,7 @@ export {
   clearWakeRateLimits,
   WOL_COOLDOWN_MS,
   buildMagicPacket,
+  parseIpv4,
   resolveWolBroadcast,
+  resolveWolTargets,
 } from "./wol/packet";

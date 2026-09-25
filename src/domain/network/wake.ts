@@ -58,7 +58,10 @@ export async function wakeNetworkDevice(
     return { id: detail.id, name: detail.name, status: "dry_run" };
   }
 
-  const sent = await sendMagicPacket(row.macAddress);
+  // Unicast lastSeenIp first — Docker bridge often drops directed broadcast.
+  const sent = await sendMagicPacket(row.macAddress, {
+    unicastIps: [row.lastSeenIp],
+  });
   if (sent instanceof DomainError) return sent;
 
   return { id: detail.id, name: detail.name, status: "sent" };
