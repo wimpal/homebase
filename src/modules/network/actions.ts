@@ -7,21 +7,26 @@ import {
   addNetworkDevice,
   addNetworkDeviceType,
   cancelScanJob,
+  clearNetworkDeviceSsap,
   getNetworkDevice,
   getScanJob,
   listDeviceLocations,
+  listNetworkDeviceSsapApps,
   listNetworkDeviceTypes,
   listNetworkDevicesForUi,
+  pairNetworkDeviceSsap,
   renameDeviceLocation,
   restoreNetworkDevice,
   retireNetworkDevice,
   startNetworkScan,
   updateNetworkDevice,
+  updateNetworkDeviceSsapSettings,
   type CatalogueLocation,
   type CatalogueType,
   type NetworkDeviceDetail,
   type NetworkDeviceUiRow,
   type ScanJobSnapshot,
+  type SsapAppListItem,
 } from "@/domain/network";
 import { isDomainError } from "@/domain/error";
 import {
@@ -202,6 +207,62 @@ export async function cancelNetworkScanAction(
     return failResult("Scan job not found.", "scan_job_not_found");
   }
   return okResult(snap);
+}
+
+// --- T-112 webOS SSAP ---
+
+export async function pairNetworkDeviceSsapAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await adminNetwork();
+  const result = await pairNetworkDeviceSsap(
+    householdId,
+    String(formData.get("id") ?? ""),
+  );
+  if (isDomainError(result)) return fromDomainError(result);
+  revalidatePath("/network");
+  return okResult();
+}
+
+export async function clearNetworkDeviceSsapAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await adminNetwork();
+  const result = await clearNetworkDeviceSsap(
+    householdId,
+    String(formData.get("id") ?? ""),
+  );
+  if (isDomainError(result)) return fromDomainError(result);
+  revalidatePath("/network");
+  return okResult();
+}
+
+export async function updateNetworkDeviceSsapSettingsAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await adminNetwork();
+  const hostRaw = formData.get("ssap_host");
+  const jellyRaw = formData.get("jellyfin_app_id");
+  const result = await updateNetworkDeviceSsapSettings(
+    householdId,
+    String(formData.get("id") ?? ""),
+    {
+      ssap_host: hostRaw === null ? undefined : String(hostRaw),
+      jellyfin_app_id: jellyRaw === null ? undefined : String(jellyRaw),
+    },
+  );
+  if (isDomainError(result)) return fromDomainError(result);
+  revalidatePath("/network");
+  return okResult();
+}
+
+export async function listNetworkDeviceSsapAppsAction(
+  deviceId: string,
+): Promise<ActionResult<SsapAppListItem[]>> {
+  const { householdId } = await adminNetwork();
+  const result = await listNetworkDeviceSsapApps(householdId, deviceId);
+  if (isDomainError(result)) return fromDomainError(result);
+  return okResult(result);
 }
 
 export async function enrollFromScanCandidateAction(

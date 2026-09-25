@@ -48,9 +48,12 @@ export async function listNetworkDevicesForUi(
   return rows.map((row) => {
     const detail = toNetworkDeviceDetail(row) as NetworkDeviceUiRow;
     detail.wake_allowed = row.wakeAllowed;
+    detail.ssap_paired = Boolean(row.ssapClientKey);
     if (row.macAddress) detail.mac_address = row.macAddress;
     if (row.lastSeenIp) detail.last_seen_ip = row.lastSeenIp;
     if (row.lastSeenHostname) detail.last_seen_hostname = row.lastSeenHostname;
+    if (row.ssapHost) detail.ssap_host = row.ssapHost;
+    if (row.jellyfinAppId) detail.jellyfin_app_id = row.jellyfinAppId;
     return detail;
   });
 }

@@ -14,10 +14,12 @@ export function toNetworkDeviceDetail(row: Row): NetworkDeviceDetail {
   const wake_capable = Boolean(
     row.wakeAllowed && row.macAddress && !row.retiredAt,
   );
+  const tv_capable = Boolean(row.ssapClientKey && !row.retiredAt);
   const detail: NetworkDeviceDetail = {
     id: row.id,
     name: row.name,
     wake_capable,
+    tv_capable,
     type: {
       id: row.type.id,
       slug: row.type.slug,

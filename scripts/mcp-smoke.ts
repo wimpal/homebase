@@ -301,8 +301,11 @@ async function main() {
     "homebase.changes.revert",
     "homebase.devices.add",
     "homebase.devices.get",
+    "homebase.devices.go_home",
+    "homebase.devices.launch_app",
     "homebase.devices.list",
     "homebase.devices.remove",
+    "homebase.devices.set_input",
     "homebase.devices.update",
     "homebase.devices.wake",
     "homebase.inventory.get",
@@ -322,10 +325,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 24 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 27 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 24 homebase tools");
+  ok("tools/list returns exactly 27 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -882,6 +885,9 @@ async function main() {
       /"mac"/i.test(text) ||
       /mac_address/i.test(text) ||
       /macAddress/.test(text) ||
+      /ssapClientKey/.test(text) ||
+      /ssap_client_key/.test(text) ||
+      /"client-key"/i.test(text) ||
       /lastSeenIp/.test(text) ||
       /lastSeenHostname/.test(text) ||
       /lastSeenAt/.test(text) ||
@@ -889,7 +895,7 @@ async function main() {
       /last_seen_hostname/.test(text) ||
       /last_seen_at/.test(text)
     ) {
-      fail(`${label}: identity/MAC leak in payload: ${text}`);
+      fail(`${label}: identity/MAC/SSAP-key leak in payload: ${text}`);
     }
   }
 
@@ -1118,7 +1124,125 @@ async function main() {
   }
   ok("homebase.devices.wake forged MAC args ignored / no MAC leak");
 
+  // --- T-112 webOS SSAP ---
+  const ssapFixtures = await seedSsapSmokeFixturesLocal();
+  assertNoMac(ssapFixtures, "ssap fixtures meta");
+
+  const goUnpaired = await callTool(49, "homebase.devices.go_home", {
+    device_id: ssapFixtures.unpaired_id,
+  });
+  if (!goUnpaired.isError) {
+    fail("devices.go_home unpaired should fail");
+  }
+  assertNoMac(parseToolPayload(goUnpaired), "devices.go_home unpaired error");
+  ok("homebase.devices.go_home unpaired refused");
+
+  const launchUnset = await callTool(50, "homebase.devices.launch_app", {
+    device_id: ssapFixtures.paired_dry_id,
+    target: "jellyfin",
+  });
+  if (!launchUnset.isError) {
+    fail("devices.launch_app jellyfin without app id should fail");
+  }
+  assertNoMac(
+    parseToolPayload(launchUnset),
+    "devices.launch_app unset jellyfin error",
+  );
+  ok("homebase.devices.launch_app jellyfin unset refused");
+
+  const goForgedKey = await callTool(51, "homebase.devices.go_home", {
+    device_id: ssapFixtures.paired_dry_id,
+    client_key: "forged-secret",
+    ssapClientKey: "forged-secret",
+  } as Record<string, unknown>);
+  // Extra keys ignored; may succeed (dry-run server) or fail unreachable — never leak key.
+  assertNoMac(
+    parseToolPayload(goForgedKey),
+    "devices.go_home forged key args",
+  );
+  ok("homebase.devices.go_home forged key args ignored / no key leak");
+
+  const badInput = await callTool(52, "homebase.devices.set_input", {
+    device_id: ssapFixtures.paired_dry_id,
+    input: "hdmi9",
+  } as Record<string, unknown>);
+  if (!badInput.isError) {
+    fail("devices.set_input invalid enum should fail");
+  }
+  assertNoMac(parseToolPayload(badInput), "devices.set_input invalid");
+  ok("homebase.devices.set_input invalid input refused");
+
+  const tvList = await callTool(53, "homebase.devices.list", {});
+  if (tvList.isError) fail("devices.list after ssap fixtures");
+  const tvListed = parseToolPayload(tvList) as {
+    id: string;
+    tv_capable?: boolean;
+  }[];
+  const pairedRow = tvListed.find((d) => d.id === ssapFixtures.paired_dry_id);
+  if (!pairedRow?.tv_capable) {
+    fail(`expected tv_capable on paired fixture: ${JSON.stringify(pairedRow)}`);
+  }
+  const unpairedRow = tvListed.find((d) => d.id === ssapFixtures.unpaired_id);
+  if (unpairedRow?.tv_capable) {
+    fail("unpaired fixture must not be tv_capable");
+  }
+  assertNoMac(tvListed, "devices.list tv_capable");
+  ok("devices.list tv_capable");
+
   await runLightsSmoke(callTool);
+}
+
+type SsapSmokeFixtures = {
+  unpaired_id: string;
+  paired_dry_id: string;
+};
+
+async function seedSsapSmokeFixturesLocal(): Promise<SsapSmokeFixtures> {
+  const { ensureNetworkCatalogues } = await import(
+    "../src/domain/network/ensure-catalogues"
+  );
+  const prisma = createPrismaClient();
+  try {
+    await ensureNetworkCatalogues(HOUSEHOLD_ID!);
+    const type = await prisma.networkDeviceType.findFirst({
+      where: { householdId: HOUSEHOLD_ID!, slug: "pc" },
+    });
+    const location = await prisma.deviceLocation.findFirst({
+      where: { householdId: HOUSEHOLD_ID!, slug: "unknown" },
+    });
+    if (!type || !location) {
+      fail("ssap fixtures: missing pc type or unknown location");
+    }
+    const stamp = Date.now().toString(16).slice(-6).padStart(6, "0");
+    const unpaired = await prisma.networkDevice.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: `mcp-smoke ssap unpaired ${stamp}`,
+        typeId: type.id,
+        locationId: location.id,
+        lastSeenIp: "192.168.1.200",
+        notes: "mcp-smoke",
+      },
+    });
+    const paired = await prisma.networkDevice.create({
+      data: {
+        householdId: HOUSEHOLD_ID!,
+        name: `mcp-smoke ssap paired ${stamp}`,
+        typeId: type.id,
+        locationId: location.id,
+        lastSeenIp: "192.168.1.201",
+        ssapClientKey: `smoke-key-${stamp}`,
+        ssapPairedAt: new Date(),
+        notes: "mcp-smoke",
+      },
+    });
+    return {
+      unpaired_id: unpaired.id,
+      paired_dry_id: paired.id,
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 type WolSmokeFixtures = {

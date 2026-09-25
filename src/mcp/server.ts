@@ -9,8 +9,13 @@ import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from 
 import {
   addNetworkDevice,
   getNetworkDevice,
+  goHomeNetworkDevice,
+  isTvInputId,
+  isTvLaunchTarget,
+  launchAppNetworkDevice,
   listNetworkDevices,
   retireNetworkDevice,
+  setInputNetworkDevice,
   updateNetworkDevice,
   wakeNetworkDevice,
 } from "@/domain/network";
@@ -570,6 +575,108 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ device_id }) => {
       const result = await wakeNetworkDevice(householdId, device_id);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.go_home",
+    {
+      description:
+        "Open webOS Home on a paired LG TV (Network device) via SSAP. Optional wake_if_needed. device_id only.",
+      inputSchema: {
+        device_id: z
+          .string()
+          .describe("Network device id from devices.list / devices.get"),
+        wake_if_needed: z
+          .boolean()
+          .optional()
+          .describe("WoL then floor+poll until SSAP ready before Home"),
+      },
+    },
+    async ({ device_id, wake_if_needed }) => {
+      const result = await goHomeNetworkDevice(
+        householdId,
+        device_id,
+        Boolean(wake_if_needed),
+      );
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.launch_app",
+    {
+      description:
+        'Launch named TV app (home or jellyfin) on a paired LG webOS Network device via SSAP. Optional wake_if_needed. Not a deep-link.',
+      inputSchema: {
+        device_id: z
+          .string()
+          .describe("Network device id from devices.list / devices.get"),
+        target: z
+          .enum(["home", "jellyfin"])
+          .describe("Named TV launch target"),
+        wake_if_needed: z
+          .boolean()
+          .optional()
+          .describe("WoL then floor+poll until SSAP ready"),
+      },
+    },
+    async ({ device_id, target, wake_if_needed }) => {
+      if (!isTvLaunchTarget(target)) {
+        return toolError(
+          DomainError.invalidInput("Invalid launch target.", "invalid_target"),
+        );
+      }
+      const result = await launchAppNetworkDevice(
+        householdId,
+        device_id,
+        target,
+        Boolean(wake_if_needed),
+      );
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.devices.set_input",
+    {
+      description:
+        "Switch TV input on a paired LG webOS Network device via SSAP (hdmi1–4 or live_tv). Optional wake_if_needed.",
+      inputSchema: {
+        device_id: z
+          .string()
+          .describe("Network device id from devices.list / devices.get"),
+        input: z
+          .enum(["hdmi1", "hdmi2", "hdmi3", "hdmi4", "live_tv"])
+          .describe("Allowlisted TV input id"),
+        wake_if_needed: z
+          .boolean()
+          .optional()
+          .describe("WoL then floor+poll until SSAP ready"),
+      },
+    },
+    async ({ device_id, input, wake_if_needed }) => {
+      if (!isTvInputId(input)) {
+        return toolError(
+          DomainError.invalidInput("Invalid TV input.", "invalid_input"),
+        );
+      }
+      const result = await setInputNetworkDevice(
+        householdId,
+        device_id,
+        input,
+        Boolean(wake_if_needed),
+      );
       if (isDomainError(result)) {
         return toolError(result);
       }

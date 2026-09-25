@@ -25,6 +25,7 @@
     "automations:active-window-selftest": "tsx scripts/active-window-selftest.ts",
     "network:scan-selftest": "tsx scripts/network-scan-selftest.ts",
     "network:wol-selftest": "tsx scripts/network-wol-selftest.ts",
+    "network:ssap-selftest": "tsx scripts/network-ssap-selftest.ts",
     "household:geo-backfill": "tsx scripts/backfill-household-geo.ts",
     "recipes:backfill-steps": "tsx scripts/backfill-recipe-steps.ts",
     "household:id": "tsx scripts/print-household-id.ts",
@@ -76,6 +77,7 @@
     "suncalc": "^2.0.2",
     "tailwind-merge": "^3.3.1",
     "web-push": "^3.6.7",
+    "ws": "^8.21.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -88,6 +90,7 @@
     "@types/react-dom": "^19",
     "@types/suncalc": "^1.9.2",
     "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "prisma": "^7.10.0",

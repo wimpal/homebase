@@ -904,6 +904,13 @@ model NetworkDevice {
   lastSeenIp       String?
   lastSeenHostname String?
   lastSeenAt       DateTime?
+  /// SSAP client key from ADMIN pair (T-112 / ADR-023). Never returned on MCP or UI after save.
+  ssapClientKey    String?
+  /// Optional preferred host/IP for SSAP; fall back to lastSeenIp.
+  ssapHost         String?
+  ssapPairedAt     DateTime?
+  /// LG app id for Jellyfin when installed; set via ADMIN UI after list-apps.
+  jellyfinAppId    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

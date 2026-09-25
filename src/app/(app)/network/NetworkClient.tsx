@@ -27,6 +27,7 @@ import type {
   NetworkDeviceUiRow,
 } from "@/domain/network";
 import { NetworkScanPanel } from "./NetworkScanPanel";
+import { NetworkTvSsapPanel } from "./NetworkTvSsapPanel";
 
 type Props = {
   devices: NetworkDeviceUiRow[];
@@ -172,6 +173,7 @@ export function NetworkClient({
                     {d.type.name} · {d.location.name}
                     {d.mac_address ? ` · ${d.mac_address}` : ""}
                     {d.wake_allowed ? ` · ${t("wakeCapableBadge")}` : ""}
+                    {d.ssap_paired ? ` · ${t("ssapPairedBadge")}` : ""}
                     {d.last_seen_ip ? ` · ${d.last_seen_ip}` : ""}
                   </p>
                   {d.notes && (
@@ -309,6 +311,9 @@ export function NetworkClient({
                   </p>
                   <Button type="submit">{t("saveChanges")}</Button>
                 </FormAction>
+              )}
+              {isAdmin && editingId === d.id && !d.retired_at && (
+                <NetworkTvSsapPanel device={d} />
               )}
             </CardContent>
           </Card>
