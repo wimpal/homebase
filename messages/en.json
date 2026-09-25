@@ -757,6 +757,7 @@
     "ssapUnpaired": "Not paired",
     "ssapPairedBadge": "TV",
     "ssapPair": "Pair TV",
+    "ssapPairPending": "Waiting for TV… (accept the prompt on the remote)",
     "ssapRepair": "Re-pair TV",
     "ssapClear": "Clear pairing",
     "confirmClearSsap": "Clear SSAP pairing for this TV?",

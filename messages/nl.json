@@ -757,6 +757,7 @@
     "ssapUnpaired": "Niet gekoppeld",
     "ssapPairedBadge": "TV",
     "ssapPair": "TV koppelen",
+    "ssapPairPending": "Wachten op TV… (bevestig de melding op de afstandsbediening)",
     "ssapRepair": "TV opnieuw koppelen",
     "ssapClear": "Koppeling wissen",
     "confirmClearSsap": "SSAP-koppeling voor deze TV wissen?",

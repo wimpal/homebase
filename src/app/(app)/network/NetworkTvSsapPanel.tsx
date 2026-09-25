@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,20 @@ import type { NetworkDeviceUiRow, SsapAppListItem } from "@/domain/network";
 type Props = {
   device: NetworkDeviceUiRow;
 };
+
+function PairSubmitButton({ paired }: { paired: boolean }) {
+  const t = useTranslations("network");
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" variant="outline" disabled={pending}>
+      {pending
+        ? t("ssapPairPending")
+        : paired
+          ? t("ssapRepair")
+          : t("ssapPair")}
+    </Button>
+  );
+}
 
 export function NetworkTvSsapPanel({ device }: Props) {
   const t = useTranslations("network");
@@ -56,9 +71,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
           }}
         >
           <input type="hidden" name="id" value={device.id} />
-          <Button type="submit" size="sm" variant="outline">
-            {device.ssap_paired ? t("ssapRepair") : t("ssapPair")}
-          </Button>
+          <PairSubmitButton paired={device.ssap_paired} />
         </FormAction>
         {device.ssap_paired && (
           <>
