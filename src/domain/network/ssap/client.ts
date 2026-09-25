@@ -1,10 +1,41 @@
 import WebSocket from "ws";
 import { DomainError } from "@/domain/error";
 
-const SSAP_PORT = 3000;
+/** Modern webOS: secure SSAP. TV cert is self-signed — verify off. */
+const SSAP_WSS_PORT = 3001;
+/** Older webOS / fallback when 3001 fails. */
+const SSAP_WS_PORT = 3000;
 const DEFAULT_CONNECT_MS = 8_000;
 const DEFAULT_REQUEST_MS = 15_000;
 const PAIR_TIMEOUT_MS = 120_000;
+
+export type SsapTransport = "wss" | "ws";
+
+/** Last successful transport per host (in-process; single NAS replica). */
+const preferredTransportByHost = new Map<string, SsapTransport>();
+
+/** Endpoint order: prefer last winner, else wss:3001 then ws:3000. */
+export function ssapEndpointCandidates(
+  host: string,
+): Array<{ transport: SsapTransport; url: string }> {
+  const secure = {
+    transport: "wss" as const,
+    url: `wss://${host}:${SSAP_WSS_PORT}`,
+  };
+  const insecure = {
+    transport: "ws" as const,
+    url: `ws://${host}:${SSAP_WS_PORT}`,
+  };
+  if (preferredTransportByHost.get(host) === "ws") {
+    return [insecure, secure];
+  }
+  return [secure, insecure];
+}
+
+/** Clear preferred-transport cache (selftest). */
+export function clearSsapTransportPreferences(): void {
+  preferredTransportByHost.clear();
+}
 
 const MANIFEST = {
   manifestVersion: 1,
@@ -93,15 +124,17 @@ export type SsapSession = {
   close: () => void;
 };
 
-function wsUrl(host: string): string {
-  return `ws://${host}:${SSAP_PORT}`;
-}
-
-function openSocket(host: string, timeoutMs: number): Promise<WebSocket> {
+function openOneEndpoint(
+  url: string,
+  transport: SsapTransport,
+  timeoutMs: number,
+): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     let settled = false;
-    const ws = new WebSocket(wsUrl(host), {
+    const ws = new WebSocket(url, {
       handshakeTimeout: timeoutMs,
+      // LG uses a self-signed cert on :3001.
+      rejectUnauthorized: transport === "wss" ? false : undefined,
     });
     const timer = setTimeout(() => {
       if (settled) return;
@@ -127,6 +160,27 @@ function openSocket(host: string, timeoutMs: number): Promise<WebSocket> {
       reject(err);
     });
   });
+}
+
+/**
+ * Open SSAP WebSocket: try wss://host:3001 first, then ws://host:3000.
+ * Remembers the winner per host for faster reconnect / ready-poll.
+ */
+async function openSocket(host: string, timeoutMs: number): Promise<WebSocket> {
+  const candidates = ssapEndpointCandidates(host);
+  let lastErr: unknown;
+  for (const { transport, url } of candidates) {
+    try {
+      const ws = await openOneEndpoint(url, transport, timeoutMs);
+      preferredTransportByHost.set(host, transport);
+      return ws;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("SSAP connect failed");
 }
 
 /** Probe TCP/WS handshake for ready-polling after WoL. */

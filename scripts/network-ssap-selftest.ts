@@ -15,6 +15,8 @@ import {
   SSAP_WAKE_FLOOR_MS,
   SSAP_POLL_INTERVAL_MS,
   SSAP_READY_TIMEOUT_MS,
+  clearSsapTransportPreferences,
+  ssapEndpointCandidates,
 } from "../src/domain/network";
 import { isDomainError } from "../src/domain/error";
 
@@ -40,6 +42,14 @@ async function main() {
     assert.ok(isDomainError(host));
     assert.equal(host.reason, "ssap_no_host");
     ok("no host → DomainError");
+  }
+
+  {
+    clearSsapTransportPreferences();
+    const first = ssapEndpointCandidates("192.168.1.106");
+    assert.equal(first[0]?.url, "wss://192.168.1.106:3001");
+    assert.equal(first[1]?.url, "ws://192.168.1.106:3000");
+    ok("default endpoint order wss:3001 then ws:3000");
   }
 
   {

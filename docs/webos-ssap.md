@@ -18,6 +18,11 @@ Ready-wait after wake is owned by Homebase (`wake_if_needed`).
 Host resolution: optional **SSAP host** on the Network device, else `lastSeenIp`
 from LAN scan.
 
+Transport: try **`wss://<host>:3001`** first (self-signed cert; verify off), then
+fall back to **`ws://<host>:3000`**. Newer OLEDs often complete SSAP only on 3001
+even when TCP still answers on 3000. The last successful transport is remembered
+in-process per host (ready-poll / reconnect).
+
 ## Pair (operator)
 
 1. Enroll the LG OLED on `/network` with MAC + wake allowlist (T-101).

@@ -60,7 +60,13 @@ export {
   waitUntilSsapReady,
 } from "./ssap/ready";
 export { clearSsapRateLimits, SSAP_COOLDOWN_MS } from "./ssap/rate-limit";
-export { isSsapDryRun, probeSsapPort } from "./ssap/client";
+export {
+  isSsapDryRun,
+  probeSsapPort,
+  clearSsapTransportPreferences,
+  ssapEndpointCandidates,
+} from "./ssap/client";
+export type { SsapTransport } from "./ssap/client";
 export type {
   NetworkDeviceDetail,
   NetworkDeviceUiRow,
