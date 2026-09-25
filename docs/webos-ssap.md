@@ -23,6 +23,10 @@ fall back to **`ws://<host>:3000`**. Newer OLEDs often complete SSAP only on 300
 even when TCP still answers on 3000. The last successful transport is remembered
 in-process per host (ready-poll / reconnect).
 
+**Response handling:** only skip intermediate register acks with
+`pairingType: "PROMPT"`. A normal command success is `returnValue: true` — that
+must resolve the pending request (not wait for the 15s timeout).
+
 ## Pair (operator)
 
 1. Enroll the LG OLED on `/network` with MAC + wake allowlist (T-101).

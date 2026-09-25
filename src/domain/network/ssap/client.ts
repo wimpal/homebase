@@ -115,6 +115,24 @@ type SsapeMessage = {
   error?: string;
 };
 
+/**
+ * Intermediate register ack while the TV shows the pair prompt.
+ * Successful commands use returnValue:true without pairingType — do not treat
+ * those as pairing prompts.
+ */
+export function isSsapPairingPromptAck(msg: {
+  type?: string;
+  payload?: Record<string, unknown> | null;
+}): boolean {
+  const payload = msg.payload;
+  return (
+    msg.type === "response" &&
+    !!payload &&
+    payload.pairingType === "PROMPT" &&
+    !payload["client-key"]
+  );
+}
+
 export type SsapSession = {
   clientKey: string;
   request: (
@@ -253,14 +271,11 @@ export async function openSsapSession(
     if (!id) return;
     const p = pending.get(id);
     if (!p) return;
-    // Pairing: ignore intermediate "response" prompts; wait for registered/error
-    if (
-      msg.type === "response" &&
-      msg.payload &&
-      (msg.payload.pairingType === "PROMPT" ||
-        msg.payload.returnValue === true) &&
-      !msg.payload["client-key"]
-    ) {
+    // Pairing only: TV acks with pairingType PROMPT before the user accepts.
+    // Do NOT ignore returnValue:true — that is a normal successful command reply
+    // (launch / switchInput). Swallowing it caused ~15s timeouts while the TV
+    // had already acted (go_home false failure).
+    if (isSsapPairingPromptAck(msg)) {
       return;
     }
     pending.delete(id);
@@ -366,7 +381,14 @@ export async function openSsapSession(
     if (msg.type === "error") {
       throw new Error(String(msg.error ?? "SSAP request error"));
     }
-    return (msg.payload ?? {}) as Record<string, unknown>;
+    const body = (msg.payload ?? {}) as Record<string, unknown>;
+    // Match aiowebostv: explicit false means command rejected.
+    if (body.returnValue === false) {
+      throw new Error(
+        String(body.errorText ?? body.errorCode ?? "SSAP returnValue false"),
+      );
+    }
+    return body;
   };
 
   return {

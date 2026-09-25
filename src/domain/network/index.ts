@@ -65,6 +65,7 @@ export {
   probeSsapPort,
   clearSsapTransportPreferences,
   ssapEndpointCandidates,
+  isSsapPairingPromptAck,
 } from "./ssap/client";
 export type { SsapTransport } from "./ssap/client";
 export type {

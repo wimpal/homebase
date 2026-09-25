@@ -17,6 +17,7 @@ import {
   SSAP_READY_TIMEOUT_MS,
   clearSsapTransportPreferences,
   ssapEndpointCandidates,
+  isSsapPairingPromptAck,
 } from "../src/domain/network";
 import { isDomainError } from "../src/domain/error";
 
@@ -50,6 +51,32 @@ async function main() {
     assert.equal(first[0]?.url, "wss://192.168.1.106:3001");
     assert.equal(first[1]?.url, "ws://192.168.1.106:3000");
     ok("default endpoint order wss:3001 then ws:3000");
+  }
+
+  {
+    assert.equal(
+      isSsapPairingPromptAck({
+        type: "response",
+        payload: { pairingType: "PROMPT", returnValue: true },
+      }),
+      true,
+    );
+    assert.equal(
+      isSsapPairingPromptAck({
+        type: "response",
+        payload: { returnValue: true },
+      }),
+      false,
+      "successful launch ack must not be treated as pairing prompt",
+    );
+    assert.equal(
+      isSsapPairingPromptAck({
+        type: "registered",
+        payload: { "client-key": "x" },
+      }),
+      false,
+    );
+    ok("pairing prompt ack vs launch success");
   }
 
   {
