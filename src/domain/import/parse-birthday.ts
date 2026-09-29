@@ -1,6 +1,7 @@
 /**
  * Parse Notion CSV birthday cells into a UTC calendar Date for @db.Date.
- * Accepts YYYY-MM-DD, DD-MM-YYYY, and date+time prefixes Notion sometimes exports.
+ * Accepts YYYY-MM-DD, DD-MM-YYYY, and slash variants (DD/MM/YYYY, YYYY/MM/DD),
+ * plus date+time prefixes Notion sometimes exports.
  * Returns null for empty; "invalid" for unparseable values.
  */
 export function parseImportBirthday(
@@ -10,7 +11,7 @@ export function parseImportBirthday(
   const s = raw.trim();
   if (!s) return null;
 
-  // Strip trailing time portion: "2020-05-12T00:00:00.000Z" or "12-05-2020 00:00"
+  // Strip trailing time portion: "2020-05-12T00:00:00.000Z" or "12/05/2020 00:00"
   const datePart = s.split(/[T\s]/)[0]?.trim() ?? "";
   if (!datePart) return "invalid";
 
@@ -18,13 +19,14 @@ export function parseImportBirthday(
   let m: number;
   let d: number;
 
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  const iso = /^(\d{4})[/.-](\d{2})[/.-](\d{2})$/.exec(datePart);
   if (iso) {
     y = Number(iso[1]);
     m = Number(iso[2]);
     d = Number(iso[3]);
   } else {
-    const dmy = /^(\d{2})-(\d{2})-(\d{4})$/.exec(datePart);
+    // Notion People export commonly uses DD/MM/YYYY
+    const dmy = /^(\d{2})[/.-](\d{2})[/.-](\d{4})$/.exec(datePart);
     if (!dmy) return "invalid";
     d = Number(dmy[1]);
     m = Number(dmy[2]);

@@ -40,7 +40,8 @@ Bring a **Notion database** into Homebase without a Notion API token.
 - Match by **case-insensitive email** when present; ambiguous email → row fails.
 - Else match by **case-insensitive name + family name** (both required); ambiguous → fail.
 - Given name only (no email) → **always create** (never auto-merge).
-- Birthday cells: `YYYY-MM-DD`, `DD-MM-YYYY`, or those with a trailing time portion.
+- Birthday cells: `YYYY-MM-DD`, `DD-MM-YYYY`, `DD/MM/YYYY` (Notion People export),
+  or those with a trailing time portion.
 - Re-import updates matched rows (blank optional cells clear stored values).
 
 ## Limits
