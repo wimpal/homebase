@@ -29,6 +29,7 @@ enum ModuleId {
   HOME_NETWORK
   PROTOCOLS
   PEOPLE
+  HOUSE_MANUAL
 }
 
 enum NotificationType {
@@ -107,6 +108,7 @@ model User {
   badges              UserBadge[]
   pushSubscriptions   PushSubscription[]
   passwordResetTokens PasswordResetToken[]
+  houseManualDocuments HouseManualDocument[]
 }
 
 /// Opaque password-reset tokens hashed at rest (T-092). Bound to userId, not email.
@@ -205,6 +207,7 @@ model Household {
   networkDevices          NetworkDevice[]
   protocolCinemaSettings  ProtocolCinemaSettings?
   people                  Person[]
+  houseManualDocuments    HouseManualDocument[]
 }
 
 /// Household contact who is not necessarily a Homebase Account (T-097).
@@ -230,6 +233,30 @@ model Person {
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@index([householdId])
+}
+
+/// ADMIN-uploaded household docs for read-only House manual search (T-098).
+model HouseManualDocument {
+  id               String   @id @default(cuid())
+  householdId      String
+  title            String
+  originalName     String
+  mimeType         String
+  sizeBytes        Int
+  url              String
+  /// ADMIN allowlist for MCP search/get. New uploads default false.
+  searchable       Boolean  @default(false)
+  /// Plain-text extract for search (txt/md in v1).
+  extractedText    String   @db.Text
+  uploadedByUserId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  uploadedBy User?     @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([householdId, searchable])
 }
 
 model McpChangeLog {

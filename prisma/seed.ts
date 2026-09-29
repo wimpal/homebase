@@ -1,6 +1,6 @@
-import { ModuleId } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { createPrismaClient } from "../src/core/db";
+import { MODULE_REGISTRY } from "../src/core/modules/registry";
 
 const prisma = createPrismaClient();
 
@@ -49,10 +49,14 @@ async function main() {
     },
   });
 
-  for (const moduleId of Object.values(ModuleId)) {
+  for (const mod of MODULE_REGISTRY) {
     await prisma.moduleSetting.upsert({
-      where: { householdId_moduleId: { householdId, moduleId } },
-      create: { householdId, moduleId, enabled: true },
+      where: { householdId_moduleId: { householdId, moduleId: mod.id } },
+      create: {
+        householdId,
+        moduleId: mod.id,
+        enabled: mod.defaultEnabled,
+      },
       update: {},
     });
   }

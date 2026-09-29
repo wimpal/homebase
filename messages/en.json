@@ -68,6 +68,10 @@
       "name": "People",
       "description": "Friends and relatives directory"
     },
+    "house_manual": {
+      "name": "House manual",
+      "description": "Allowlisted household docs for search"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -684,6 +688,21 @@
     "noDetails": "No contact details yet.",
     "confirmDelete": "Delete this contact? This cannot be undone.",
     "noPeople": "No contacts yet."
+  },
+  "house_manual": {
+    "title": "House manual",
+    "subtitle": "Admin-uploaded docs; only allowlisted ones appear in chat search",
+    "upload": "Upload document",
+    "uploadBtn": "Upload",
+    "titleLabel": "Title",
+    "fileLabel": "File (.txt or .md)",
+    "searchable": "Searchable in chat",
+    "makeSearchable": "Allow search",
+    "makePrivate": "Remove from search",
+    "confirmDelete": "Delete this document? This cannot be undone.",
+    "noDocs": "No documents yet. Upload a .txt or .md file.",
+    "adminOnly": "Only household admins can upload or change allowlisting.",
+    "pdfSkipped": "PDF is not indexed in v1 — upload plain text or Markdown."
   },
   "pets": {
     "title": "Pets",

@@ -10,7 +10,8 @@ export type UploadSubdir =
   | "projects"
   | "projects/files"
   | "projects/vision"
-  | "recipes";
+  | "recipes"
+  | "house-manual";
 
 type ImageRule = {
   extension: string;

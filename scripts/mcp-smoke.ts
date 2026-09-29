@@ -312,6 +312,8 @@ async function main() {
     "homebase.devices.set_input",
     "homebase.devices.update",
     "homebase.devices.wake",
+    "homebase.house_manual.get",
+    "homebase.house_manual.search",
     "homebase.inventory.get",
     "homebase.inventory.list",
     "homebase.inventory.update",
@@ -331,10 +333,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 33 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 35 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 33 homebase tools");
+  ok("tools/list returns exactly 35 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -1359,6 +1361,105 @@ async function main() {
   }
   ok("homebase.protocols.run unknown name refused (Cinema not fired)");
 
+  // --- T-098 House manual (module default-off; fixture enables temporarily) ---
+  const hmOriginalEnabled = await readHouseManualModuleEnabled();
+  let hmFixtures: HouseManualSmokeFixtures | null = null;
+  try {
+    await restoreHouseManualModule(false);
+
+    const hmOff = await callTool(59, "homebase.house_manual.search", {
+      query: "fuse box",
+    });
+    if (!hmOff.isError) {
+      fail(
+        `house_manual.search with module off must error, got ${JSON.stringify(parseToolPayload(hmOff))}`,
+      );
+    }
+    const hmOffErr = parseToolPayload(hmOff) as {
+      error?: { code?: string; message?: string };
+    };
+    if (hmOffErr.error?.code !== "unavailable") {
+      fail(
+        `house_manual.search module-off expected unavailable, got ${JSON.stringify(hmOffErr)}`,
+      );
+    }
+    ok("homebase.house_manual.search module-off → unavailable");
+
+    hmFixtures = await seedHouseManualSmokeFixtures();
+
+    const hmSearch = await callTool(60, "homebase.house_manual.search", {
+      query: "fuse box",
+    });
+    if (hmSearch.isError) {
+      fail(
+        `house_manual.search after enable: ${hmSearch.content?.[0]?.text ?? "unknown"}`,
+      );
+    }
+    const hmHits = parseToolPayload(hmSearch) as {
+      id: string;
+      title: string;
+      snippet: string;
+    }[];
+    if (!Array.isArray(hmHits) || hmHits.length < 1) {
+      fail(`house_manual.search expected hits, got ${JSON.stringify(hmHits)}`);
+    }
+    if (!hmHits.some((h) => h.id === hmFixtures!.searchable_id)) {
+      fail(`search missing searchable fixture: ${JSON.stringify(hmHits)}`);
+    }
+    if (hmHits.some((h) => h.id === hmFixtures!.private_id)) {
+      fail("non-searchable doc must not appear in search");
+    }
+    const fuseHit = hmHits.find((h) => h.id === hmFixtures!.searchable_id);
+    if (
+      !fuseHit?.snippet?.toLowerCase().includes("fuse") &&
+      !fuseHit?.snippet?.toLowerCase().includes("meterkast")
+    ) {
+      fail(`snippet missing fuse/meterkast: ${JSON.stringify(fuseHit)}`);
+    }
+    ok("homebase.house_manual.search finds allowlisted fuse-box fixture");
+
+    const hmGet = await callTool(61, "homebase.house_manual.get", {
+      id: hmFixtures.searchable_id,
+    });
+    if (hmGet.isError) {
+      fail(
+        `house_manual.get searchable: ${hmGet.content?.[0]?.text ?? "unknown"}`,
+      );
+    }
+    const hmBody = parseToolPayload(hmGet) as {
+      id?: string;
+      body?: string;
+      mime?: string;
+    };
+    if (
+      hmBody.id !== hmFixtures.searchable_id ||
+      !hmBody.body?.toLowerCase().includes("meterkast")
+    ) {
+      fail(`house_manual.get unexpected: ${JSON.stringify(hmBody)}`);
+    }
+    ok("homebase.house_manual.get returns allowlisted body");
+
+    const hmPrivate = await callTool(62, "homebase.house_manual.get", {
+      id: hmFixtures.private_id,
+    });
+    if (!hmPrivate.isError) {
+      fail(
+        `get non-searchable must not_found, got ${JSON.stringify(parseToolPayload(hmPrivate))}`,
+      );
+    }
+    const hmPrivErr = parseToolPayload(hmPrivate) as {
+      error?: { code?: string };
+    };
+    if (hmPrivErr.error?.code !== "not_found") {
+      fail(
+        `get non-searchable expected not_found, got ${JSON.stringify(hmPrivErr)}`,
+      );
+    }
+    ok("homebase.house_manual.get non-allowlisted → not_found");
+  } finally {
+    await restoreHouseManualModule(hmOriginalEnabled);
+  }
+
   await runLightsSmoke(callTool);
 }
 
@@ -1366,6 +1467,100 @@ type SsapSmokeFixtures = {
   unpaired_id: string;
   paired_dry_id: string;
 };
+
+type HouseManualSmokeFixtures = {
+  searchable_id: string;
+  private_id: string;
+  previous_enabled: boolean;
+};
+
+async function runHouseManualFixtureScript(
+  args: string[],
+  envExtra: Record<string, string> = {},
+): Promise<string> {
+  if (IS_LOCAL) {
+    const { execFileSync } = await import("node:child_process");
+    return execFileSync("npx", ["tsx", "scripts/seed-house-manual-smoke-fixtures.ts", ...args], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MCP_HOUSEHOLD_ID: HOUSEHOLD_ID!,
+        HOMEBASE_SMOKE_SKIP_DOTENV: "1",
+        ...envExtra,
+      },
+    });
+  }
+
+  const nasHost = process.env.NAS_HOST?.trim();
+  if (!nasHost) {
+    fail(
+      "remote house-manual fixture script requires NAS_HOST (or run mcp:smoke locally)",
+    );
+  }
+  const nasUser = process.env.NAS_USER?.trim() || "wim";
+  const nasPath =
+    process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+  const sshPortRaw = process.env.NAS_SSH_PORT?.trim();
+  const sshPort =
+    sshPortRaw && Number.parseInt(sshPortRaw, 10) > 0
+      ? Number.parseInt(sshPortRaw, 10)
+      : 22;
+  const remote = `${nasUser}@${nasHost}`;
+  const envFlags = [
+    `-e MCP_HOUSEHOLD_ID=${shellSingleQuote(HOUSEHOLD_ID!)}`,
+    ...Object.entries(envExtra).map(
+      ([k, v]) => `-e ${k}=${shellSingleQuote(v)}`,
+    ),
+  ].join(" ");
+  const argStr = args.map((a) => shellSingleQuote(a)).join(" ");
+  const remoteCmd = [
+    "set -eu",
+    `cd ${shellSingleQuote(nasPath)}`,
+    `docker compose exec -T ${envFlags} worker npx tsx scripts/seed-house-manual-smoke-fixtures.ts ${argStr}`.trim(),
+  ].join(" && ");
+  const { execFileSync } = await import("node:child_process");
+  return execFileSync("ssh", ["-p", String(sshPort), remote, remoteCmd], {
+    encoding: "utf8",
+  });
+}
+
+async function readHouseManualModuleEnabled(): Promise<boolean> {
+  const out = await runHouseManualFixtureScript(["--status"]);
+  const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  try {
+    const parsed = JSON.parse(line) as { enabled?: boolean };
+    return Boolean(parsed.enabled);
+  } catch {
+    fail(`house-manual --status bad output: ${out}`);
+  }
+}
+
+async function seedHouseManualSmokeFixtures(): Promise<HouseManualSmokeFixtures> {
+  const out = await runHouseManualFixtureScript([]);
+  const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  let fixtures: HouseManualSmokeFixtures;
+  try {
+    fixtures = JSON.parse(line) as HouseManualSmokeFixtures;
+  } catch {
+    fail(`house-manual fixture seed bad output: ${out}`);
+  }
+  if (!IS_LOCAL) await sleepMs(500);
+  return fixtures;
+}
+
+async function restoreHouseManualModule(previousEnabled: boolean) {
+  if (process.env.HOMEBASE_SMOKE_KEEP_DATA === "1") {
+    console.log(
+      "NOTE: HOMEBASE_SMOKE_KEEP_DATA=1 — leaving House manual module state for debug",
+    );
+    return;
+  }
+
+  await runHouseManualFixtureScript(["--restore"], {
+    HOUSE_MANUAL_RESTORE_ENABLED: previousEnabled ? "true" : "false",
+  });
+  ok(`house manual module restored to enabled=${previousEnabled}`);
+}
 
 async function seedSsapSmokeFixturesLocal(): Promise<SsapSmokeFixtures> {
   const { ensureNetworkCatalogues } = await import(

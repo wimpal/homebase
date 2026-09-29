@@ -369,9 +369,11 @@ Verify changes with `npm run build` — TypeScript is strict about server action
 | Recipes | `(app)/recipes/` | `modules/recipes/` | Timers in RecipesClient |
 | Budget | `(app)/budget/` | `modules/recipes/` | `getBudgetRemaining` in `lib/budget.ts` |
 | Delivery | `(app)/delivery/` | `modules/social/` | Pre-delivery alerts in scheduler |
+| People | `(app)/people/` | `modules/people/` | Contacts SoT (T-097); Notion import via Settings |
 | Messages | `(app)/messages/` | `modules/social/` | Requests need ADMIN to approve |
 | Smart Home | `(app)/smart-home/` | `modules/smarthome/` | IKEA/Dirigera lights + automations; utils in `lib/smarthome.ts` |
-| Settings | `(app)/settings/` | modules/settings, social | Module toggles |
+| Home network | `(app)/network/` | `modules/network/` | Devices, WoL, SSAP |
+| Settings | `(app)/settings/` | modules/settings, social | Module toggles; Notion Import |
 
 ---
 

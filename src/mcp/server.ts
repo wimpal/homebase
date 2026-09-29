@@ -27,6 +27,10 @@ import {
   setDeliveryStatus,
 } from "@/domain/delivery";
 import { listProtocols, runProtocol } from "@/domain/protocols";
+import {
+  getHouseManualDoc,
+  searchHouseManual,
+} from "@/domain/house-manual";
 
 function toolJson(value: unknown) {
   return {
@@ -826,6 +830,44 @@ export function createMcpServer(householdId: string): McpServer {
         return toolError(
           DomainError.conflict(result.error ?? "Protocol already running."),
         );
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.house_manual.search",
+    {
+      description:
+        'Search ADMIN-allowlisted House manual documents for practical household location/how-to answers (fuse box, meterkast). Use for "where\'s the fuse box". Not Notes or inventing locations.',
+      inputSchema: {
+        query: z
+          .string()
+          .describe("Non-empty free-text search over allowlisted titles and body"),
+      },
+    },
+    async ({ query }) => {
+      const result = await searchHouseManual(householdId, query);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.house_manual.get",
+    {
+      description:
+        "Get one allowlisted House manual document by id (title + body). Prefer after house_manual.search.",
+      inputSchema: {
+        id: z.string().describe("House manual document id from search"),
+      },
+    },
+    async ({ id }) => {
+      const result = await getHouseManualDoc(householdId, id);
+      if (isDomainError(result)) {
+        return toolError(result);
       }
       return toolJson(result);
     },

@@ -68,6 +68,10 @@
       "name": "Mensen",
       "description": "Directory van vrienden en familie"
     },
+    "house_manual": {
+      "name": "Huishandleiding",
+      "description": "Toegestane huishouddocumenten voor zoeken"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -684,6 +688,21 @@
     "noDetails": "Nog geen contactgegevens.",
     "confirmDelete": "Dit contact verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "noPeople": "Nog geen contacten."
+  },
+  "house_manual": {
+    "title": "Huishandleiding",
+    "subtitle": "Documenten van de beheerder; alleen toegestane docs verschijnen in chatzoekopdrachten",
+    "upload": "Document uploaden",
+    "uploadBtn": "Uploaden",
+    "titleLabel": "Titel",
+    "fileLabel": "Bestand (.txt of .md)",
+    "searchable": "Doorzoekbaar in chat",
+    "makeSearchable": "Zoeken toestaan",
+    "makePrivate": "Uit zoeken halen",
+    "confirmDelete": "Dit document verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "noDocs": "Nog geen documenten. Upload een .txt- of .md-bestand.",
+    "adminOnly": "Alleen beheerders kunnen uploaden of de zoeklijst wijzigen.",
+    "pdfSkipped": "PDF wordt in v1 niet geïndexeerd — upload platte tekst of Markdown."
   },
   "pets": {
     "title": "Huisdieren",
