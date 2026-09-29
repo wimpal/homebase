@@ -9,22 +9,17 @@ import { revalidatePath } from "next/cache";
 import {
   type ActionResult,
   failResult,
+  fromDomainError,
   okResult,
 } from "@/lib/action-result";
+import { isDomainError } from "@/domain/error";
+import { addDelivery, setDeliveryStatus } from "@/domain/delivery";
 
 const requestInputSchema = z.object({
   type: z.enum(["GROCERY", "TASK"]),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2_000).optional(),
 });
-
-const deliveryStatusSchema = z.enum([
-  "PENDING",
-  "IN_TRANSIT",
-  "OUT_FOR_DELIVERY",
-  "DELIVERED",
-  "EXCEPTION",
-]);
 
 export async function getDeliveries() {
   const { householdId } = await requireHousehold();
@@ -34,26 +29,35 @@ export async function getDeliveries() {
   });
 }
 
+function formDateToIso(value: FormDataEntryValue | null): string | undefined {
+  if (!value || typeof value !== "string" || !value.trim()) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
 export async function createDelivery(formData: FormData) {
   const { householdId } = await requireMutationAccess(ModuleId.DELIVERY);
-  await prisma.deliveryPackage.create({
-    data: {
-      householdId,
-      carrier: (formData.get("carrier") as string) || undefined,
-      trackingNumber: (formData.get("trackingNumber") as string) || undefined,
-      trackingUrl: (formData.get("trackingUrl") as string) || undefined,
-      description: (formData.get("description") as string) || undefined,
-      expectedDate: formData.get("expectedDate")
-        ? new Date(formData.get("expectedDate") as string)
-        : undefined,
-      earliestTime: formData.get("earliestTime")
-        ? new Date(formData.get("earliestTime") as string)
-        : undefined,
-      latestTime: formData.get("latestTime")
-        ? new Date(formData.get("latestTime") as string)
-        : undefined,
-    },
+  const descriptionRaw = String(formData.get("description") ?? "").trim();
+  const carrier = String(formData.get("carrier") ?? "").trim() || undefined;
+  const trackingNumber =
+    String(formData.get("trackingNumber") ?? "").trim() || undefined;
+  const description =
+    descriptionRaw || carrier || trackingNumber || "Package";
+
+  const expectedRaw = String(formData.get("expectedDate") ?? "").trim();
+  const result = await addDelivery(householdId, {
+    description,
+    carrier,
+    tracking_number: trackingNumber,
+    tracking_url: String(formData.get("trackingUrl") ?? "").trim() || undefined,
+    expected_date: expectedRaw || undefined,
+    earliest_time: formDateToIso(formData.get("earliestTime")),
+    latest_time: formDateToIso(formData.get("latestTime")),
   });
+  if (isDomainError(result)) {
+    throw result;
+  }
   revalidatePath("/delivery");
 }
 
@@ -62,16 +66,10 @@ export async function updateDeliveryStatus(
 ): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.DELIVERY);
   const id = formData.get("id") as string;
-  const parsed = deliveryStatusSchema.safeParse(formData.get("status"));
-  if (!parsed.success) {
-    return failResult("Invalid delivery status", "invalid_delivery_status");
-  }
-  const result = await prisma.deliveryPackage.updateMany({
-    where: { id, householdId },
-    data: { status: parsed.data },
-  });
-  if (result.count === 0) {
-    return failResult("Delivery not found", "delivery_not_found");
+  const status = String(formData.get("status") ?? "");
+  const result = await setDeliveryStatus(householdId, { id, status });
+  if (isDomainError(result)) {
+    return fromDomainError(result);
   }
   revalidatePath("/delivery");
   return okResult();

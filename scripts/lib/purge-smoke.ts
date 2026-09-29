@@ -6,6 +6,7 @@
  *   Chore                  — title starts with "mcp-smoke"
  *   Recipe                 — title starts with "Smoke Add "
  *   NetworkDevice          — name starts with "Smoke Add " or "mcp-smoke"
+ *   DeliveryPackage        — description starts with "mcp-smoke"
  *   Notification           — title or message contains "mcp-smoke"
  *   McpChangeLog           — entityId in deleted set OR payloadJson text
  *                            contains "mcp-smoke" / "Smoke Add" (orphan reverts)
@@ -24,6 +25,7 @@ export type PurgeSmokeCounts = {
   chore: number;
   recipe: number;
   networkDevice: number;
+  deliveryPackage: number;
 };
 
 export type PurgeSmokeMatch = {
@@ -38,6 +40,7 @@ export type PurgeSmokeMatches = {
   chores: PurgeSmokeMatch[];
   recipes: PurgeSmokeMatch[];
   networkDevices: PurgeSmokeMatch[];
+  deliveryPackages: PurgeSmokeMatch[];
   notifications: PurgeSmokeMatch[];
   /** Orphan / payload-matched change-log rows (id + short label). */
   changeLogs: PurgeSmokeMatch[];
@@ -135,14 +138,30 @@ function networkDeviceWhere(
   };
 }
 
+function deliveryPackageWhere(
+  householdId?: string,
+): Prisma.DeliveryPackageWhereInput {
+  return {
+    description: { startsWith: "mcp-smoke" },
+    ...(householdId ? { householdId } : {}),
+  };
+}
+
 export async function collectSmokeMatches(
   prisma: PrismaClient,
   options: PurgeSmokeOptions = {},
 ): Promise<PurgeSmokeMatches> {
   const householdId = options.householdId;
 
-  const [shoppingItems, products, chores, recipes, networkDevices, notifications] =
-    await Promise.all([
+  const [
+    shoppingItems,
+    products,
+    chores,
+    recipes,
+    networkDevices,
+    deliveryPackages,
+    notifications,
+  ] = await Promise.all([
       prisma.shoppingItem.findMany({
         where: {
           name: { startsWith: "mcp-smoke" },
@@ -186,6 +205,11 @@ export async function collectSmokeMatches(
         select: { id: true, name: true, householdId: true },
         orderBy: { createdAt: "asc" },
       }),
+      prisma.deliveryPackage.findMany({
+        where: deliveryPackageWhere(householdId),
+        select: { id: true, description: true, householdId: true },
+        orderBy: { createdAt: "asc" },
+      }),
       prisma.notification.findMany({
         where: notificationWhere(householdId),
         select: { id: true, title: true, householdId: true },
@@ -199,6 +223,7 @@ export async function collectSmokeMatches(
     ...chores.map((r) => r.id),
     ...recipes.map((r) => r.id),
     ...networkDevices.map((r) => r.id),
+    ...deliveryPackages.map((r) => r.id),
   ];
 
   const changeLogs = await collectSmokeChangeLogs(
@@ -233,6 +258,11 @@ export async function collectSmokeMatches(
       label: r.name,
       householdId: r.householdId,
     })),
+    deliveryPackages: deliveryPackages.map((r) => ({
+      id: r.id,
+      label: r.description ?? r.id,
+      householdId: r.householdId,
+    })),
     notifications: notifications.map((r) => ({
       id: r.id,
       label: r.title,
@@ -249,6 +279,7 @@ export function countSmokeMatchRows(matches: PurgeSmokeMatches): number {
     matches.chores.length +
     matches.recipes.length +
     matches.networkDevices.length +
+    matches.deliveryPackages.length +
     matches.notifications.length +
     matches.changeLogs.length
   );
@@ -322,6 +353,7 @@ export async function applySmokePurge(
     ...matches.chores.map((r) => r.id),
     ...matches.recipes.map((r) => r.id),
     ...matches.networkDevices.map((r) => r.id),
+    ...matches.deliveryPackages.map((r) => r.id),
   ];
 
   const result = await prisma.$transaction(async (tx) => {
@@ -369,6 +401,10 @@ export async function applySmokePurge(
       where: networkDeviceWhere(householdId),
     });
 
+    const deliveryPackage = await tx.deliveryPackage.deleteMany({
+      where: deliveryPackageWhere(householdId),
+    });
+
     // Drain notifications created mid-transaction / by a concurrent scheduler tick
     // against rows we just removed (no FK — they can linger).
     const notificationDrain = await tx.notification.deleteMany({
@@ -385,6 +421,7 @@ export async function applySmokePurge(
       chore,
       recipe,
       networkDevice,
+      deliveryPackage,
     };
   });
 
@@ -396,6 +433,7 @@ export async function applySmokePurge(
     chore: result.chore.count,
     recipe: result.recipe.count,
     networkDevice: result.networkDevice.count,
+    deliveryPackage: result.deliveryPackage.count,
   };
 }
 
@@ -424,6 +462,7 @@ export function formatPurgeCounts(counts: PurgeSmokeCounts): string {
     `chore=${counts.chore}`,
     `recipe=${counts.recipe}`,
     `networkDevice=${counts.networkDevice}`,
+    `deliveryPackage=${counts.deliveryPackage}`,
   ].join(" ");
 }
 
@@ -435,6 +474,7 @@ export function totalPurgeCounts(counts: PurgeSmokeCounts): number {
     counts.product +
     counts.chore +
     counts.recipe +
-    counts.networkDevice
+    counts.networkDevice +
+    counts.deliveryPackage
   );
 }

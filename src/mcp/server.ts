@@ -21,6 +21,11 @@ import {
   wakeNetworkDevice,
 } from "@/domain/network";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
+import {
+  addDelivery,
+  listDeliveries,
+  setDeliveryStatus,
+} from "@/domain/delivery";
 import { listProtocols, runProtocol } from "@/domain/protocols";
 
 function toolJson(value: unknown) {
@@ -298,6 +303,85 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ id }) => {
       const result = await completeChoreDomain(householdId, { id });
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.delivery.list",
+    {
+      description:
+        'List household delivery packages (manual status tracking). Use for "where\'s my package", "any deliveries coming". Optional status filter. Freshness is the last household update — does not scrape carrier APIs.',
+      inputSchema: {
+        status: z
+          .string()
+          .optional()
+          .describe(
+            "Optional DeliveryStatus: PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION",
+          ),
+      },
+    },
+    async (input) => {
+      const result = await listDeliveries(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.delivery.add",
+    {
+      description:
+        "Add a delivery package row. Always creates a new row (no silent merge on tracking number or label). Default status PENDING. Not for carrier live-tracking APIs.",
+      inputSchema: {
+        description: z.string().describe("Human label for the package (required)"),
+        carrier: z.string().optional(),
+        tracking_number: z.string().optional(),
+        tracking_url: z
+          .string()
+          .optional()
+          .describe("http(s) URL when set"),
+        expected_date: z.string().optional().describe("YYYY-MM-DD"),
+        earliest_time: z
+          .string()
+          .optional()
+          .describe("RFC3339 delivery window start"),
+        latest_time: z
+          .string()
+          .optional()
+          .describe("RFC3339 delivery window end"),
+      },
+    },
+    async (input) => {
+      const result = await addDelivery(householdId, input);
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.delivery.set_status",
+    {
+      description:
+        "Update a delivery package status by id. Only valid DeliveryStatus transitions are accepted. Use after delivery.list to resolve the id. Same status is a no-op success.",
+      inputSchema: {
+        id: z.string().describe("DeliveryPackage id from delivery.list"),
+        status: z
+          .string()
+          .describe(
+            "Target DeliveryStatus: PENDING, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION",
+          ),
+      },
+    },
+    async (input) => {
+      const result = await setDeliveryStatus(householdId, input);
       if (isDomainError(result)) {
         return toolError(result);
       }

@@ -299,6 +299,9 @@ async function main() {
   const expected = [
     "homebase.changes.list",
     "homebase.changes.revert",
+    "homebase.delivery.add",
+    "homebase.delivery.list",
+    "homebase.delivery.set_status",
     "homebase.devices.add",
     "homebase.devices.get",
     "homebase.devices.go_home",
@@ -328,10 +331,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 30 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 33 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 30 homebase tools");
+  ok("tools/list returns exactly 33 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -572,6 +575,76 @@ async function main() {
     fail("recurring task still in active list before next due");
   }
   ok("recurring tasks.complete rolls nextDue and hides until next due");
+
+  const deliveryListResult = await callTool(60, "homebase.delivery.list", {});
+  if (deliveryListResult.isError) {
+    fail("homebase.delivery.list tool error");
+  }
+  ok("homebase.delivery.list");
+
+  const smokeDeliveryDesc = `mcp-smoke-delivery-${Date.now()}`;
+  const deliveryAddResult = await callTool(61, "homebase.delivery.add", {
+    description: smokeDeliveryDesc,
+    carrier: "mcp-smoke",
+  });
+  if (deliveryAddResult.isError) {
+    fail(
+      `homebase.delivery.add tool error: ${deliveryAddResult.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const addedDelivery = parseToolPayload(deliveryAddResult) as {
+    id: string;
+    description?: string;
+    status: string;
+  };
+  if (
+    addedDelivery.description !== smokeDeliveryDesc ||
+    addedDelivery.status !== "PENDING"
+  ) {
+    fail(
+      `delivery.add unexpected payload: ${JSON.stringify(addedDelivery)}`,
+    );
+  }
+
+  const deliveryAfterAdd = await callTool(62, "homebase.delivery.list", {});
+  const deliveriesListed = parseToolPayload(deliveryAfterAdd) as {
+    id: string;
+    description?: string;
+  }[];
+  if (!deliveriesListed.some((d) => d.id === addedDelivery.id)) {
+    fail("delivery.add row missing from delivery.list");
+  }
+
+  const setInTransit = await callTool(63, "homebase.delivery.set_status", {
+    id: addedDelivery.id,
+    status: "IN_TRANSIT",
+  });
+  if (setInTransit.isError) {
+    fail(
+      `homebase.delivery.set_status tool error: ${setInTransit.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const inTransit = parseToolPayload(setInTransit) as { status: string };
+  if (inTransit.status !== "IN_TRANSIT") {
+    fail(`expected IN_TRANSIT, got ${inTransit.status}`);
+  }
+
+  const setDelivered = await callTool(64, "homebase.delivery.set_status", {
+    id: addedDelivery.id,
+    status: "DELIVERED",
+  });
+  if (setDelivered.isError) {
+    fail("delivery.set_status DELIVERED tool error");
+  }
+
+  const illegalTransition = await callTool(65, "homebase.delivery.set_status", {
+    id: addedDelivery.id,
+    status: "PENDING",
+  });
+  if (!illegalTransition.isError) {
+    fail("DELIVERED → PENDING should be rejected");
+  }
+  ok("delivery list → add → set_status (+ illegal transition refused)");
 
   const recipeSearchResult = await callTool(22, "homebase.recipes.search", {});
   if (recipeSearchResult.isError) {

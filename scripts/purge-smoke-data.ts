@@ -117,6 +117,10 @@ async function main() {
     matches.networkDevices,
   );
   printSection(
+    "DeliveryPackage (description starts with mcp-smoke)",
+    matches.deliveryPackages,
+  );
+  printSection(
     "Notification (title or message contains mcp-smoke)",
     matches.notifications,
   );
