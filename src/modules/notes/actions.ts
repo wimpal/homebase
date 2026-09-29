@@ -17,8 +17,6 @@ import {
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-export type { NoteListItem };
-
 export async function getNotes(): Promise<NoteListItem[]> {
   const { householdId } = await requireHousehold();
   const result = await listNotes(householdId);

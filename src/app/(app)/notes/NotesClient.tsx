@@ -9,10 +9,10 @@ import { FormAction } from "@/components/ui/form-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { NoteListItem } from "@/domain/notes";
 import {
   createNoteAction,
   deleteNoteAction,
-  type NoteListItem,
 } from "@/modules/notes/actions";
 import { StickyNote } from "lucide-react";
 import { useTranslations } from "next-intl";
