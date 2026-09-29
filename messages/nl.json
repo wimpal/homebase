@@ -72,6 +72,10 @@
       "name": "Huishandleiding",
       "description": "Toegestane huishouddocumenten voor zoeken"
     },
+    "notes": {
+      "name": "Notities",
+      "description": "Korte huishoudfacts en tips"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -704,6 +708,18 @@
     "adminOnly": "Alleen beheerders kunnen uploaden of de zoeklijst wijzigen.",
     "pdfSkipped": "PDF wordt in v1 niet geïndexeerd — upload platte tekst of Markdown."
   },
+  "notes": {
+    "title": "Notities",
+    "subtitle": "Korte huishoudfacts die je ook via chat kunt vastleggen",
+    "notPasswordManager": "Geen wachtwoordkluis — sla hier geen Wi‑Fi-wachtwoorden, API-tokens of andere geheimen op.",
+    "addNote": "Notitie toevoegen",
+    "addNoteBtn": "Notitie toevoegen",
+    "titleLabel": "Titel (optioneel)",
+    "bodyLabel": "Notitie",
+    "untitled": "Naamloze notitie",
+    "confirmDelete": "Deze notitie verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "noNotes": "Nog geen notities."
+  },
   "pets": {
     "title": "Huisdieren",
     "subtitle": "Huisdierverzorging, afspraken en voeding",
@@ -1078,6 +1094,41 @@
         "title": "Te veel meldingen",
         "why": "Je hebt recent al meerdere foutmeldingen gestuurd.",
         "fix": "Wacht een paar minuten voordat je opnieuw meldt."
+      },
+      "secret_content_rejected": {
+        "title": "Kan die notitie niet opslaan",
+        "why": "De tekst lijkt op een wachtwoord, Wi‑Fi-sleutel of API-token.",
+        "fix": "Verwijder geheimen en bewaar een korte niet-geheime tip. Gebruik een wachtwoordkluis voor credentials."
+      },
+      "body_required": {
+        "title": "Notitie verplicht",
+        "why": "De notitietekst was leeg.",
+        "fix": "Schrijf een korte notitie en sla opnieuw op."
+      },
+      "body_too_long": {
+        "title": "Notitie te lang",
+        "why": "De notitietekst overschrijdt de limiet.",
+        "fix": "Maak de notitie korter (max. 4000 tekens) en probeer opnieuw."
+      },
+      "title_too_long": {
+        "title": "Titel te lang",
+        "why": "De notitietitel overschrijdt de limiet.",
+        "fix": "Maak de titel korter (max. 200 tekens) en probeer opnieuw."
+      },
+      "note_id_required": {
+        "title": "Notitie ontbreekt",
+        "why": "Er is geen notitie-id doorgegeven.",
+        "fix": "Vernieuw de pagina en probeer opnieuw."
+      },
+      "note_not_found": {
+        "title": "Notitie niet gevonden",
+        "why": "Die notitie bestaat niet meer.",
+        "fix": "Vernieuw de notitiepagina en probeer opnieuw."
+      },
+      "module_disabled": {
+        "title": "Module uitgeschakeld",
+        "why": "Deze module staat uit voor het huishouden.",
+        "fix": "Schakel hem in onder Instellingen → Modules en probeer opnieuw."
       }
     }
   },

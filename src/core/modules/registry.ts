@@ -14,6 +14,7 @@ import {
   Package,
   Repeat,
   ShoppingCart,
+  StickyNote,
   Users,
   Wallet,
   Wrench,
@@ -161,6 +162,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     icon: BookOpen,
     href: "/house-manual",
     defaultEnabled: false,
+  },
+  {
+    id: ModuleId.NOTES,
+    nameKey: "notes",
+    descriptionKey: "notes",
+    icon: StickyNote,
+    href: "/notes",
+    defaultEnabled: true,
   },
 ];
 

@@ -320,6 +320,9 @@ async function main() {
     "homebase.lights.list",
     "homebase.lights.party_mode",
     "homebase.lights.set_state",
+    "homebase.notes.add",
+    "homebase.notes.list",
+    "homebase.notes.remove",
     "homebase.protocols.list",
     "homebase.protocols.run",
     "homebase.recipes.add",
@@ -333,10 +336,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 35 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 38 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 35 homebase tools");
+  ok("tools/list returns exactly 38 homebase tools");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
@@ -1460,6 +1463,108 @@ async function main() {
     await restoreHouseManualModule(hmOriginalEnabled);
   }
 
+  // --- T-099 Notes (module default-on; temporarily disable for gate test) ---
+  const notesOriginalEnabled = await readNotesModuleEnabled();
+  try {
+    await disableNotesModule();
+
+    const notesOff = await callTool(70, "homebase.notes.list", {});
+    if (!notesOff.isError) {
+      fail(
+        `notes.list with module off must error, got ${JSON.stringify(parseToolPayload(notesOff))}`,
+      );
+    }
+    const notesOffErr = parseToolPayload(notesOff) as {
+      error?: { code?: string; message?: string };
+    };
+    if (notesOffErr.error?.code !== "unavailable") {
+      fail(
+        `notes.list module-off expected unavailable, got ${JSON.stringify(notesOffErr)}`,
+      );
+    }
+    ok("homebase.notes.list module-off → unavailable");
+  } finally {
+    await restoreNotesModule(notesOriginalEnabled);
+  }
+
+  const smokeNoteBody = `mcp-smoke-guest-parking-${Date.now()}`;
+  const notesAdd = await callTool(71, "homebase.notes.add", {
+    title: "mcp-smoke parking",
+    body: smokeNoteBody,
+  });
+  if (notesAdd.isError) {
+    fail(
+      `homebase.notes.add tool error: ${notesAdd.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const addedNote = parseToolPayload(notesAdd) as {
+    id?: string;
+    body?: string;
+    title?: string;
+  };
+  if (!addedNote.id || addedNote.body !== smokeNoteBody) {
+    fail(`notes.add unexpected payload shape`);
+  }
+  ok("homebase.notes.add creates non-secret note");
+
+  const notesList = await callTool(72, "homebase.notes.list", {
+    query: "mcp-smoke-guest-parking",
+  });
+  if (notesList.isError) {
+    fail(
+      `homebase.notes.list tool error: ${notesList.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const listedNotes = parseToolPayload(notesList) as {
+    id: string;
+    body: string;
+  }[];
+  if (!Array.isArray(listedNotes) || !listedNotes.some((n) => n.id === addedNote.id)) {
+    fail("notes.add row missing from notes.list");
+  }
+  ok("homebase.notes.list finds added note");
+
+  const notesSecret = await callTool(73, "homebase.notes.add", {
+    body: "mcp-smoke wifi password: hunter2-not-real",
+  });
+  if (!notesSecret.isError) {
+    fail("notes.add must reject password-like body");
+  }
+  const notesSecretErr = parseToolPayload(notesSecret) as {
+    error?: { code?: string; message?: string };
+  };
+  if (notesSecretErr.error?.code !== "invalid_input") {
+    fail(
+      `notes.add secret expected invalid_input, got ${JSON.stringify(notesSecretErr)}`,
+    );
+  }
+  if (!notesSecretErr.error?.message?.toLowerCase().includes("password")) {
+    fail("notes.add secret rejection message should mention password");
+  }
+  ok("homebase.notes.add rejects secret-like body");
+
+  const notesRemove = await callTool(74, "homebase.notes.remove", {
+    id: addedNote.id!,
+  });
+  if (notesRemove.isError) {
+    fail(
+      `homebase.notes.remove tool error: ${notesRemove.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const removed = parseToolPayload(notesRemove) as { ok?: boolean; id?: string };
+  if (removed.ok !== true || removed.id !== addedNote.id) {
+    fail(`notes.remove unexpected payload shape`);
+  }
+
+  const notesAfterRemove = await callTool(75, "homebase.notes.list", {
+    query: "mcp-smoke-guest-parking",
+  });
+  const afterRemove = parseToolPayload(notesAfterRemove) as { id: string }[];
+  if (Array.isArray(afterRemove) && afterRemove.some((n) => n.id === addedNote.id)) {
+    fail("notes.remove left row in notes.list");
+  }
+  ok("homebase.notes.remove deletes note");
+
   await runLightsSmoke(callTool);
 }
 
@@ -1560,6 +1665,86 @@ async function restoreHouseManualModule(previousEnabled: boolean) {
     HOUSE_MANUAL_RESTORE_ENABLED: previousEnabled ? "true" : "false",
   });
   ok(`house manual module restored to enabled=${previousEnabled}`);
+}
+
+async function runNotesModuleScript(
+  args: string[],
+  envExtra: Record<string, string> = {},
+): Promise<string> {
+  if (IS_LOCAL) {
+    const { execFileSync } = await import("node:child_process");
+    return execFileSync("npx", ["tsx", "scripts/seed-notes-smoke-module.ts", ...args], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MCP_HOUSEHOLD_ID: HOUSEHOLD_ID!,
+        HOMEBASE_SMOKE_SKIP_DOTENV: "1",
+        ...envExtra,
+      },
+    });
+  }
+
+  const nasHost = process.env.NAS_HOST?.trim();
+  if (!nasHost) {
+    fail(
+      "remote notes module script requires NAS_HOST (or run mcp:smoke locally)",
+    );
+  }
+  const nasUser = process.env.NAS_USER?.trim() || "wim";
+  const nasPath =
+    process.env.NAS_PATH?.trim() || "/volume1/docker/homebase";
+  const sshPortRaw = process.env.NAS_SSH_PORT?.trim();
+  const sshPort =
+    sshPortRaw && Number.parseInt(sshPortRaw, 10) > 0
+      ? Number.parseInt(sshPortRaw, 10)
+      : 22;
+  const remote = `${nasUser}@${nasHost}`;
+  const envFlags = [
+    `-e MCP_HOUSEHOLD_ID=${shellSingleQuote(HOUSEHOLD_ID!)}`,
+    ...Object.entries(envExtra).map(
+      ([k, v]) => `-e ${k}=${shellSingleQuote(v)}`,
+    ),
+  ].join(" ");
+  const argStr = args.map((a) => shellSingleQuote(a)).join(" ");
+  const remoteCmd = [
+    "set -eu",
+    `cd ${shellSingleQuote(nasPath)}`,
+    `docker compose exec -T ${envFlags} worker npx tsx scripts/seed-notes-smoke-module.ts ${argStr}`.trim(),
+  ].join(" && ");
+  const { execFileSync } = await import("node:child_process");
+  return execFileSync("ssh", ["-p", String(sshPort), remote, remoteCmd], {
+    encoding: "utf8",
+  });
+}
+
+async function readNotesModuleEnabled(): Promise<boolean> {
+  const out = await runNotesModuleScript(["--status"]);
+  const line = out.trim().split("\n").filter(Boolean).pop() ?? "";
+  try {
+    const parsed = JSON.parse(line) as { enabled?: boolean };
+    return Boolean(parsed.enabled);
+  } catch {
+    fail(`notes --status bad output: ${out}`);
+  }
+}
+
+async function disableNotesModule(): Promise<void> {
+  await runNotesModuleScript(["--disable"]);
+  if (!IS_LOCAL) await sleepMs(500);
+}
+
+async function restoreNotesModule(previousEnabled: boolean) {
+  if (process.env.HOMEBASE_SMOKE_KEEP_DATA === "1") {
+    console.log(
+      "NOTE: HOMEBASE_SMOKE_KEEP_DATA=1 — leaving Notes module state for debug",
+    );
+    return;
+  }
+
+  await runNotesModuleScript(["--restore"], {
+    NOTES_RESTORE_ENABLED: previousEnabled ? "true" : "false",
+  });
+  ok(`notes module restored to enabled=${previousEnabled}`);
 }
 
 async function seedSsapSmokeFixturesLocal(): Promise<SsapSmokeFixtures> {

@@ -125,6 +125,10 @@ async function main() {
     matches.houseManualDocuments,
   );
   printSection(
+    "HouseholdNote (title or body starts with mcp-smoke)",
+    matches.householdNotes,
+  );
+  printSection(
     "Notification (title or message contains mcp-smoke)",
     matches.notifications,
   );

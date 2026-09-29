@@ -72,6 +72,10 @@
       "name": "House manual",
       "description": "Allowlisted household docs for search"
     },
+    "notes": {
+      "name": "Notes",
+      "description": "Short household facts and tips"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -704,6 +708,18 @@
     "adminOnly": "Only household admins can upload or change allowlisting.",
     "pdfSkipped": "PDF is not indexed in v1 — upload plain text or Markdown."
   },
+  "notes": {
+    "title": "Notes",
+    "subtitle": "Short household facts you can also capture via chat",
+    "notPasswordManager": "Not a password manager — do not store Wi‑Fi passwords, API tokens, or other secrets here.",
+    "addNote": "Add note",
+    "addNoteBtn": "Add note",
+    "titleLabel": "Title (optional)",
+    "bodyLabel": "Note",
+    "untitled": "Untitled note",
+    "confirmDelete": "Remove this note? This cannot be undone.",
+    "noNotes": "No notes yet."
+  },
   "pets": {
     "title": "Pets",
     "subtitle": "Pet care, appointments, and feeding",
@@ -1078,6 +1094,41 @@
         "title": "Too many reports",
         "why": "You already sent several error reports recently.",
         "fix": "Wait a few minutes before reporting again."
+      },
+      "secret_content_rejected": {
+        "title": "Can't save that note",
+        "why": "The text looks like a password, Wi‑Fi key, or API token.",
+        "fix": "Remove secrets and save a short non-secret tip instead. Use a password manager for credentials."
+      },
+      "body_required": {
+        "title": "Note required",
+        "why": "The note body was empty.",
+        "fix": "Write a short note, then save again."
+      },
+      "body_too_long": {
+        "title": "Note too long",
+        "why": "The note body exceeds the size limit.",
+        "fix": "Shorten the note (max 4000 characters) and try again."
+      },
+      "title_too_long": {
+        "title": "Title too long",
+        "why": "The note title exceeds the size limit.",
+        "fix": "Shorten the title (max 200 characters) and try again."
+      },
+      "note_id_required": {
+        "title": "Note missing",
+        "why": "No note id was provided.",
+        "fix": "Refresh the page and try again."
+      },
+      "note_not_found": {
+        "title": "Note not found",
+        "why": "That note no longer exists.",
+        "fix": "Refresh the notes page and try again."
+      },
+      "module_disabled": {
+        "title": "Module disabled",
+        "why": "This module is turned off for the household.",
+        "fix": "Enable it under Settings → Modules, then try again."
       }
     }
   },
