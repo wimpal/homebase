@@ -16,8 +16,7 @@ const TARGETS: Record<ImportTargetId, ImportTargetDef> = {
   },
   people: {
     id: "people",
-    enabled: false,
-    disabledReason: "People import ships after T-097 (contacts directory).",
+    enabled: true,
     labelKey: "targets.people",
   },
 };

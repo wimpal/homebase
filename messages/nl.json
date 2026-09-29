@@ -64,6 +64,10 @@
       "name": "Protocollen",
       "description": "Genoemde huishoudrituelen zoals Cinema"
     },
+    "people": {
+      "name": "Mensen",
+      "description": "Directory van vrienden en familie"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -214,6 +218,12 @@
       "file": "Notion CSV-bestand",
       "fileRequired": "Kies eerst een CSV-bestand.",
       "columnName": "Naamkolom",
+      "columnFamilyName": "Achternaamkolom",
+      "columnBirthday": "Geboortedatumkolom",
+      "columnPhone": "Telefoonkolom",
+      "columnEmail": "E-mailkolom",
+      "columnAddress": "Adreskolom",
+      "columnCity": "Plaatskolom",
       "columnCategory": "Categoriekolom",
       "columnDescription": "Notities / omschrijvingkolom",
       "columnNone": "— niet gekoppeld —",
@@ -657,6 +667,23 @@
     "confirmDelete": "Deze plant verwijderen?",
     "noPlants": "Nog geen planten.",
     "quickWater": "Markeer bewaterd"
+  },
+  "people": {
+    "title": "Mensen",
+    "subtitle": "Vrienden en familie die geen huishoudaccounts zijn",
+    "addPerson": "Contact toevoegen",
+    "addPersonBtn": "Contact toevoegen",
+    "familyName": "Achternaam",
+    "birthday": "Geboortedatum",
+    "birthdayLabel": "Geboortedatum: {date}",
+    "phone": "Telefoon",
+    "email": "E-mail",
+    "address": "Adres",
+    "city": "Plaats",
+    "notes": "Notities",
+    "noDetails": "Nog geen contactgegevens.",
+    "confirmDelete": "Dit contact verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "noPeople": "Nog geen contacten."
   },
   "pets": {
     "title": "Huisdieren",

@@ -118,3 +118,8 @@ export async function assertNotification(householdId: string, id: string) {
   const resource = await prisma.notification.findFirst({ where: { id, householdId } });
   return resource ?? notFound("Notification");
 }
+
+export async function assertPerson(householdId: string, id: string) {
+  const resource = await prisma.person.findFirst({ where: { id, householdId } });
+  return resource ?? notFound("Person");
+}

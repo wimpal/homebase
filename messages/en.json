@@ -64,6 +64,10 @@
       "name": "Protocols",
       "description": "Named household rituals like Cinema"
     },
+    "people": {
+      "name": "People",
+      "description": "Friends and relatives directory"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -214,6 +218,12 @@
       "file": "Notion CSV file",
       "fileRequired": "Choose a CSV file first.",
       "columnName": "Name column",
+      "columnFamilyName": "Last name column",
+      "columnBirthday": "Birthday column",
+      "columnPhone": "Phone column",
+      "columnEmail": "Email column",
+      "columnAddress": "Address column",
+      "columnCity": "City column",
       "columnCategory": "Category column",
       "columnDescription": "Notes / description column",
       "columnNone": "— not mapped —",
@@ -657,6 +667,23 @@
     "confirmDelete": "Delete this plant?",
     "noPlants": "No plants yet.",
     "quickWater": "Mark watered"
+  },
+  "people": {
+    "title": "People",
+    "subtitle": "Friends and relatives who are not household accounts",
+    "addPerson": "Add contact",
+    "addPersonBtn": "Add contact",
+    "familyName": "Last name",
+    "birthday": "Birthday",
+    "birthdayLabel": "Birthday: {date}",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "city": "City",
+    "notes": "Notes",
+    "noDetails": "No contact details yet.",
+    "confirmDelete": "Delete this contact? This cannot be undone.",
+    "noPeople": "No contacts yet."
   },
   "pets": {
     "title": "Pets",

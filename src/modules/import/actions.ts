@@ -10,6 +10,7 @@ import {
   previewImport,
   type ColumnMap,
   type ImportSummary,
+  type PeopleColumnMap,
 } from "@/domain/import";
 import { isDomainError } from "@/domain/error";
 import {
@@ -20,7 +21,13 @@ import {
 } from "@/lib/action-result";
 import { revalidatePath } from "next/cache";
 
-function parseColumnMap(formData: FormData): Partial<ColumnMap> | null {
+function blankOrNull(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  const t = value.trim();
+  return t === "" ? null : t;
+}
+
+function parseProductColumnMap(formData: FormData): Partial<ColumnMap> | null {
   if (
     !formData.has("columnName") &&
     !formData.has("columnCategory") &&
@@ -29,21 +36,46 @@ function parseColumnMap(formData: FormData): Partial<ColumnMap> | null {
     return null;
   }
 
-  const name = formData.get("columnName");
-  const category = formData.get("columnCategory");
-  const description = formData.get("columnDescription");
+  return {
+    name: blankOrNull(formData.get("columnName")),
+    category: blankOrNull(formData.get("columnCategory")),
+    description: blankOrNull(formData.get("columnDescription")),
+  };
+}
+
+function parsePeopleColumnMap(
+  formData: FormData,
+): Partial<PeopleColumnMap> | null {
+  const keys = [
+    "columnName",
+    "columnFamilyName",
+    "columnBirthday",
+    "columnPhone",
+    "columnEmail",
+    "columnAddress",
+    "columnCity",
+    "columnNotes",
+  ] as const;
+  if (!keys.some((k) => formData.has(k))) return null;
 
   return {
-    name: typeof name === "string" && name.trim() ? name.trim() : null,
-    category:
-      typeof category === "string" && category.trim()
-        ? category.trim()
-        : null,
-    description:
-      typeof description === "string" && description.trim()
-        ? description.trim()
-        : null,
+    name: blankOrNull(formData.get("columnName")),
+    familyName: blankOrNull(formData.get("columnFamilyName")),
+    birthday: blankOrNull(formData.get("columnBirthday")),
+    phone: blankOrNull(formData.get("columnPhone")),
+    email: blankOrNull(formData.get("columnEmail")),
+    addressLine: blankOrNull(formData.get("columnAddress")),
+    city: blankOrNull(formData.get("columnCity")),
+    notes: blankOrNull(formData.get("columnNotes")),
   };
+}
+
+function parseColumnMapForTarget(
+  target: string,
+  formData: FormData,
+): Partial<ColumnMap> | Partial<PeopleColumnMap> | null {
+  if (target === "people") return parsePeopleColumnMap(formData);
+  return parseProductColumnMap(formData);
 }
 
 async function readCsvFromForm(
@@ -119,7 +151,7 @@ export async function previewImportAction(
     householdId,
     target,
     csvText,
-    columnMap: parseColumnMap(formData),
+    columnMap: parseColumnMapForTarget(target, formData),
     markNeeded: false,
   });
   if (isDomainError(result)) return fromDomainError(result);
@@ -145,13 +177,14 @@ export async function applyImportAction(
     );
   }
 
-  const markNeeded = formData.get("markNeeded") === "true";
+  const markNeeded =
+    target === "products" && formData.get("markNeeded") === "true";
 
   const result = await applyImport({
     householdId,
     target,
     csvText,
-    columnMap: parseColumnMap(formData),
+    columnMap: parseColumnMapForTarget(target, formData),
     markNeeded,
   });
   if (isDomainError(result)) return fromDomainError(result);
@@ -159,5 +192,6 @@ export async function applyImportAction(
   revalidatePath("/settings");
   revalidatePath("/shopping");
   revalidatePath("/inventory");
+  revalidatePath("/people");
   return okResult(result);
 }

@@ -28,6 +28,7 @@ enum ModuleId {
   MESSAGING
   HOME_NETWORK
   PROTOCOLS
+  PEOPLE
 }
 
 enum NotificationType {
@@ -203,6 +204,32 @@ model Household {
   deviceLocations         DeviceLocation[]
   networkDevices          NetworkDevice[]
   protocolCinemaSettings  ProtocolCinemaSettings?
+  people                  Person[]
+}
+
+/// Household contact who is not necessarily a Homebase Account (T-097).
+model Person {
+  id          String    @id @default(cuid())
+  householdId String
+  /// Given / first name (Notion "Name"). Required.
+  name        String
+  /// Family / last name (Notion "Achternaam").
+  familyName  String?
+  /// Calendar date only. Display as DD-MM-YYYY in UTC (same pattern as User.birthday).
+  birthday    DateTime? @db.Date
+  phone       String?
+  email       String?
+  addressLine String?
+  city        String?
+  notes       String?
+  /// Stub for Face greet opt-in photo; no enroll UI in T-097.
+  photoUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
 }
 
 model McpChangeLog {

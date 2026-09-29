@@ -7,6 +7,18 @@ export interface ColumnMap {
   description: string | null;
 }
 
+/** Operator column map: CSV header name → Person field (or null = ignore). */
+export interface PeopleColumnMap {
+  name: string | null;
+  familyName: string | null;
+  birthday: string | null;
+  phone: string | null;
+  email: string | null;
+  addressLine: string | null;
+  city: string | null;
+  notes: string | null;
+}
+
 export type ImportRowOutcome =
   | "created"
   | "updated"
@@ -38,6 +50,18 @@ export interface MappedProductRow {
   name: string;
   category?: string;
   description?: string;
+}
+
+export interface MappedPersonRow {
+  row: number;
+  name: string;
+  familyName?: string;
+  birthday?: Date | null;
+  phone?: string;
+  email?: string;
+  addressLine?: string;
+  city?: string;
+  notes?: string;
 }
 
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;

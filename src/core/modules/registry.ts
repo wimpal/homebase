@@ -13,6 +13,7 @@ import {
   Package,
   Repeat,
   ShoppingCart,
+  Users,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -143,6 +144,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     icon: Clapperboard,
     href: "/protocols",
     defaultEnabled: true,
+  },
+  {
+    id: ModuleId.PEOPLE,
+    nameKey: "people",
+    descriptionKey: "people",
+    icon: Users,
+    href: "/people",
+    defaultEnabled: false,
   },
 ];
 

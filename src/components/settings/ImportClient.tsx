@@ -18,21 +18,92 @@ type TargetOption = {
   disabledReason?: string;
 };
 
+type ColumnPickers = {
+  name: string;
+  familyName: string;
+  birthday: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  category: string;
+  description: string;
+};
+
+const EMPTY_PICKERS: ColumnPickers = {
+  name: "",
+  familyName: "",
+  birthday: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "",
+  category: "",
+  description: "",
+};
+
+function pickHeader(headers: string[], aliases: string[]): string {
+  const lower = (h: string) => h.trim().toLowerCase();
+  return headers.find((h) => aliases.includes(lower(h))) ?? "";
+}
+
+function ColumnSelect({
+  id,
+  label,
+  value,
+  headers,
+  disabled,
+  noneLabel,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  headers: string[];
+  disabled: boolean;
+  noneLabel: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">{noneLabel}</option>
+        {headers.map((h) => (
+          <option key={`${id}-${h}`} value={h}>
+            {h}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ImportClient({ targets }: { targets: TargetOption[] }) {
   const t = useTranslations("settings.import");
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [target, setTarget] = useState("products");
   const [headers, setHeaders] = useState<string[]>([]);
-  const [columnName, setColumnName] = useState("");
-  const [columnCategory, setColumnCategory] = useState("");
-  const [columnDescription, setColumnDescription] = useState("");
+  const [pickers, setPickers] = useState<ColumnPickers>(EMPTY_PICKERS);
   const [markNeeded, setMarkNeeded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
 
   const selected = targets.find((x) => x.id === target);
   const targetEnabled = selected?.enabled ?? false;
+  const isPeople = target === "people";
+
+  function setPicker<K extends keyof ColumnPickers>(key: K, value: string) {
+    setPickers((prev) => ({ ...prev, [key]: value }));
+    setSummary(null);
+  }
 
   function buildFormData(): FormData | null {
     const file = fileRef.current?.files?.[0];
@@ -44,21 +115,94 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
     fd.set("file", file);
     fd.set("target", target);
     if (headers.length > 0) {
-      fd.set("columnName", columnName);
-      fd.set("columnCategory", columnCategory);
-      fd.set("columnDescription", columnDescription);
+      fd.set("columnName", pickers.name);
+      if (isPeople) {
+        fd.set("columnFamilyName", pickers.familyName);
+        fd.set("columnBirthday", pickers.birthday);
+        fd.set("columnPhone", pickers.phone);
+        fd.set("columnEmail", pickers.email);
+        fd.set("columnAddress", pickers.address);
+        fd.set("columnCity", pickers.city);
+        fd.set("columnNotes", pickers.description);
+      } else {
+        fd.set("columnCategory", pickers.category);
+        fd.set("columnDescription", pickers.description);
+      }
     }
-    if (markNeeded) fd.set("markNeeded", "true");
+    if (!isPeople && markNeeded) fd.set("markNeeded", "true");
     return fd;
+  }
+
+  function inferPickers(hdrs: string[], forTarget: string) {
+    if (forTarget === "people") {
+      return {
+        ...EMPTY_PICKERS,
+        name: pickHeader(hdrs, [
+          "name",
+          "naam",
+          "first name",
+          "voornaam",
+          "given name",
+        ]),
+        familyName: pickHeader(hdrs, [
+          "achternaam",
+          "family name",
+          "last name",
+          "surname",
+          "lastname",
+        ]),
+        birthday: pickHeader(hdrs, [
+          "geboortedatum",
+          "birthday",
+          "birth date",
+          "birthdate",
+          "date of birth",
+          "dob",
+        ]),
+        phone: pickHeader(hdrs, [
+          "telefoon",
+          "phone",
+          "tel",
+          "mobile",
+          "mobiel",
+        ]),
+        email: pickHeader(hdrs, ["e-mail", "email", "mail"]),
+        address: pickHeader(hdrs, ["adres", "address", "street", "straat"]),
+        city: pickHeader(hdrs, ["plaats", "city", "plaatsnaam", "woonplaats"]),
+        description: pickHeader(hdrs, [
+          "notes",
+          "notities",
+          "note",
+          "omschrijving",
+        ]),
+      };
+    }
+
+    return {
+      ...EMPTY_PICKERS,
+      name: pickHeader(hdrs, [
+        "name",
+        "title",
+        "naam",
+        "product",
+        "product name",
+      ]),
+      category: pickHeader(hdrs, ["category", "categorie", "cat"]),
+      description: pickHeader(hdrs, [
+        "notes",
+        "description",
+        "notities",
+        "omschrijving",
+        "note",
+      ]),
+    };
   }
 
   function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     setSummary(null);
     setError(null);
     setHeaders([]);
-    setColumnName("");
-    setColumnCategory("");
-    setColumnDescription("");
+    setPickers(EMPTY_PICKERS);
 
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,24 +219,7 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
       }
       const hdrs = result.data?.headers ?? [];
       setHeaders(hdrs);
-
-      const lower = (h: string) => h.trim().toLowerCase();
-      const pick = (aliases: string[]) =>
-        hdrs.find((h) => aliases.includes(lower(h))) ?? "";
-
-      setColumnName(
-        pick(["name", "title", "naam", "product", "product name"]),
-      );
-      setColumnCategory(pick(["category", "categorie", "cat"]));
-      setColumnDescription(
-        pick([
-          "notes",
-          "description",
-          "notities",
-          "omschrijving",
-          "note",
-        ]),
-      );
+      setPickers(inferPickers(hdrs, target));
     });
   }
 
@@ -138,6 +265,10 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
           onChange={(e) => {
             setTarget(e.target.value);
             setSummary(null);
+            setHeaders([]);
+            setPickers(EMPTY_PICKERS);
+            setMarkNeeded(false);
+            if (fileRef.current) fileRef.current.value = "";
           }}
         >
           {targets.map((opt) => (
@@ -165,81 +296,129 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
         />
       </div>
 
-      {headers.length > 0 && (
+      {headers.length > 0 && !isPeople && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="import-col-name">{t("columnName")}</Label>
-            <select
-              id="import-col-name"
-              className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={columnName}
-              onChange={(e) => {
-                setColumnName(e.target.value);
-                setSummary(null);
-              }}
-              disabled={pending}
-            >
-              <option value="">{t("columnNone")}</option>
-              {headers.map((h) => (
-                <option key={`name-${h}`} value={h}>
-                  {h}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="import-col-category">{t("columnCategory")}</Label>
-            <select
-              id="import-col-category"
-              className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={columnCategory}
-              onChange={(e) => {
-                setColumnCategory(e.target.value);
-                setSummary(null);
-              }}
-              disabled={pending}
-            >
-              <option value="">{t("columnNone")}</option>
-              {headers.map((h) => (
-                <option key={`cat-${h}`} value={h}>
-                  {h}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="import-col-desc">{t("columnDescription")}</Label>
-            <select
-              id="import-col-desc"
-              className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={columnDescription}
-              onChange={(e) => {
-                setColumnDescription(e.target.value);
-                setSummary(null);
-              }}
-              disabled={pending}
-            >
-              <option value="">{t("columnNone")}</option>
-              {headers.map((h) => (
-                <option key={`desc-${h}`} value={h}>
-                  {h}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ColumnSelect
+            id="import-col-name"
+            label={t("columnName")}
+            value={pickers.name}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("name", v)}
+          />
+          <ColumnSelect
+            id="import-col-category"
+            label={t("columnCategory")}
+            value={pickers.category}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("category", v)}
+          />
+          <ColumnSelect
+            id="import-col-desc"
+            label={t("columnDescription")}
+            value={pickers.description}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("description", v)}
+          />
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={markNeeded}
-          onChange={(e) => setMarkNeeded(e.target.checked)}
-          disabled={!targetEnabled || pending}
-        />
-        {t("markNeeded")}
-      </label>
-      <p className="text-xs text-zinc-500">{t("markNeededHint")}</p>
+      {headers.length > 0 && isPeople && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ColumnSelect
+            id="import-col-name"
+            label={t("columnName")}
+            value={pickers.name}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("name", v)}
+          />
+          <ColumnSelect
+            id="import-col-family"
+            label={t("columnFamilyName")}
+            value={pickers.familyName}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("familyName", v)}
+          />
+          <ColumnSelect
+            id="import-col-birthday"
+            label={t("columnBirthday")}
+            value={pickers.birthday}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("birthday", v)}
+          />
+          <ColumnSelect
+            id="import-col-phone"
+            label={t("columnPhone")}
+            value={pickers.phone}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("phone", v)}
+          />
+          <ColumnSelect
+            id="import-col-email"
+            label={t("columnEmail")}
+            value={pickers.email}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("email", v)}
+          />
+          <ColumnSelect
+            id="import-col-address"
+            label={t("columnAddress")}
+            value={pickers.address}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("address", v)}
+          />
+          <ColumnSelect
+            id="import-col-city"
+            label={t("columnCity")}
+            value={pickers.city}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("city", v)}
+          />
+          <ColumnSelect
+            id="import-col-notes"
+            label={t("columnDescription")}
+            value={pickers.description}
+            headers={headers}
+            disabled={pending}
+            noneLabel={t("columnNone")}
+            onChange={(v) => setPicker("description", v)}
+          />
+        </div>
+      )}
+
+      {!isPeople && (
+        <>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={markNeeded}
+              onChange={(e) => setMarkNeeded(e.target.checked)}
+              disabled={!targetEnabled || pending}
+            />
+            {t("markNeeded")}
+          </label>
+          <p className="text-xs text-zinc-500">{t("markNeededHint")}</p>
+        </>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button
