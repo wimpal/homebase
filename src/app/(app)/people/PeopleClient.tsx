@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CollapsibleCreate } from "@/components/ui/collapsible-create";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormAction } from "@/components/ui/form-action";
@@ -37,23 +38,29 @@ export function PeopleClient({
       </div>
 
       {canMutate && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("addPerson")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormAction
-              action={createPersonAction}
-              actionName="createPerson"
-              className="grid gap-3 md:grid-cols-2"
-            >
-              <PersonFields />
-              <div className="md:col-span-2">
-                <Button type="submit">{t("addPersonBtn")}</Button>
-              </div>
-            </FormAction>
-          </CardContent>
-        </Card>
+        <CollapsibleCreate
+          openLabel={t("addPerson")}
+          cancelLabel={tc("cancelAdd")}
+          defaultOpen={people.length === 0}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t("addPerson")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormAction
+                action={createPersonAction}
+                actionName="createPerson"
+                className="grid gap-3 md:grid-cols-2"
+              >
+                <PersonFields />
+                <div className="md:col-span-2">
+                  <Button type="submit">{t("addPersonBtn")}</Button>
+                </div>
+              </FormAction>
+            </CardContent>
+          </Card>
+        </CollapsibleCreate>
       )}
 
       {people.length === 0 ? (
