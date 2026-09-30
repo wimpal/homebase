@@ -157,7 +157,7 @@ export function MealPlanClient({
         <EmptyState message={t("noRecipes")} />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         {data.days.map((day) => (
           <DayCard
             key={`${day.date}:${day.recipeId ?? ""}`}
@@ -195,7 +195,10 @@ function DayCard({
   chooseLabel: string;
   clearLabel: string;
 }) {
-  const [selected, setSelected] = useState("");
+  // `changed` gates submit so "Change" only fires on a real pick; the select
+  // itself always shows the day's current recipe.
+  const [selected, setSelected] = useState(day.recipeId ?? "");
+  const [changed, setChanged] = useState(false);
 
   return (
     <Card>
@@ -205,7 +208,12 @@ function DayCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {day.recipeId ? (
-          <p className="text-sm font-medium">{day.title}</p>
+          <p
+            className="text-sm font-medium leading-snug line-clamp-2"
+            title={day.title}
+          >
+            {day.title}
+          </p>
         ) : (
           <EmptyState message={emptyLabel} />
         )}
@@ -221,7 +229,10 @@ function DayCard({
               <input type="hidden" name="recipeId" value={selected} />
               <Select
                 value={selected}
-                onValueChange={setSelected}
+                onValueChange={(value) => {
+                  setSelected(value);
+                  setChanged(true);
+                }}
                 disabled={recipes.length === 0}
               >
                 <SelectTrigger>
@@ -235,7 +246,7 @@ function DayCard({
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="submit" size="sm" disabled={selected === ""}>
+              <Button type="submit" size="sm" disabled={!changed}>
                 {assignLabel}
               </Button>
             </FormAction>
