@@ -336,7 +336,22 @@
       "dayOfYear": "Dag van het jaar",
       "weekOfYear": "Week van het jaar",
       "daysLeft": "Dagen resterend",
-      "yearProgress": "Jaarvoortgang"
+      "yearProgress": "Jaarvoortgang",
+      "dinner": "Diner",
+      "sunset": "Zonsondergang",
+      "weatherRange": "H {high}° / L {low}°",
+      "weatherCodes": {
+        "clear": "Zonnig",
+        "mainlyClear": "Vrij zonnig",
+        "overcast": "Bewolkt",
+        "fog": "Mist",
+        "drizzle": "Motregen",
+        "rain": "Regen",
+        "showers": "Bui",
+        "snow": "Sneeuw",
+        "snowShowers": "Sneeuwbuien",
+        "thunderstorm": "Onweer"
+      }
     }
   },
   "shopping": {

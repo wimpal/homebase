@@ -4,23 +4,63 @@ import { HomeFeed } from "@/components/dashboard/HomeFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getNotifications } from "@/core/notifications/service";
 import { requireHousehold } from "@/core/auth/session";
+import { isModuleEnabled } from "@/core/modules/settings";
+import { prisma } from "@/core/db";
 import { getDashboardTodos } from "@/modules/tasks/actions";
 import { getLowStockProducts } from "@/modules/inventory/actions";
 import { CheckSquare, AlertTriangle } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatDate } from "@/lib/utils";
 import { isLocale, localeToBcp47 } from "@/i18n/config";
+import { ModuleId } from "@prisma/client";
+import { getDinnerForDate, todayKey } from "@/domain/meal-plan";
+import { getLocalSunsetHhMm, parseLatLon } from "@/domain/automations";
+import { getCurrentWeather } from "@/domain/weather";
 
 export default async function DashboardPage() {
   const { householdId } = await requireHousehold();
-  const [notifications, todos, lowStock] = await Promise.all([
-    getNotifications(householdId),
-    getDashboardTodos(),
-    getLowStockProducts(),
-  ]);
+  const [notifications, todos, lowStock, household, mealPlanEnabled] =
+    await Promise.all([
+      getNotifications(householdId),
+      getDashboardTodos(),
+      getLowStockProducts(),
+      prisma.household.findUnique({
+        where: { id: householdId },
+        select: { latitude: true, longitude: true, timezone: true },
+      }),
+      isModuleEnabled(householdId, ModuleId.MEAL_PLAN),
+    ]);
   const t = await getTranslations("dashboard");
   const localeRaw = await getLocale();
   const bcp47 = localeToBcp47(isLocale(localeRaw) ? localeRaw : "en");
+
+  // Sunset and weather share one coordinate guard: no coords, neither row.
+  const timezone = household?.timezone ?? "Europe/Amsterdam";
+  const coords = parseLatLon(household?.latitude, household?.longitude);
+  const now = new Date();
+
+  const [dinner, sunsetResult, weatherResult] = await Promise.all([
+    mealPlanEnabled
+      ? getDinnerForDate(householdId, todayKey(timezone, now))
+      : Promise.resolve(null),
+    coords
+      ? Promise.resolve(
+          getLocalSunsetHhMm({
+            lat: coords.lat,
+            lon: coords.lon,
+            when: now,
+            timezone,
+          }),
+        )
+      : Promise.resolve(null),
+    coords
+      ? getCurrentWeather({
+          lat: coords.lat,
+          lon: coords.lon,
+          timezone,
+        })
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -31,7 +71,12 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <TodayTile />
+          <TodayTile
+            timezone={timezone}
+            dinner={dinner}
+            sunset={sunsetResult?.ok ? sunsetResult.sunsetHhMm : null}
+            weather={weatherResult?.ok ? weatherResult.weather : null}
+          />
         </div>
         <div className="lg:col-span-2">
           <HomeFeed notifications={notifications} />
@@ -63,9 +108,9 @@ export default async function DashboardPage() {
                     >
                       <div>
                         <p className="font-medium">{chore.title}</p>
-                        {chore.nextDue && (
+                        {(chore.deadline ?? chore.nextDue) && (
                           <p className="text-muted-foreground">
-                            {t("due", { date: formatDate(chore.nextDue, bcp47, { dateStyle: "medium" }) })}
+                            {t("due", { date: formatDate(chore.deadline ?? chore.nextDue!, bcp47, { dateStyle: "medium" }) })}
                           </p>
                         )}
                       </div>

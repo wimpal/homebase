@@ -25,6 +25,7 @@
     "automations:active-window-selftest": "tsx scripts/active-window-selftest.ts",
     "network:scan-selftest": "tsx scripts/network-scan-selftest.ts",
     "meal-plan:selftest": "tsx scripts/meal-plan-selftest.ts",
+    "today-tile:selftest": "tsx scripts/today-tile-selftest.ts",
     "network:dirigera-import-smoke": "tsx scripts/network-dirigera-import-smoke.ts",
     "network:wol-selftest": "tsx scripts/network-wol-selftest.ts",
     "network:ssap-selftest": "tsx scripts/network-ssap-selftest.ts",

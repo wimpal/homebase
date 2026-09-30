@@ -336,7 +336,22 @@
       "dayOfYear": "Day of year",
       "weekOfYear": "Week of year",
       "daysLeft": "Days left",
-      "yearProgress": "Year progress"
+      "yearProgress": "Year progress",
+      "dinner": "Dinner",
+      "sunset": "Sunset",
+      "weatherRange": "H {high}° / L {low}°",
+      "weatherCodes": {
+        "clear": "Clear",
+        "mainlyClear": "Mainly clear",
+        "overcast": "Overcast",
+        "fog": "Fog",
+        "drizzle": "Drizzle",
+        "rain": "Rain",
+        "showers": "Showers",
+        "snow": "Snow",
+        "snowShowers": "Snow showers",
+        "thunderstorm": "Thunderstorm"
+      }
     }
   },
   "shopping": {

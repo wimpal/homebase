@@ -1,6 +1,7 @@
 export { assignDinner, clearDinner, clearWeekDinners } from "./assign";
 export { addWeekIngredientsToShopping } from "./add-to-shopping";
 export { getMealPlan } from "./get-week";
+export { getDinnerForDate } from "./get-dinner";
 export { randomFillDinners } from "./random-fill";
 export type {
   AddWeekToShoppingResult,

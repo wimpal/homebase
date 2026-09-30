@@ -16,6 +16,7 @@ import {
 import {
   addChore,
   completeChoreDomain,
+  effectiveDue,
   isChoreActive,
   listChoreHistory,
 } from "@/domain/tasks";
@@ -31,7 +32,6 @@ import {
 } from "@/domain/tasks/projectConstants";
 import { ModuleId } from "@prisma/client";
 import { getAverageChoreDuration } from "@/core/scheduler";
-import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { deleteUploadsByUrls, saveUpload } from "@/core/uploads/service";
 
@@ -748,25 +748,24 @@ export async function getDashboardTodos() {
   const { householdId } = await requireHousehold();
   const now = new Date();
   const chores = await prisma.chore.findMany({
-    where: {
-      householdId,
-      OR: [
-        { nextDue: { lte: addDays(now, 7) } },
-        { deadline: { lte: addDays(now, 7) } },
-      ],
-    },
+    where: { householdId },
     include: {
       completions: {
         select: { completedAt: true, durationMin: true },
         orderBy: { completedAt: "desc" },
+        take: 20,
       },
     },
-    take: 20,
   });
 
   return chores
     .filter((chore) => isChoreActive(chore, now))
-    .slice(0, 10)
+    .sort((a, b) => {
+      // Dated chores first (soonest first), then undated ones oldest-created first.
+      const dueA = effectiveDue(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const dueB = effectiveDue(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return dueA - dueB || a.createdAt.getTime() - b.createdAt.getTime();
+    })
     .map((c) => ({
       ...c,
       avgDuration: getAverageChoreDuration(c.completions),
