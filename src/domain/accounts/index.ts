@@ -26,6 +26,9 @@ export {
 export type { RequestPasswordResetResult } from "./password-reset";
 export { getAccountProfile, updateAccount } from "./update-account";
 export type { UpdateAccountInput, UpdateAccountResult } from "./update-account";
+export { getThemePreference, setThemePreference } from "./theme";
+export { isThemePreference, THEME_PREFERENCES } from "./theme-preference";
+export type { ThemePreference } from "./theme-preference";
 export type {
   AccountProfile,
   HouseholdCountMode,

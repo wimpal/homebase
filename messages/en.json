@@ -170,6 +170,13 @@
       "english": "English",
       "dutch": "Nederlands"
     },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Light, Dark, or follow your device (System)",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
     "modules": {
       "title": "Modules",
       "description": "Toggle features on or off for your household",

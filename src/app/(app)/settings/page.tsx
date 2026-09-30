@@ -11,6 +11,7 @@ import { getVisitorPreferences } from "@/modules/social/actions";
 import { toggleNotificationTypeAction } from "@/modules/settings/actions";
 import {
   getAccountProfile,
+  getThemePreference,
   isDomainError,
   listMembers,
 } from "@/domain/accounts";
@@ -26,6 +27,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { PushNotificationSetup } from "./PushNotificationSetup";
 import { ImportClient } from "@/components/settings/ImportClient";
 import { LanguageToggle } from "@/components/settings/LanguageToggle";
+import { AppearanceToggle } from "@/components/settings/AppearanceToggle";
 import { ModuleToggle } from "@/components/settings/ModuleToggle";
 import { NotificationTypeToggle } from "@/components/settings/NotificationTypeToggle";
 import { listImportTargets } from "@/domain/import";
@@ -53,6 +55,7 @@ export default async function SettingsPage({
   const notifSettings = await getNotificationTypeSettings(householdId);
   const profileResult = await getAccountProfile(userId);
   const profile = isDomainError(profileResult) ? null : profileResult;
+  const themePreference = await getThemePreference(userId);
   const members = isAdmin ? await listMembers(householdId) : [];
   const t = await getTranslations("settings");
   const tm = await getTranslations("modules");
@@ -105,6 +108,16 @@ export default async function SettingsPage({
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("appearance.title")}</CardTitle>
+          <CardDescription>{t("appearance.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppearanceToggle storedPreference={themePreference ?? "system"} />
+        </CardContent>
+      </Card>
 
       {isAdmin && (
         <Card>

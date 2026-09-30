@@ -170,6 +170,13 @@
       "english": "English",
       "dutch": "Nederlands"
     },
+    "appearance": {
+      "title": "Weergave",
+      "description": "Licht, Donker of volg je apparaat (Systeem)",
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
+    },
     "modules": {
       "title": "Modules",
       "description": "Functies in- of uitschakelen voor je huishouden",

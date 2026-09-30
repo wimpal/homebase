@@ -90,6 +90,8 @@ model User {
   birthday       DateTime? @db.Date
   /// Bumped on password change to revoke JWTs (T-092).
   sessionVersion Int       @default(0)
+  /// Appearance preference (T-123): "light" | "dark" | "system"; null = never chosen (system).
+  themePreference String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

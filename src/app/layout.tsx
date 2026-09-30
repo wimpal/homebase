@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { auth } from "@/core/auth/config";
+import { getThemePreference } from "@/domain/accounts/theme";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemePreferenceSync } from "@/components/theme-preference-sync";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,6 +40,10 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const session = await auth();
+  const userId = session?.user?.id;
+  const themePreference = userId ? await getThemePreference(userId) : null;
+  const storageKey = userId ? `homebase-theme:${userId}` : "homebase-theme";
 
   return (
     <html
@@ -47,10 +54,12 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme={themePreference ?? "system"}
           enableSystem
           disableTransitionOnChange
+          storageKey={storageKey}
         >
+          <ThemePreferenceSync preference={themePreference ?? "system"} />
           <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
         </ThemeProvider>
       </body>
