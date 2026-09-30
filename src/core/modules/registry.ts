@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   StickyNote,
   Users,
+  UtensilsCrossed,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -169,6 +170,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     descriptionKey: "notes",
     icon: StickyNote,
     href: "/notes",
+    defaultEnabled: true,
+  },
+  {
+    id: ModuleId.MEAL_PLAN,
+    nameKey: "meal_plan",
+    descriptionKey: "meal_plan",
+    icon: UtensilsCrossed,
+    href: "/meal-plan",
     defaultEnabled: true,
   },
 ];

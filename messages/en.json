@@ -76,6 +76,10 @@
       "name": "Notes",
       "description": "Short household facts and tips"
     },
+    "meal_plan": {
+      "name": "Meal plan",
+      "description": "Plan dinners for the week"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -719,6 +723,22 @@
     "untitled": "Untitled note",
     "confirmDelete": "Remove this note? This cannot be undone.",
     "noNotes": "No notes yet."
+  },
+  "mealPlan": {
+    "title": "Meal plan",
+    "subtitle": "Dinners for this week",
+    "surprise": "Surprise",
+    "surpriseResult": "Filled {count} empty days",
+    "surpriseNone": "No empty days or no recipes",
+    "shoppingResult": "Added {added}, skipped {skipped} (already on list)",
+    "shoppingErrors": "{count} ingredients could not be added",
+    "addMissing": "Add missing to shopping",
+    "assign": "Assign",
+    "change": "Change",
+    "clear": "Clear",
+    "emptySlot": "No dinner planned",
+    "chooseRecipe": "Choose recipe",
+    "noRecipes": "No recipes in the library yet"
   },
   "pets": {
     "title": "Pets",

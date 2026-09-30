@@ -76,6 +76,10 @@
       "name": "Notities",
       "description": "Korte huishoudfacts en tips"
     },
+    "meal_plan": {
+      "name": "Maaltijdplan",
+      "description": "Plan het avondeten voor de week"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -719,6 +723,22 @@
     "untitled": "Naamloze notitie",
     "confirmDelete": "Deze notitie verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "noNotes": "Nog geen notities."
+  },
+  "mealPlan": {
+    "title": "Maaltijdplan",
+    "subtitle": "Avondeten voor deze week",
+    "surprise": "Verras me",
+    "surpriseResult": "{count} lege dagen gevuld",
+    "surpriseNone": "Geen lege dagen of geen recepten",
+    "shoppingResult": "{added} toegevoegd, {skipped} stond al op de lijst",
+    "shoppingErrors": "{count} ingrediënten konden niet worden toegevoegd",
+    "addMissing": "Ontbrekende naar boodschappen",
+    "assign": "Toewijzen",
+    "change": "Wijzigen",
+    "clear": "Wissen",
+    "emptySlot": "Nog geen diner gepland",
+    "chooseRecipe": "Kies recept",
+    "noRecipes": "Nog geen recepten in de bibliotheek"
   },
   "pets": {
     "title": "Huisdieren",

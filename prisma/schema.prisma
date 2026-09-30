@@ -31,6 +31,7 @@ enum ModuleId {
   PEOPLE
   HOUSE_MANUAL
   NOTES
+  MEAL_PLAN
 }
 
 enum NotificationType {
@@ -210,6 +211,7 @@ model Household {
   people                  Person[]
   houseManualDocuments    HouseManualDocument[]
   householdNotes          HouseholdNote[]
+  mealPlanEntries         MealPlanEntry[]
 }
 
 /// Household contact who is not necessarily a Homebase Account (T-097).
@@ -863,6 +865,25 @@ model Recipe {
   steps       RecipeStep[]
   timers      RecipeTimer[]
   leftovers   Leftover[]
+  mealPlanEntries MealPlanEntry[]
+}
+
+/// One dinner per household per day (T-118). Fixed Mon–Sun calendar week view.
+model MealPlanEntry {
+  id          String   @id @default(cuid())
+  householdId String
+  /// Dinner date, date-only. Always convert with toISOString().slice(0, 10).
+  date        DateTime @db.Date
+  recipeId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  /// Deleting a recipe silently drops its planned dinners (documented in status notes).
+  recipe    Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, date])
+  @@index([householdId])
 }
 
 model RecipeIngredient {
