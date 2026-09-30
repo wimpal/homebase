@@ -142,9 +142,9 @@ export function ReolinkSnapshot({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-zinc-500">{t("livePreviewHint")}</p>
+      <p className="text-xs text-muted-foreground">{t("livePreviewHint")}</p>
       {initialLoading && !objectUrl && (
-        <p className="text-sm text-zinc-500">{t("snapshotLoading")}</p>
+        <p className="text-sm text-muted-foreground">{t("snapshotLoading")}</p>
       )}
       {error && (
         <p className="text-sm text-amber-700 dark:text-amber-400">{error}</p>
@@ -154,7 +154,7 @@ export function ReolinkSnapshot({
         <img
           src={objectUrl}
           alt={name}
-          className="max-h-64 w-full rounded object-contain bg-zinc-100 dark:bg-zinc-900"
+          className="max-h-64 w-full rounded object-contain bg-muted"
         />
       )}
       <Button

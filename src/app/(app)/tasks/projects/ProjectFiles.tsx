@@ -123,22 +123,22 @@ export function ProjectFiles({
       </form>
 
       {files.length === 0 ? (
-        <p className="text-sm text-zinc-500">{t("noFiles")}</p>
+        <p className="text-sm text-muted-foreground">{t("noFiles")}</p>
       ) : (
         <ul className="space-y-2">
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200 p-2 text-sm dark:border-zinc-800"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2 text-sm"
             >
               <button
                 type="button"
-                className="text-left font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                className="text-left font-medium text-primary hover:underline"
                 onClick={() => openPreview(file)}
               >
                 {file.originalName}
               </button>
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 {file.mimeType} · {formatBytes(file.sizeBytes)}
               </span>
               <div className="flex gap-2">
@@ -163,7 +163,7 @@ export function ProjectFiles({
       )}
 
       <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-3xl">
           {preview && (
             <>
               <DialogHeader>
@@ -182,15 +182,15 @@ export function ProjectFiles({
                     title={preview.originalName}
                     data={preview.url}
                     type="application/pdf"
-                    className="h-[60vh] w-full rounded border border-zinc-200 dark:border-zinc-800"
+                    className="h-[60vh] w-full rounded border border-border"
                   >
-                    <p className="p-3 text-sm text-zinc-500">
+                    <p className="p-3 text-sm text-muted-foreground">
                       {t("previewLoadFailed")}{" "}
                       <a
                         href={preview.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-emerald-700 underline dark:text-emerald-400"
+                        className="text-primary underline"
                       >
                         {t("openInNewTab")}
                       </a>
@@ -199,7 +199,7 @@ export function ProjectFiles({
                 )}
                 {previewKind === "text" && (
                   <pre
-                    className="max-h-[60vh] overflow-auto rounded bg-zinc-50 p-3 text-xs dark:bg-zinc-900"
+                    className="max-h-[60vh] overflow-auto rounded bg-background p-3 text-xs"
                     dangerouslySetInnerHTML={{ __html: textBody ?? "…" }}
                   />
                 )}

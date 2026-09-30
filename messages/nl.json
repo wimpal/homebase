@@ -544,6 +544,7 @@
   "smartHome": {
     "title": "Smart Home",
     "subtitle": "Sensoren, lampen, automatiseringen en camera's",
+    "unavailable": "Niet beschikbaar",
     "noReadings": "Voeg sensorwaarden toe voor aanbevelingen.",
     "recommendations": {
       "warmAir": "Open ramen voor frisse lucht - temperatuur is warm en luchtvochtigheid is matig.",
@@ -746,6 +747,7 @@
     "title": "Huisdieren",
     "subtitle": "Huisdierverzorging, afspraken en voeding",
     "addPet": "Huisdier toevoegen",
+    "species": "Soort",
     "breed": "Ras",
     "birthDate": "Geboortedatum",
     "addPetBtn": "Huisdier toevoegen",

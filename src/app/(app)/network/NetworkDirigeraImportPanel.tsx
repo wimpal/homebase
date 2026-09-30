@@ -110,11 +110,11 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-zinc-500">{t("dirigeraHint")}</p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <p className="text-sm text-muted-foreground">{t("dirigeraHint")}</p>
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {preview && preview.candidates.length === 0 && (
-          <p className="text-sm text-zinc-500">{t("dirigeraNothing")}</p>
+          <p className="text-sm text-muted-foreground">{t("dirigeraNothing")}</p>
         )}
 
         {preview && preview.candidates.length > 0 && (
@@ -123,11 +123,11 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
               {preview.candidates.map((candidate) => (
                 <li
                   key={candidate.dirigeraId}
-                  className="flex flex-wrap items-start gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-700"
+                  className="flex flex-wrap items-start gap-3 rounded-md border p-3 border-input"
                 >
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-zinc-300"
+                    className="mt-1 h-4 w-4 rounded border-input"
                     checked={selected.has(candidate.dirigeraId)}
                     disabled={candidate.status !== "new"}
                     onChange={() => toggle(candidate.dirigeraId)}
@@ -136,11 +136,11 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
                   <div className="min-w-0">
                     <p className="font-medium">
                       {candidate.name}
-                      <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">
                         {t(`dirigeraStatus_${candidate.status}`)}
                       </span>
                     </p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {typeName(candidate.typeSlug)} · {candidate.deviceType} ·{" "}
                       {candidate.locationStatus === "matched"
                         ? t("dirigeraLocation_matched", {
@@ -161,7 +161,7 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
               <input
                 type="checkbox"
                 id="dirigera-create-locations"
-                className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+                className="mt-0.5 h-4 w-4 rounded border-input"
                 checked={createMissingLocations}
                 onChange={(event) =>
                   setCreateMissingLocations(event.target.checked)
@@ -174,7 +174,7 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
                 >
                   {t("dirigeraCreateLocations")}
                 </Label>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {t("dirigeraCreateLocationsHint")}
                 </p>
               </div>
@@ -192,7 +192,7 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
         )}
 
         {summary && (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950">
+          <div className="rounded-md border border-primary/30 bg-primary/10 p-3 text-sm">
             <p>
               {t("dirigeraSummary", {
                 created: summary.created,
@@ -203,7 +203,7 @@ export function NetworkDirigeraImportPanel({ types, locations }: Props) {
               })}
             </p>
             {summary.failed.length > 0 && (
-              <ul className="mt-1 text-red-600">
+              <ul className="mt-1 text-destructive">
                 {summary.failed.map((failure) => (
                   <li key={failure.dirigeraId}>{failure.message}</li>
                 ))}

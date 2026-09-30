@@ -31,9 +31,9 @@ export function HouseManualClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
         {!isAdmin && (
-          <p className="mt-1 text-sm text-zinc-500">{t("adminOnly")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("adminOnly")}</p>
         )}
       </div>
 
@@ -53,11 +53,11 @@ export function HouseManualClient({
                 actionName="uploadHouseManual"
                 className="grid gap-3"
               >
-                <div>
+                <div className="grid gap-2">
                   <Label htmlFor="title">{t("titleLabel")}</Label>
-                  <Input id="title" name="title" className="mt-1" />
+                  <Input id="title" name="title" />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label htmlFor="file">{t("fileLabel")}</Label>
                   <Input
                     id="file"
@@ -65,9 +65,8 @@ export function HouseManualClient({
                     type="file"
                     accept=".txt,.md,text/plain,text/markdown"
                     required
-                    className="mt-1"
                   />
-                  <p className="mt-1 text-xs text-zinc-500">{t("pdfSkipped")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t("pdfSkipped")}</p>
                 </div>
                 <div>
                   <Button type="submit">{t("uploadBtn")}</Button>
@@ -88,10 +87,10 @@ export function HouseManualClient({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <BookOpen className="h-4 w-4 text-emerald-600" />
+                      <BookOpen className="h-4 w-4 text-primary" />
                       {doc.title}
                     </CardTitle>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {doc.originalName} · {doc.mimeType}
                       {doc.searchable ? ` · ${t("searchable")}` : ""}
                     </p>
@@ -131,7 +130,7 @@ export function HouseManualClient({
               <CardContent>
                 <a
                   href={doc.url}
-                  className="text-sm text-emerald-700 underline"
+                  className="text-sm text-primary underline"
                   target="_blank"
                   rel="noreferrer"
                 >

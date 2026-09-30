@@ -171,7 +171,7 @@ export function ShoppingTripView({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{listName}</h2>
-          <p className="text-sm tabular-nums text-zinc-400">
+          <p className="text-sm tabular-nums text-muted-foreground">
             {t("tripProgress", {
               needed: items.length,
               bought: boughtCount,
@@ -193,7 +193,7 @@ export function ShoppingTripView({
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={shoppingHref({ mode: "trip" })}
-          className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-emerald-600 text-white" : "bg-zinc-100 dark:bg-zinc-800"}`}
+          className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
         >
           {t("all")}
         </a>
@@ -201,14 +201,14 @@ export function ShoppingTripView({
           <a
             key={s.id}
             href={shoppingHref({ storeId: s.id, mode: "trip" })}
-            className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-emerald-600 text-white" : "bg-zinc-100 dark:bg-zinc-800"}`}
+            className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
           >
             {s.name}
           </a>
         ))}
         <button
           type="button"
-          className="text-xs text-zinc-500 underline"
+          className="text-xs text-muted-foreground underline"
           onClick={() => setStoreManageOpen((o) => !o)}
         >
           {storeManageOpen ? t("hideStores") : t("stores")}
@@ -216,7 +216,7 @@ export function ShoppingTripView({
       </div>
 
       {storeManageOpen && (
-        <div className="space-y-2 rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+        <div className="space-y-2 rounded-lg border border-dashed border-input p-3">
           <form action={createStore} className="flex gap-2">
             <Input name="name" placeholder={t("storeName")} required />
             <Button type="submit" size="sm">
@@ -246,7 +246,7 @@ export function ShoppingTripView({
           {displayItems.map((item) => (
             <li
               key={item.id}
-              className="group flex items-center gap-1 rounded-xl px-1 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+              className="group flex items-center gap-1 rounded-xl px-1 py-1 hover:bg-muted"
             >
               {item.checked ? (
                 <button
@@ -257,13 +257,13 @@ export function ShoppingTripView({
                   aria-label={t("markNeededAgain")}
                 >
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-500 text-xs text-white"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-primary text-xs text-primary-foreground"
                     aria-hidden
                   >
                     ✓
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-base font-medium leading-snug text-zinc-400 line-through">
+                    <span className="block text-base font-medium leading-snug text-muted-foreground line-through">
                       {item.name}
                       {item.quantity !== 1 && (
                         <span className="ml-1">×{item.quantity}</span>
@@ -281,14 +281,14 @@ export function ShoppingTripView({
                     aria-label={t("markBought")}
                   >
                     <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-zinc-300 group-hover:border-emerald-500 dark:border-zinc-600"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 group-hover:border-primary border-border"
                       aria-hidden
                     />
                     <span className="min-w-0">
                       <span className="block text-base font-medium leading-snug">
                         {item.name}
                         {item.quantity !== 1 && (
-                          <span className="ml-1 text-zinc-400">
+                          <span className="ml-1 text-muted-foreground">
                             ×{item.quantity}
                           </span>
                         )}
@@ -296,7 +296,7 @@ export function ShoppingTripView({
                       {(item.autoAdded ||
                         item.store ||
                         item.tags.length > 0) && (
-                        <span className="mt-0.5 block text-xs text-zinc-400">
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
                           {item.autoAdded && t("autoAdded")}
                           {item.store && ` @ ${item.store.name}`}
                           {item.tags.length > 0 &&
@@ -329,7 +329,7 @@ export function ShoppingTripView({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 lg:right-[max(1.5rem,calc(50%-14rem))]"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 lg:right-[max(1.5rem,calc(50%-14rem))]"
         aria-label={t("addItem")}
       >
         <Plus className="h-7 w-7" />
@@ -342,7 +342,7 @@ export function ShoppingTripView({
           if (!v) setQuery("");
         }}
       >
-        <DialogContent className="flex max-h-[85vh] flex-col gap-3">
+        <DialogContent className="flex max-h-[85vh] flex-col gap-3 overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("addItem")}</DialogTitle>
           </DialogHeader>
@@ -355,7 +355,7 @@ export function ShoppingTripView({
             className="h-11"
           />
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
+            <ul className="divide-y divide-border">
               {showCreate && (
                 <li>
                   <FormAction
@@ -368,7 +368,7 @@ export function ShoppingTripView({
                     <input type="hidden" name="quantity" value="1" />
                     <button
                       type="submit"
-                      className="w-full px-2 py-3 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      className="w-full px-2 py-3 text-left text-sm font-medium text-primary hover:bg-primary/10"
                     >
                       {t("addNamed", { name: qTrim })}
                     </button>
@@ -384,7 +384,7 @@ export function ShoppingTripView({
                     <div className="min-w-0">
                       <p className="truncate text-sm">{p.name}</p>
                       {p.category && (
-                        <p className="truncate text-xs text-zinc-400">
+                        <p className="truncate text-xs text-muted-foreground">
                           {p.category}
                         </p>
                       )}
@@ -402,19 +402,19 @@ export function ShoppingTripView({
                       <input type="hidden" name="productId" value={p.id} />
                       <button
                         type="submit"
-                        className="flex w-full items-center justify-between px-2 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                        className="flex w-full items-center justify-between px-2 py-3 text-left hover:bg-muted"
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-medium">
                             {p.name}
                           </span>
                           {p.category && (
-                            <span className="block truncate text-xs text-zinc-400">
+                            <span className="block truncate text-xs text-muted-foreground">
                               {p.category}
                             </span>
                           )}
                         </span>
-                        <span className="text-xs text-emerald-600">
+                        <span className="text-xs text-primary">
                           {t("need")}
                         </span>
                       </button>

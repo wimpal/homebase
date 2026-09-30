@@ -35,7 +35,7 @@ export default async function CalendarPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Tabs defaultValue="events">
@@ -54,17 +54,17 @@ export default async function CalendarPage() {
               <CardHeader><CardTitle className="text-base">{t("createEvent")}</CardTitle></CardHeader>
               <CardContent>
                 <form action={createCalendarEvent} className="grid gap-3 md:grid-cols-2">
-                  <div><Label>{tc("title")}</Label><Input name="title" required /></div>
-                  <div><Label>{t("start")}</Label><Input name="startAt" type="datetime-local" required /></div>
-                  <div><Label>{t("end")}</Label><Input name="endAt" type="datetime-local" /></div>
-                  <div><Label>{t("reminderMinutes")}</Label><Input name="reminderMinutes" type="number" defaultValue="60" /></div>
+                  <div className="grid gap-2"><Label>{tc("title")}</Label><Input name="title" required /></div>
+                  <div className="grid gap-2"><Label>{t("start")}</Label><Input name="startAt" type="datetime-local" required /></div>
+                  <div className="grid gap-2"><Label>{t("end")}</Label><Input name="endAt" type="datetime-local" /></div>
+                  <div className="grid gap-2"><Label>{t("reminderMinutes")}</Label><Input name="reminderMinutes" type="number" defaultValue="60" /></div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" name="atHome" id="atHome" defaultChecked />
                     <Label htmlFor="atHome">{tc("atHome")}</Label>
                   </div>
-                  <div><Label>{t("itemsNeeded")}</Label><Input name="itemsNeeded" placeholder={t("itemsPlaceholder")} /></div>
-                  <div className="md:col-span-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
-                  <div className="md:col-span-2"><Label>{t("guestsOnePerLine")}</Label><Textarea name="guests" /></div>
+                  <div className="grid gap-2"><Label>{t("itemsNeeded")}</Label><Input name="itemsNeeded" placeholder={t("itemsPlaceholder")} /></div>
+                  <div className="grid gap-2 md:col-span-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
+                  <div className="grid gap-2 md:col-span-2"><Label>{t("guestsOnePerLine")}</Label><Textarea name="guests" /></div>
                   <Button type="submit">{t("createEventBtn")}</Button>
                 </form>
               </CardContent>
@@ -80,22 +80,22 @@ export default async function CalendarPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-medium">{event.title}</p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {formatDateTime(event.startAt, bcp47)}
                         {event.endAt && ` - ${formatDateTime(event.endAt, bcp47)}`}
                       </p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         {event.atHome ? <><Home className="h-3 w-3" /> {tc("atHome")}</> : <><MapPin className="h-3 w-3" /> {tc("outside")}</>}
                       </p>
                       {event.itemsNeeded.length > 0 && (
                         <p className="mt-1 text-sm">{tc("items")}: {event.itemsNeeded.join(", ")}</p>
                       )}
                       {event.guests.length > 0 && (
-                        <p className="text-sm text-zinc-500">{tc("guests")}: {event.guests.map((g) => g.name).join(", ")}</p>
+                        <p className="text-sm text-muted-foreground">{tc("guests")}: {event.guests.map((g) => g.name).join(", ")}</p>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Calendar className="h-5 w-5 text-emerald-600" />
+                      <Calendar className="h-5 w-5 text-primary" />
                       <ConfirmForm action={deleteCalendarEvent} message={t("confirmDeleteEvent")}>
                         <input type="hidden" name="id" value={event.id} />
                         <Button type="submit" variant="destructive" size="sm">{tc("delete")}</Button>
@@ -113,9 +113,9 @@ export default async function CalendarPage() {
             <CardHeader><CardTitle className="text-base">{t("logEvent")}</CardTitle></CardHeader>
             <CardContent>
               <form action={logEvent} className="space-y-3">
-                <div><Label>{t("whatHappened")}</Label><Input name="title" placeholder={t("whatHappenedPlaceholder")} required /></div>
-                <div><Label>{t("when")}</Label><Input name="occurredAt" type="datetime-local" /></div>
-                <div><Label>{tc("notes")}</Label><Textarea name="description" /></div>
+                <div className="grid gap-2"><Label>{t("whatHappened")}</Label><Input name="title" placeholder={t("whatHappenedPlaceholder")} required /></div>
+                <div className="grid gap-2"><Label>{t("when")}</Label><Input name="occurredAt" type="datetime-local" /></div>
+                <div className="grid gap-2"><Label>{tc("notes")}</Label><Textarea name="description" /></div>
                 <Button type="submit">{tc("log")}</Button>
               </form>
             </CardContent>
@@ -128,7 +128,7 @@ export default async function CalendarPage() {
               <Card key={log.id}>
                 <CardContent className="p-4">
                   <p className="font-medium">{log.title}</p>
-                  <p className="text-sm text-zinc-500">{tc("last")}: {formatDateTime(log.occurredAt, bcp47)}</p>
+                  <p className="text-sm text-muted-foreground">{tc("last")}: {formatDateTime(log.occurredAt, bcp47)}</p>
                   {log.description && <p className="text-sm">{log.description}</p>}
                 </CardContent>
               </Card>

@@ -86,15 +86,15 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
           </CardHeader>
           <CardContent>
             <form action={handleCreateProject} className="space-y-3">
-              <div>
+              <div className="grid gap-2">
                 <Label>{tc("title")}</Label>
                 <Input name="title" required />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{tc("description")}</Label>
                 <Textarea name="description" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("workItemsOnePerLine")}</Label>
                 <Textarea name="workItems" placeholder={t("workItemsPlaceholder")} />
               </div>
@@ -117,15 +117,15 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
                   <div className="space-y-1">
                     <Link
                       href={projectDetailPath(project.id)}
-                      className="text-base font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                      className="text-base font-semibold text-primary hover:underline"
                     >
                       {project.title}
                     </Link>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {t("workItemsComplete", { done, total })} · {t(`status_${project.status}` as "status_active")}
                     </p>
                     {project.description && (
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      <p className="text-sm text-muted-foreground">
                         {project.description}
                       </p>
                     )}
@@ -149,7 +149,7 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
                   <select
                     name="status"
                     defaultValue={project.status}
-                    className="h-8 rounded-md border border-zinc-300 bg-transparent px-2 text-sm dark:border-zinc-700"
+                    className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
                   >
                     <option value="active">{t("status_active")}</option>
                     <option value="paused">{t("status_paused")}</option>

@@ -76,7 +76,7 @@ export function InventoryClient({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-zinc-500">{t("subtitle")}</p>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button variant="outline" onClick={() => setScanning(true)}>
           <Scan className="mr-2 h-4 w-4" />
@@ -106,19 +106,19 @@ export function InventoryClient({
             </CardHeader>
             <CardContent>
               <form action={handleCreateProduct} className="space-y-3">
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("name")}</Label>
                   <Input name="name" required />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("category")}</Label>
                   <Input name="category" />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("quantity")}</Label>
                   <Input name="quantity" type="number" min="0" defaultValue="1" />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("lowStockThreshold")}</Label>
                   <Input name="lowStockAt" type="number" min="0" defaultValue="1" />
                 </div>
@@ -127,11 +127,11 @@ export function InventoryClient({
                     type="checkbox"
                     name="autoAddWhenLowStock"
                     id="autoAddWhenLowStock"
-                    className="h-4 w-4 rounded border-zinc-300"
+                    className="h-4 w-4 rounded border-input"
                   />
                   <Label htmlFor="autoAddWhenLowStock">{t("autoAddShopping")}</Label>
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("barcode")}</Label>
                   <Input
                     name="barcode"
@@ -139,11 +139,11 @@ export function InventoryClient({
                     onChange={(e) => setBarcode(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("location")}</Label>
                   <select
                     name="locationId"
-                    className="flex h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                    className="flex h-10 w-full rounded-md border border-input px-3 text-sm"
                   >
                     <option value="">{tc("noneOption")}</option>
                     {locations.map((l) => (
@@ -153,7 +153,7 @@ export function InventoryClient({
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("expiryDate")}</Label>
                   <Input name="expiryDate" type="date" />
                 </div>
@@ -236,13 +236,13 @@ export function InventoryClient({
                       <div>
                         <p className="font-medium">{p.name}</p>
                         {p.category && (
-                          <p className="text-sm text-zinc-500">{p.category}</p>
+                          <p className="text-sm text-muted-foreground">{p.category}</p>
                         )}
                         <p className="text-sm">
                           {t("stock", { total, threshold: p.lowStockAt })}
                         </p>
                         {p.barcodes.length > 0 && (
-                          <p className="text-xs text-zinc-400">
+                          <p className="text-xs text-muted-foreground">
                             {t("barcodeLabel", {
                               codes: p.barcodes.map((b) => b.code).join(", "),
                             })}
@@ -265,7 +265,7 @@ export function InventoryClient({
                         {p.stockItems.map((stock) => (
                           <li
                             key={stock.id}
-                            className="flex items-center justify-between text-xs text-zinc-500"
+                            className="flex items-center justify-between text-xs text-muted-foreground"
                           >
                             <span>
                               {stock.quantity}
@@ -296,7 +296,7 @@ export function InventoryClient({
                       />
                       <select
                         name="locationId"
-                        className="h-10 rounded-md border border-zinc-300 px-2 text-sm"
+                        className="h-10 rounded-md border border-input px-2 text-sm"
                       >
                         <option value="">{tc("location")}</option>
                         {locations.map((l) => (

@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { LOCALE_COOKIE, type Locale } from "@/i18n/config";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +23,6 @@ export function LanguageToggle({ currentLocale }: LanguageToggleProps) {
           variant={currentLocale === locale ? "default" : "outline"}
           size="sm"
           onClick={() => setLocale(locale)}
-          className={cn(currentLocale === locale && "bg-emerald-600 hover:bg-emerald-700")}
         >
           {locale === "en" ? "English" : "Nederlands"}
         </Button>

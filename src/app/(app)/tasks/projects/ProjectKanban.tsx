@@ -88,18 +88,18 @@ function SortableCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-md border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+      className="rounded-md border border-border bg-card p-2 shadow-sm"
     >
       <div
-        className="mb-2 flex cursor-grab items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 px-2 py-2.5 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900"
+        className="mb-2 flex cursor-grab items-center gap-2 rounded-md border border-border bg-background px-2 py-2.5 active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
         <GripVertical
-          className="h-4 w-4 shrink-0 text-zinc-400"
+          className="h-4 w-4 shrink-0 text-muted-foreground"
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
           {item.title}
         </span>
         <span className="sr-only">{t("dragHandle")}</span>
@@ -157,10 +157,10 @@ function Column({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-h-[16rem] flex-1 flex-col gap-2 rounded-lg border p-3 ${
+      className={`flex min-h-[16rem] flex-1 flex-col gap-2 rounded-lg border p-3${
         isOver
-          ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
-          : "border-zinc-200 dark:border-zinc-800"
+          ? "border-primary bg-primary/10"
+          : "border-border"
       }`}
     >
       <h3 className="text-sm font-semibold">
@@ -394,7 +394,7 @@ export function ProjectKanban({
 
   return (
     <div className="space-y-4">
-      <form action={handleAdd} className="flex flex-wrap gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      <form action={handleAdd} className="flex flex-wrap gap-2 rounded-lg border border-border p-3">
         <input type="hidden" name="projectId" value={projectId} />
         <input type="hidden" name="status" value="backlog" />
         <Input
@@ -408,7 +408,7 @@ export function ProjectKanban({
           {t("addWorkItem")}
         </Button>
       </form>
-      {pending && <p className="text-xs text-zinc-500">{t("savingBoard")}</p>}
+      {pending && <p className="text-xs text-muted-foreground">{t("savingBoard")}</p>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -430,7 +430,7 @@ export function ProjectKanban({
         </div>
         <DragOverlay>
           {activeItem ? (
-            <div className="rounded-md border border-emerald-400 bg-white p-3 shadow-lg dark:bg-zinc-950">
+            <div className="rounded-md border border-primary bg-card p-3 shadow-lg">
               {activeItem.title}
             </div>
           ) : null}

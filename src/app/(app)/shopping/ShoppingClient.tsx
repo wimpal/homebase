@@ -37,12 +37,12 @@ export function ShoppingClient(props: ShoppingViewProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             {mode === "trip" ? t("subtitleTrip") : t("subtitlePlanning")}
           </p>
         </div>
         <div
-          className="inline-flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900"
+          className="inline-flex rounded-lg bg-muted p-1"
           role="tablist"
           aria-label={`${t("planning")} / ${t("trip")}`}
         >
@@ -50,10 +50,10 @@ export function ShoppingClient(props: ShoppingViewProps) {
             type="button"
             role="tab"
             aria-selected={mode === "shop"}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+            className={`rounded-md px-4 py-2 text-sm font-medium transition${
               mode === "shop"
-                ? "bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                ? "shadow bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setMode("shop")}
           >
@@ -63,10 +63,10 @@ export function ShoppingClient(props: ShoppingViewProps) {
             type="button"
             role="tab"
             aria-selected={mode === "trip"}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition ${
+            className={`rounded-md px-4 py-2 text-sm font-medium transition${
               mode === "trip"
-                ? "bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                ? "shadow bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setMode("trip")}
           >

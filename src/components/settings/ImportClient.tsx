@@ -65,11 +65,11 @@ function ColumnSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <div>
+    <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
       <select
         id={id}
-        className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -254,13 +254,13 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-500">{t("help")}</p>
+      <p className="text-sm text-muted-foreground">{t("help")}</p>
 
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="import-target">{t("target")}</Label>
         <select
           id="import-target"
-          className="mt-1 flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
           value={target}
           onChange={(e) => {
             setTarget(e.target.value);
@@ -279,18 +279,17 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
           ))}
         </select>
         {!targetEnabled && selected?.disabledReason && (
-          <p className="mt-1 text-xs text-zinc-500">{selected.disabledReason}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{selected.disabledReason}</p>
         )}
       </div>
 
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="import-file">{t("file")}</Label>
         <Input
           id="import-file"
           ref={fileRef}
           type="file"
           accept=".csv,text/csv"
-          className="mt-1"
           onChange={onFileChange}
           disabled={!targetEnabled || pending}
         />
@@ -416,7 +415,7 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
             />
             {t("markNeeded")}
           </label>
-          <p className="text-xs text-zinc-500">{t("markNeededHint")}</p>
+          <p className="text-xs text-muted-foreground">{t("markNeededHint")}</p>
         </>
       )}
 
@@ -439,17 +438,17 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
       </div>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
       {summary && (
-        <div className="space-y-2 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+        <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
           <p className="font-medium">
             {summary.dryRun ? t("summaryDryRun") : t("summaryApplied")}
           </p>
-          <ul className="grid grid-cols-2 gap-1 text-zinc-600 dark:text-zinc-400 sm:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-1 text-muted-foreground sm:grid-cols-3">
             <li>
               {t("counts.created")}: {summary.created}
             </li>
@@ -477,7 +476,7 @@ export function ImportClient({ targets }: { targets: TargetOption[] }) {
           {summary.samples.length > 0 && (
             <div>
               <p className="mt-2 font-medium">{t("samples")}</p>
-              <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-xs text-zinc-500">
+              <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-xs text-muted-foreground">
                 {summary.samples.map((s, i) => (
                   <li key={`${s.row}-${i}`}>
                     {t("sampleRow", {

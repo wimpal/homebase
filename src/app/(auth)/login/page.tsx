@@ -21,17 +21,17 @@ export default async function LoginPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-emerald-700">{t("title")}</CardTitle>
+          <CardTitle className="text-2xl text-primary">{t("title")}</CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {params.status === "password_reset" && (
-            <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+            <p className="mb-4 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
               {t("passwordResetDone")}
             </p>
           )}
           {params.error === "invalid_credentials" && (
-            <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">
+            <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {t("invalidCredentials")}
             </p>
           )}
@@ -55,15 +55,15 @@ export default async function LoginPage({
             </Button>
           </form>
           <p className="mt-3 text-center text-sm">
-            <Link href="/forgot-password" className="text-emerald-600 hover:underline">
+            <Link href="/forgot-password" className="text-primary hover:underline">
               {t("forgotPassword")}
             </Link>
           </p>
-          <p className="mt-4 text-center text-sm text-zinc-500">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "zero" && (
               <>
                 {t("noAccount")}{" "}
-                <Link href="/register" className="text-emerald-600 hover:underline">
+                <Link href="/register" className="text-primary hover:underline">
                   {t("createHousehold")}
                 </Link>
               </>
@@ -71,7 +71,7 @@ export default async function LoginPage({
             {mode === "one" && (
               <>
                 {t("needAccount")}{" "}
-                <Link href="/join" className="text-emerald-600 hover:underline">
+                <Link href="/join" className="text-primary hover:underline">
                   {t("joinAccount")}
                 </Link>
               </>

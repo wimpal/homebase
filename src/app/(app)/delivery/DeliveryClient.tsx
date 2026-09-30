@@ -53,7 +53,7 @@ export function DeliveryClient({ deliveries }: { deliveries: Delivery[] }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <CollapsibleCreate
@@ -67,31 +67,31 @@ export function DeliveryClient({ deliveries }: { deliveries: Delivery[] }) {
           </CardHeader>
           <CardContent>
             <form action={createDelivery} className="grid gap-3 md:grid-cols-2">
-              <div>
+              <div className="grid gap-2">
                 <Label>{tc("description")}</Label>
                 <Input name="description" placeholder="Amazon order" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("carrier")}</Label>
                 <Input name="carrier" placeholder={t("carrierPlaceholder")} />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("trackingNumber")}</Label>
                 <Input name="trackingNumber" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("trackingUrl")}</Label>
                 <Input name="trackingUrl" type="url" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("expectedDate")}</Label>
                 <Input name="expectedDate" type="date" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("earliestTime")}</Label>
                 <Input name="earliestTime" type="datetime-local" />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{t("latestTime")}</Label>
                 <Input name="latestTime" type="datetime-local" />
               </div>
@@ -112,7 +112,7 @@ export function DeliveryClient({ deliveries }: { deliveries: Delivery[] }) {
                   <Package className="h-4 w-4" />
                   {d.description || tc("package")}
                 </p>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted-foreground">
                   {d.carrier} {d.trackingNumber && `· ${d.trackingNumber}`}
                 </p>
                 {d.expectedDate && (
@@ -122,14 +122,14 @@ export function DeliveryClient({ deliveries }: { deliveries: Delivery[] }) {
                   </p>
                 )}
                 {d.earliestTime && (
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-muted-foreground">
                     {tc("window")}:{" "}
                     {format.dateTime(d.earliestTime, { timeStyle: "short" })}
                     {d.latestTime &&
                       ` - ${format.dateTime(d.latestTime, { timeStyle: "short" })}`}
                   </p>
                 )}
-                <span className="mt-1 inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800">
+                <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs">
                   {t(
                     statusKeys[d.status as keyof typeof statusKeys] ??
                       "statusPending",

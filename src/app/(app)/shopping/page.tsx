@@ -30,15 +30,15 @@ export default async function ShoppingPage({
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-zinc-500">{t("subtitle")}</p>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <p className="text-sm text-zinc-500">{t("noList")}</p>
+        <p className="text-sm text-muted-foreground">{t("noList")}</p>
       </div>
     );
   }
 
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
       <ShoppingClient
         listId={list.id}
         listName={list.name}

@@ -66,7 +66,7 @@ export async function HomeFeed({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Bell className="h-5 w-5 text-emerald-600" />
+            <Bell className="h-5 w-5 text-primary" />
             {t("homeFeed")}
           </CardTitle>
           {hasAny && (
@@ -75,7 +75,7 @@ export async function HomeFeed({
                 <form action={handleMarkAllRead}>
                   <button
                     type="submit"
-                    className="text-xs text-emerald-600 hover:underline"
+                    className="text-xs text-primary hover:underline"
                   >
                     {t("markAllRead")}
                   </button>
@@ -87,7 +87,7 @@ export async function HomeFeed({
               >
                 <button
                   type="submit"
-                  className="text-xs text-zinc-500 hover:underline"
+                  className="text-xs text-muted-foreground hover:underline"
                 >
                   {t("dismissAll")}
                 </button>
@@ -104,13 +104,13 @@ export async function HomeFeed({
         }
       >
         {notifications.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t("noNotifications")}</p>
+          <p className="text-sm text-muted-foreground">{t("noNotifications")}</p>
         ) : (
           <ul className="space-y-3">
             {notifications.map((n) => (
               <li
                 key={n.id}
-                className={`rounded-lg border p-3 text-sm ${n.read ? "opacity-60" : "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20"}`}
+                className={`rounded-lg border p-3 text-sm ${n.read ? "opacity-60" : "border-primary/30 bg-primary/10"}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -124,10 +124,10 @@ export async function HomeFeed({
                     ) : (
                       <p className="font-medium">{n.title}</p>
                     )}
-                    <p className="text-zinc-600 dark:text-zinc-400">
+                    <p className="text-muted-foreground">
                       {n.message}
                     </p>
-                    <p className="mt-1 text-xs text-zinc-400">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {formatDateTime(n.createdAt, bcp47)}
                     </p>
                   </div>
@@ -137,7 +137,7 @@ export async function HomeFeed({
                         <input type="hidden" name="id" value={n.id} />
                         <button
                           type="submit"
-                          className="text-xs text-emerald-600 hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           {t("markRead")}
                         </button>
@@ -147,7 +147,7 @@ export async function HomeFeed({
                       <input type="hidden" name="id" value={n.id} />
                       <button
                         type="submit"
-                        className="text-xs text-zinc-500 hover:underline"
+                        className="text-xs text-muted-foreground hover:underline"
                       >
                         {t("dismiss")}
                       </button>

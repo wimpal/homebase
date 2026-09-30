@@ -84,7 +84,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
           </Button>
           <h1 className="text-2xl font-bold">{project.title}</h1>
           {project.description && (
-            <p className="text-zinc-500">{project.description}</p>
+            <p className="text-muted-foreground">{project.description}</p>
           )}
         </div>
         <ConfirmFormAction
@@ -107,11 +107,11 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
         <CardContent className="space-y-4">
           <form action={handleUpdateMeta} className="space-y-3">
             <input type="hidden" name="id" value={project.id} />
-            <div>
+            <div className="grid gap-2">
               <Label>{tc("title")}</Label>
               <Input name="title" defaultValue={project.title} required />
             </div>
-            <div>
+            <div className="grid gap-2">
               <Label>{tc("description")}</Label>
               <Textarea name="description" defaultValue={project.description ?? ""} />
             </div>
@@ -124,7 +124,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
             <select
               name="status"
               defaultValue={project.status}
-              className="h-8 rounded-md border border-zinc-300 bg-transparent px-2 text-sm dark:border-zinc-700"
+              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
             >
               <option value="active">{t("status_active")}</option>
               <option value="paused">{t("status_paused")}</option>
@@ -161,7 +161,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
         <form
           ref={updateFormRef}
           action={handleAddUpdate}
-          className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          className="space-y-2 rounded-lg border border-border p-3"
         >
           <input type="hidden" name="projectId" value={project.id} />
           <Textarea name="comment" placeholder={t("progressUpdate")} required />
@@ -171,17 +171,17 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
           </Button>
         </form>
         {updates.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t("noActivity")}</p>
+          <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
         ) : (
           <ul className="space-y-2">
             {updates.map((u) => (
               <li
                 key={u.id}
-                className="rounded bg-zinc-50 p-2 text-sm dark:bg-zinc-900"
+                className="rounded bg-background p-2 text-sm"
               >
                 <p>{u.comment}</p>
                 {u.user?.name && (
-                  <p className="mt-1 text-xs text-zinc-500">{u.user.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{u.user.name}</p>
                 )}
                 {u.photoUrl && (
                   // eslint-disable-next-line @next/next/no-img-element

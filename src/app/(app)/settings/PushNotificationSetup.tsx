@@ -54,7 +54,7 @@ export function PushNotificationSetup() {
       </CardHeader>
       <CardContent className="space-y-3">
         <Button onClick={subscribe}>{t("enable")}</Button>
-        {status && <p className="text-sm text-zinc-500">{status}</p>}
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
       </CardContent>
     </Card>
   );

@@ -298,14 +298,14 @@ function VisionPinCard({
       data-vision-pin-id={pin.id}
       style={style}
       className={cn(
-        "group absolute flex flex-col overflow-visible rounded-md border bg-white text-xs shadow-md dark:bg-zinc-950",
+        "group absolute flex flex-col overflow-visible rounded-md border bg-card text-xs shadow-md",
         dropHighlight
-          ? "border-emerald-500 ring-2 ring-emerald-400/60"
-          : "border-zinc-200 dark:border-zinc-700",
+          ? "border-primary ring-2 ring-primary/40"
+          : "border-input",
       )}
     >
       <div
-        className="mb-1 flex shrink-0 cursor-grab items-center gap-1 px-2 pt-2 text-[10px] text-zinc-400 active:cursor-grabbing"
+        className="mb-1 flex shrink-0 cursor-grab items-center gap-1 px-2 pt-2 text-[10px] text-muted-foreground active:cursor-grabbing"
         {...listeners}
         {...attributes}
       >
@@ -338,7 +338,7 @@ function VisionPinCard({
           type="button"
           aria-label={label}
           className={cn(
-            "absolute z-10 h-3.5 w-3.5 rounded-sm border border-emerald-600 bg-white opacity-70 shadow hover:opacity-100 focus:opacity-100 dark:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100",
+            "absolute z-10 h-3.5 w-3.5 rounded-sm border border-primary bg-card opacity-70 shadow hover:opacity-100 focus:opacity-100 md:opacity-0 md:group-hover:opacity-100",
             className,
           )}
           onPointerDown={(e) => onCornerPointerDown(e, corner)}
@@ -351,7 +351,7 @@ function VisionPinCard({
           aria-label={t("visionConnectPort")}
           tabIndex={-1}
           className={cn(
-            "absolute z-30 h-3.5 w-3.5 touch-none rounded-full border-2 border-emerald-600 bg-white shadow dark:bg-zinc-900",
+            "absolute z-30 h-3.5 w-3.5 touch-none rounded-full border-2 border-primary bg-card shadow",
             connectingFromThis
               ? "opacity-100"
               : "opacity-70 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
@@ -388,7 +388,7 @@ function VisionAddForms({
         ref={textFormRef}
         action={onAdd}
         className={cn(
-          "space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800",
+          "space-y-2 rounded-lg border border-border p-3",
           compact && "p-2",
         )}
       >
@@ -410,7 +410,7 @@ function VisionAddForms({
         ref={imageFormRef}
         action={onAdd}
         className={cn(
-          "space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800",
+          "space-y-2 rounded-lg border border-border p-3",
           compact && "p-2",
         )}
       >
@@ -516,7 +516,7 @@ function VisionLinkLayer({
               y1={`${a.y}%`}
               x2={`${b.x}%`}
               y2={`${b.y}%`}
-              className="stroke-emerald-600/70 dark:stroke-emerald-400/70"
+              className="stroke-primary/70"
               strokeWidth={2}
               vectorEffect="non-scaling-stroke"
             />
@@ -556,7 +556,7 @@ function VisionLinkLayer({
           y1={`${connectDraft.y1Pct}%`}
           x2={`${connectDraft.x2Pct}%`}
           y2={`${connectDraft.y2Pct}%`}
-          className="stroke-emerald-500"
+          className="stroke-primary"
           strokeWidth={2}
           strokeDasharray="6 4"
           vectorEffect="non-scaling-stroke"
@@ -608,12 +608,12 @@ function VisionBoardSurface({
       ref={boardRef}
       data-vision-board
       className={cn(
-        "relative overflow-hidden border border-dashed border-zinc-300 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-950",
+        "relative overflow-hidden border border-dashed border-input bg-gradient-to-br from-background to-muted",
         className,
       )}
     >
       {pins.length === 0 && (
-        <p className="absolute inset-0 z-10 flex items-center justify-center text-sm text-zinc-500">
+        <p className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">
           {t("emptyVision")}
         </p>
       )}
@@ -1057,7 +1057,7 @@ export function ProjectVisionBoard({
         if (!open) setLightbox(null);
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-3xl">
         {lightbox && (
           <>
             <DialogHeader>
@@ -1097,9 +1097,9 @@ export function ProjectVisionBoard({
           role="dialog"
           aria-modal="true"
           aria-label={t("sectionVision")}
-          className="fixed inset-0 z-50 flex h-dvh flex-col bg-white dark:bg-zinc-950"
+          className="fixed inset-0 z-50 flex h-dvh flex-col bg-card"
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-2">
             <h2 className="text-base font-semibold">{t("sectionVision")}</h2>
             <Button
               ref={closeButtonRef}

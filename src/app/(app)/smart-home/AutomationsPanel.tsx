@@ -110,7 +110,7 @@ function AutomationFormFields({
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      <div className="md:col-span-2">
+      <div className="grid gap-2 md:col-span-2">
         <Label htmlFor={`${idPrefix}-name`}>{tc("name")}</Label>
         <Input
           id={`${idPrefix}-name`}
@@ -126,12 +126,12 @@ function AutomationFormFields({
         />
       </div>
 
-      <div className="md:col-span-2">
+      <div className="grid gap-2 md:col-span-2">
         <Label htmlFor={`${idPrefix}-trigger`}>{t("triggerKind")}</Label>
         <select
           id={`${idPrefix}-trigger`}
           name="triggerKind"
-          className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+          className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
           value={triggerKind}
           onChange={(e) => {
             const next =
@@ -152,7 +152,7 @@ function AutomationFormFields({
 
       {triggerKind === "SCHEDULE" ? (
         <>
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor={`${idPrefix}-time`}>{t("time")}</Label>
             <Input
               id={`${idPrefix}-time`}
@@ -162,12 +162,12 @@ function AutomationFormFields({
               defaultValue={defaults?.timeLocal ?? "21:00"}
             />
           </div>
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor={`${idPrefix}-action`}>{t("action")}</Label>
             <select
               id={`${idPrefix}-action`}
               name="action"
-              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={action === "toggle" ? "on" : action}
               onChange={(e) =>
                 setAction(e.target.value === "off" ? "off" : "on")
@@ -179,7 +179,7 @@ function AutomationFormFields({
           </div>
           {action === "on" ? (
             <>
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor={`${idPrefix}-brightness`}>
                   {t("brightness")}
                 </Label>
@@ -193,7 +193,7 @@ function AutomationFormFields({
                   defaultValue={defaults?.brightness ?? undefined}
                 />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor={`${idPrefix}-warmth`}>{t("warmth")}</Label>
                 <Input
                   id={`${idPrefix}-warmth`}
@@ -216,14 +216,14 @@ function AutomationFormFields({
                     name="daysOfWeek"
                     value={day}
                     defaultChecked={defaultDays.has(day)}
-                    className="h-4 w-4 rounded border-zinc-300"
+                    className="h-4 w-4 rounded border-input"
                   />
                   {t(DAY_KEYS[i])}
                 </label>
               ))}
             </div>
           </div>
-          <div className="md:col-span-2 space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <div className="md:col-span-2 space-y-3 rounded-md border border-border p-3">
             <input
               type="hidden"
               name="sunsetLinkEnabled"
@@ -232,7 +232,7 @@ function AutomationFormFields({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium">{t("sunsetLink")}</p>
-                <p className="text-xs text-zinc-500">{t("sunsetLinkHint")}</p>
+                <p className="text-xs text-muted-foreground">{t("sunsetLinkHint")}</p>
               </div>
               <Switch
                 checked={sunsetLinkEnabled}
@@ -241,7 +241,7 @@ function AutomationFormFields({
               />
             </div>
             {sunsetLinkEnabled ? (
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor={`${idPrefix}-minutes-before`}>
                   {t("minutesBeforeSunset")}
                 </Label>
@@ -261,16 +261,16 @@ function AutomationFormFields({
       ) : (
         <>
           <input type="hidden" name="sensorEdgeAttribute" value={edgeAttr} />
-          <div className="md:col-span-2">
+          <div className="grid gap-2 md:col-span-2">
             <Label htmlFor={`${idPrefix}-sensor`}>{t("sensor")}</Label>
             {sensors.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-500">{t("noEdgeSensors")}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noEdgeSensors")}</p>
             ) : (
               <select
                 id={`${idPrefix}-sensor`}
                 name="sensorDirigeraDeviceId"
                 required
-                className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
                 value={sensorId}
                 onChange={(e) => setSensorId(e.target.value)}
               >
@@ -285,12 +285,12 @@ function AutomationFormFields({
           {action === "toggle" ? (
             <input type="hidden" name="sensorEdgePolarity" value="rising" />
           ) : (
-            <div>
+            <div className="grid gap-2">
               <Label htmlFor={`${idPrefix}-polarity`}>{t("sensorEdge")}</Label>
               <select
                 id={`${idPrefix}-polarity`}
                 name="sensorEdgePolarity"
-                className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
                 value={polarity}
                 onChange={(e) =>
                   setPolarity(
@@ -311,12 +311,12 @@ function AutomationFormFields({
               </select>
             </div>
           )}
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor={`${idPrefix}-action`}>{t("action")}</Label>
             <select
               id={`${idPrefix}-action`}
               name="action"
-              className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               value={action}
               onChange={(e) => {
                 const v = e.target.value;
@@ -330,12 +330,12 @@ function AutomationFormFields({
               <option value="toggle">{t("toggle")}</option>
             </select>
           </div>
-          <p className="md:col-span-2 text-xs text-zinc-500">
+          <p className="md:col-span-2 text-xs text-muted-foreground">
             {action === "toggle" ? t("toggleLeaveHint") : t("sensorRuleHint")}
           </p>
           {action === "on" || action === "toggle" ? (
             <>
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor={`${idPrefix}-brightness`}>
                   {t("brightness")}
                 </Label>
@@ -349,7 +349,7 @@ function AutomationFormFields({
                   defaultValue={defaults?.brightness ?? undefined}
                 />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor={`${idPrefix}-warmth`}>{t("warmth")}</Label>
                 <Input
                   id={`${idPrefix}-warmth`}
@@ -365,7 +365,7 @@ function AutomationFormFields({
         </>
       )}
 
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor={`${idPrefix}-active-from`}>{t("activeFrom")}</Label>
         <Input
           id={`${idPrefix}-active-from`}
@@ -374,7 +374,7 @@ function AutomationFormFields({
           defaultValue={defaults?.activeFromLocal ?? undefined}
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor={`${idPrefix}-active-until`}>{t("activeUntil")}</Label>
         <Input
           id={`${idPrefix}-active-until`}
@@ -383,14 +383,14 @@ function AutomationFormFields({
           defaultValue={defaults?.activeUntilLocal ?? undefined}
         />
       </div>
-      <p className="md:col-span-2 text-xs text-zinc-500">
+      <p className="md:col-span-2 text-xs text-muted-foreground">
         {t("activeHoursHint")}
       </p>
 
       <div className="md:col-span-2">
         <Label>{t("targets")}</Label>
         {lights.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">{t("noIkeaLights")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("noIkeaLights")}</p>
         ) : (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {lights.map((light) => (
@@ -403,12 +403,12 @@ function AutomationFormFields({
                   name="targetDeviceIds"
                   value={light.id}
                   defaultChecked={defaultTargets.has(light.id)}
-                  className="h-4 w-4 rounded border-zinc-300"
+                  className="h-4 w-4 rounded border-input"
                 />
                 <span>
                   {light.name}
                   {light.room ? (
-                    <span className="text-zinc-500"> ({light.room})</span>
+                    <span className="text-muted-foreground"> ({light.room})</span>
                   ) : null}
                 </span>
               </label>
@@ -580,11 +580,11 @@ export function AutomationsPanel({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-500">{t("automationsSubtitle")}</p>
+      <p className="text-sm text-muted-foreground">{t("automationsSubtitle")}</p>
 
       {!dirigera.configured ? (
         <Card>
-          <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+          <CardContent className="p-4 text-sm text-muted-foreground">
             <p>
               {t.rich("dirigeraSetup", {
                 ip: () => <code className="text-xs">DIRIGERA_IP</code>,
@@ -627,7 +627,7 @@ export function AutomationsPanel({
       ) : null}
 
       {runMessage ? (
-        <p className="text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="text-sm text-primary">
           {runMessage}
         </p>
       ) : null}
@@ -680,8 +680,8 @@ export function AutomationsPanel({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{rule.name}</p>
-                  <p className="text-sm text-zinc-500">{summaryLine(rule)}</p>
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="text-sm text-muted-foreground">{summaryLine(rule)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {t("lastRun")}: {lastRunLabel}
                     {rule.lastRunResult ? ` — ${rule.lastRunResult}` : null}
                   </p>
@@ -703,7 +703,7 @@ export function AutomationsPanel({
                         toggleEnabled(rule, checked)
                       }
                     />
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-muted-foreground">
                       {rule.enabled ? t("enabled") : t("disabled")}
                     </span>
                   </div>
@@ -746,7 +746,7 @@ export function AutomationsPanel({
               {editing ? (
                 <form
                   action={handleUpdate}
-                  className="space-y-4 border-t border-zinc-100 pt-3 dark:border-zinc-800"
+                  className="space-y-4 border-t border-border pt-3"
                 >
                   <input type="hidden" name="id" value={rule.id} />
                   <AutomationFormFields

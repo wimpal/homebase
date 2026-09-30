@@ -34,7 +34,7 @@ export function PeopleClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {canMutate && (
@@ -73,11 +73,11 @@ export function PeopleClient({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-4 w-4 text-emerald-600" />
+                      <Users className="h-4 w-4 text-primary" />
                       {person.displayName}
                     </CardTitle>
                     {person.birthday && (
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {t("birthdayLabel", { date: person.birthday })}
                       </p>
                     )}
@@ -118,7 +118,7 @@ export function PeopleClient({
                     action={updatePersonAction}
                     actionName="updatePerson"
                     onSuccess={() => setEditingId(null)}
-                    className="grid gap-3 border-t border-zinc-100 pt-3 md:grid-cols-2 dark:border-zinc-800"
+                    className="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
                   >
                     <input type="hidden" name="id" value={person.id} />
                     <PersonFields person={person} />
@@ -148,15 +148,15 @@ function PersonDetails({ person }: { person: PersonListItem }) {
 
   const visible = rows.filter((r) => r.value);
   if (visible.length === 0) {
-    return <p className="text-sm text-zinc-500">{t("noDetails")}</p>;
+    return <p className="text-sm text-muted-foreground">{t("noDetails")}</p>;
   }
 
   return (
     <dl className="space-y-1 text-sm">
       {visible.map((r) => (
         <div key={r.label} className="flex gap-2">
-          <dt className="shrink-0 text-zinc-500">{r.label}:</dt>
-          <dd className="text-zinc-800 dark:text-zinc-200">{r.value}</dd>
+          <dt className="shrink-0 text-muted-foreground">{r.label}:</dt>
+          <dd className="text-foreground">{r.value}</dd>
         </div>
       ))}
     </dl>
@@ -169,15 +169,15 @@ function PersonFields({ person }: { person?: PersonListItem }) {
 
   return (
     <>
-      <div>
+      <div className="grid gap-2">
         <Label>{tc("name")}</Label>
         <Input name="name" required defaultValue={person?.name ?? ""} />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("familyName")}</Label>
         <Input name="familyName" defaultValue={person?.familyName ?? ""} />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("birthday")}</Label>
         <Input
           name="birthday"
@@ -185,23 +185,23 @@ function PersonFields({ person }: { person?: PersonListItem }) {
           defaultValue={person?.birthdayInput ?? ""}
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("phone")}</Label>
         <Input name="phone" type="tel" defaultValue={person?.phone ?? ""} />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("email")}</Label>
         <Input name="email" type="email" defaultValue={person?.email ?? ""} />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("city")}</Label>
         <Input name="city" defaultValue={person?.city ?? ""} />
       </div>
-      <div className="md:col-span-2">
+      <div className="grid gap-2 md:col-span-2">
         <Label>{t("address")}</Label>
         <Input name="addressLine" defaultValue={person?.addressLine ?? ""} />
       </div>
-      <div className="md:col-span-2">
+      <div className="grid gap-2 md:col-span-2">
         <Label>{tc("notes")}</Label>
         <Textarea name="notes" defaultValue={person?.notes ?? ""} rows={2} />
       </div>

@@ -55,10 +55,10 @@ export function NetworkTvSsapPanel({ device }: Props) {
   }
 
   return (
-    <div className="space-y-3 border-t border-zinc-100 pt-3 md:col-span-2 dark:border-zinc-800">
+    <div className="space-y-3 border-t border-border pt-3 md:col-span-2">
       <p className="text-sm font-medium">{t("ssapTitle")}</p>
-      <p className="text-xs text-zinc-500">{t("ssapHint")}</p>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-xs text-muted-foreground">{t("ssapHint")}</p>
+      <p className="text-sm text-muted-foreground">
         {device.ssap_paired ? t("ssapPaired") : t("ssapUnpaired")}
       </p>
 
@@ -99,7 +99,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
       </div>
 
       {appsError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{appsError}</p>
+        <p className="text-sm text-destructive">{appsError}</p>
       )}
 
       <FormAction
@@ -108,7 +108,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
         className="grid gap-3 md:grid-cols-2"
       >
         <input type="hidden" name="id" value={device.id} />
-        <div>
+        <div className="grid gap-2">
           <Label>{t("ssapHost")}</Label>
           <Input
             name="ssap_host"
@@ -119,7 +119,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
             spellCheck={false}
           />
         </div>
-        <div>
+        <div className="grid gap-2">
           <Label>{t("jellyfinAppId")}</Label>
           <Input
             name="jellyfin_app_id"
@@ -130,7 +130,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
             autoComplete="off"
             spellCheck={false}
           />
-          <p className="mt-1 text-xs text-zinc-500">{t("jellyfinAppIdHint")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("jellyfinAppIdHint")}</p>
         </div>
         <Button type="submit" size="sm" className="md:col-span-2 w-fit">
           {t("ssapSaveSettings")}
@@ -138,8 +138,8 @@ export function NetworkTvSsapPanel({ device }: Props) {
       </FormAction>
 
       {apps.length > 0 && (
-        <div className="max-h-48 overflow-y-auto rounded border border-zinc-200 text-sm dark:border-zinc-700">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="max-h-48 overflow-y-auto rounded border text-sm border-input">
+          <ul className="divide-y divide-border">
             {apps.map((app) => (
               <li
                 key={app.id}
@@ -147,7 +147,7 @@ export function NetworkTvSsapPanel({ device }: Props) {
               >
                 <span className="min-w-0 truncate">
                   <span className="font-medium">{app.title}</span>
-                  <span className="ml-2 text-xs text-zinc-500">{app.id}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{app.id}</span>
                 </span>
                 <Button
                   type="button"

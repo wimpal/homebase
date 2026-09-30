@@ -85,7 +85,7 @@ export function ShoppingPlanningView({
     <div className="flex flex-wrap items-center gap-2">
       <a
         href={shoppingHref({})}
-        className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
+        className={`rounded-full px-3 py-1 text-xs ${!storeFilter ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
       >
         {t("all")}
       </a>
@@ -93,14 +93,14 @@ export function ShoppingPlanningView({
         <a
           key={s.id}
           href={shoppingHref({ storeId: s.id })}
-          className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800"}`}
+          className={`rounded-full px-3 py-1 text-xs ${storeFilter === s.id ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
         >
           {s.name}
         </a>
       ))}
       <button
         type="button"
-        className="text-xs text-zinc-500 underline"
+        className="text-xs text-muted-foreground underline"
         onClick={() => setStoreManageOpen((o) => !o)}
       >
         {storeManageOpen ? t("hideStores") : t("stores")}
@@ -112,11 +112,11 @@ export function ShoppingPlanningView({
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{listName}</h2>
-        <span className="text-sm text-zinc-400">{items.length}</span>
+        <span className="text-sm text-muted-foreground">{items.length}</span>
       </div>
       {storeChips}
       {storeManageOpen && (
-        <div className="mt-2 space-y-2 rounded-lg border border-dashed border-zinc-300 p-2 dark:border-zinc-700">
+        <div className="mt-2 space-y-2 rounded-lg border border-dashed border-input p-2">
           <form action={createStore} className="flex gap-2">
             <Input name="name" placeholder={t("storeName")} required />
             <Button type="submit" size="sm">
@@ -142,7 +142,7 @@ export function ShoppingPlanningView({
         {items.length === 0 ? (
           <EmptyState message={t("nothingNeeded")} />
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {items.map((item) => (
               <li
                 key={item.id}
@@ -159,16 +159,16 @@ export function ShoppingPlanningView({
                     className="flex w-full items-center gap-3 text-left"
                     aria-label={t("markBought")}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-zinc-300 text-xs dark:border-zinc-600" />
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs border-border" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">
                         {item.name}
                         {item.quantity !== 1 && (
-                          <span className="text-zinc-400"> ×{item.quantity}</span>
+                          <span className="text-muted-foreground"> ×{item.quantity}</span>
                         )}
                       </span>
                       {(item.autoAdded || item.store || item.tags.length > 0) && (
-                        <span className="block truncate text-xs text-zinc-400">
+                        <span className="block truncate text-xs text-muted-foreground">
                           {item.autoAdded && t("autoAdded")}
                           {item.store && ` @ ${item.store.name}`}
                           {item.tags.length > 0 && ` · ${item.tags.join(", ")}`}
@@ -182,7 +182,7 @@ export function ShoppingPlanningView({
                   actionName="removeShoppingItem"
                 >
                   <input type="hidden" name="id" value={item.id} />
-                  <Button type="submit" variant="ghost" size="sm" className="text-zinc-400">
+                  <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground">
                     {tc("remove")}
                   </Button>
                 </FormAction>
@@ -198,17 +198,17 @@ export function ShoppingPlanningView({
     return (
       <li
         key={p.id}
-        className={`flex items-center gap-1 px-1 py-2 ${p.needed ? "opacity-60" : ""}`}
+        className={`flex items-center gap-1 px-1 py-2${p.needed ? "opacity-60" : ""}`}
       >
         {p.needed ? (
           <div className="flex min-w-0 flex-1 items-center justify-between px-2 py-1.5">
             <div className="min-w-0">
               <p className="truncate text-sm">{p.name}</p>
               {p.category && (
-                <p className="truncate text-xs text-zinc-400">{p.category}</p>
+                <p className="truncate text-xs text-muted-foreground">{p.category}</p>
               )}
             </div>
-            <span className="text-xs text-emerald-600">{t("onList")}</span>
+            <span className="text-xs text-primary">{t("onList")}</span>
           </div>
         ) : (
           <FormAction
@@ -220,17 +220,17 @@ export function ShoppingPlanningView({
             <input type="hidden" name="productId" value={p.id} />
             <button
               type="submit"
-              className="flex w-full items-center justify-between px-2 py-1.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              className="flex w-full items-center justify-between px-2 py-1.5 text-left hover:bg-muted"
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">{p.name}</span>
                 {p.category && (
-                  <span className="block truncate text-xs text-zinc-400">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {p.category}
                   </span>
                 )}
               </span>
-              <span className="shrink-0 text-xs text-emerald-600">{t("need")}</span>
+              <span className="shrink-0 text-xs text-primary">{t("need")}</span>
             </button>
           </FormAction>
         )}
@@ -238,7 +238,7 @@ export function ShoppingPlanningView({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 w-8 shrink-0 p-0 text-zinc-400"
+          className="h-8 w-8 shrink-0 p-0 text-muted-foreground"
           aria-label={t("editProduct")}
           onClick={() => setEditing(p)}
         >
@@ -252,7 +252,7 @@ export function ShoppingPlanningView({
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{t("catalog")}</h2>
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-muted-foreground">
           {filteredCatalog.length}
           {filtersActive ? ` / ${catalog.length}` : ""}
         </span>
@@ -302,10 +302,10 @@ export function ShoppingPlanningView({
 
       {categories.length > 0 && (
         <>
-          <div className="my-3 border-t border-zinc-200 dark:border-zinc-800" />
+          <div className="my-3 border-t border-border" />
           <button
             type="button"
-            className="mb-2 flex w-full items-center gap-2 text-left text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            className="mb-2 flex w-full items-center gap-2 text-left text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setCategoriesOpen((o) => !o)}
             aria-expanded={categoriesOpen}
           >
@@ -314,12 +314,12 @@ export function ShoppingPlanningView({
             />
             <span className="font-medium">{t("categories")}</span>
             {categoryFilter && !categoriesOpen && (
-              <span className="truncate text-xs text-emerald-600">
+              <span className="truncate text-xs text-primary">
                 · {categoryFilter}
               </span>
             )}
             {!categoryFilter && (
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted-foreground">
                 ({categories.length})
               </span>
             )}
@@ -352,10 +352,10 @@ export function ShoppingPlanningView({
         </>
       )}
 
-      <div className="my-3 border-t border-zinc-200 dark:border-zinc-800" />
+      <div className="my-3 border-t border-border" />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-y divide-border">
           {showCreateRow && (
             <li>
               <FormAction
@@ -368,7 +368,7 @@ export function ShoppingPlanningView({
                 <input type="hidden" name="quantity" value="1" />
                 <button
                   type="submit"
-                  className="flex w-full items-center gap-2 px-2 py-2.5 text-left text-sm text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  className="flex w-full items-center gap-2 px-2 py-2.5 text-left text-sm text-primary hover:bg-primary/10"
                 >
                   {t("addNamed", { name: qTrim })}
                 </button>
@@ -376,7 +376,7 @@ export function ShoppingPlanningView({
             </li>
           )}
           {filteredCatalog.length === 0 && !showCreateRow ? (
-            <li className="px-2 py-4 text-sm text-zinc-500">
+            <li className="px-2 py-4 text-sm text-muted-foreground">
               {t("noProductsMatch")}
             </li>
           ) : (
@@ -389,17 +389,17 @@ export function ShoppingPlanningView({
 
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
-      <div className="mb-3 flex gap-1 rounded-lg bg-zinc-100 p-1 lg:hidden dark:bg-zinc-900">
+      <div className="mb-3 flex gap-1 rounded-lg bg-muted p-1 lg:hidden">
         <button
           type="button"
-          className={`flex-1 rounded-md py-2 text-sm font-medium ${mobileTab === "browse" ? "bg-white shadow dark:bg-zinc-800" : ""}`}
+          className={`flex-1 rounded-md py-2 text-sm font-medium${mobileTab === "browse" ? "shadow bg-muted" : ""}`}
           onClick={() => setMobileTab("browse")}
         >
           {t("browse")}
         </button>
         <button
           type="button"
-          className={`flex-1 rounded-md py-2 text-sm font-medium ${mobileTab === "need" ? "bg-white shadow dark:bg-zinc-800" : ""}`}
+          className={`flex-1 rounded-md py-2 text-sm font-medium${mobileTab === "need" ? "shadow bg-muted" : ""}`}
           onClick={() => setMobileTab("need")}
         >
           {t("needTab", { count: items.length })}
@@ -407,7 +407,7 @@ export function ShoppingPlanningView({
       </div>
 
       <div className="hidden min-h-0 flex-1 gap-6 lg:grid lg:grid-cols-5">
-        <div className="col-span-3 flex min-h-0 flex-col border-r border-zinc-200 pr-6 dark:border-zinc-800">
+        <div className="col-span-3 flex min-h-0 flex-col border-r border-border pr-6">
           {browsePanel}
         </div>
         <div className="col-span-2 flex min-h-0 flex-col">{needPanel}</div>
@@ -423,7 +423,7 @@ export function ShoppingPlanningView({
           if (!open) setEditing(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("editProduct")}</DialogTitle>
           </DialogHeader>
@@ -438,7 +438,7 @@ export function ShoppingPlanningView({
               onSuccess={() => setEditing(null)}
             >
               <input type="hidden" name="id" value={editing.id} />
-              <div>
+              <div className="grid gap-2">
                 <Label>{tc("name")}</Label>
                 <Input
                   name="name"
@@ -447,7 +447,7 @@ export function ShoppingPlanningView({
                   autoFocus
                 />
               </div>
-              <div>
+              <div className="grid gap-2">
                 <Label>{tc("category")}</Label>
                 <Input
                   name="category"

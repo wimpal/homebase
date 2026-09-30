@@ -54,7 +54,7 @@ export function NetworkClient({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-zinc-500">{t("subtitle")}</p>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href={includeRetired ? "/network" : "/network?retired=1"}>
@@ -64,7 +64,7 @@ export function NetworkClient({
       </div>
 
       {!isAdmin && (
-        <p className="text-sm text-zinc-500">{t("adminOnly")}</p>
+        <p className="text-sm text-muted-foreground">{t("adminOnly")}</p>
       )}
 
       {isAdmin && <NetworkScanPanel types={types} locations={locations} />}
@@ -87,16 +87,16 @@ export function NetworkClient({
                 actionName="enrollNetworkDevice"
                 className="grid gap-3 md:grid-cols-2"
               >
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("name")}</Label>
                   <Input name="name" required maxLength={200} />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("type")}</Label>
                   <select
                     name="type"
                     required
-                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                    className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                   >
                     {types.map((ty) => (
                       <option key={ty.id} value={ty.id}>
@@ -105,12 +105,12 @@ export function NetworkClient({
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("location")}</Label>
                   <select
                     name="location"
                     required
-                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                    className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                   >
                     {locations.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -119,7 +119,7 @@ export function NetworkClient({
                     ))}
                   </select>
                 </div>
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("mac")}</Label>
                     <Input
                       name="mac"
@@ -134,13 +134,13 @@ export function NetworkClient({
                       type="checkbox"
                       id="enroll-wake"
                       name="wake_allowed"
-                      className="h-4 w-4 rounded border-zinc-300"
+                      className="h-4 w-4 rounded border-input"
                     />
                     <Label htmlFor="enroll-wake" className="font-normal">
                       {t("wakeAllowlist")}
                     </Label>
                   </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("notes")}</Label>
                   <Input
                     name="notes"
@@ -167,12 +167,12 @@ export function NetworkClient({
                     <Network className="h-4 w-4" />
                     {d.name}
                     {d.retired_at && (
-                      <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                      <span className="rounded bg-accent px-1.5 py-0.5 text-xs text-foreground">
                         {t("retired")}
                       </span>
                     )}
                   </p>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {d.type.name} · {d.location.name}
                     {d.mac_address ? ` · ${d.mac_address}` : ""}
                     {d.wake_allowed ? ` · ${t("wakeCapableBadge")}` : ""}
@@ -180,7 +180,7 @@ export function NetworkClient({
                     {d.last_seen_ip ? ` · ${d.last_seen_ip}` : ""}
                   </p>
                   {d.notes && (
-                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {d.notes}
                     </p>
                   )}
@@ -231,7 +231,7 @@ export function NetworkClient({
                   action={updateNetworkDeviceAction}
                   actionName="updateNetworkDevice"
                   onSuccess={() => setEditingId(null)}
-                  className="grid gap-3 border-t border-zinc-100 pt-3 md:grid-cols-2 dark:border-zinc-800"
+                  className="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
                   confirmIf={(fd) => {
                     const mac = String(fd.get("mac") ?? "").trim();
                     const wake = fd.get("wake_allowed") === "on";
@@ -241,7 +241,7 @@ export function NetworkClient({
                   }}
                 >
                   <input type="hidden" name="id" value={d.id} />
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("name")}</Label>
                     <Input
                       name="name"
@@ -250,12 +250,12 @@ export function NetworkClient({
                       maxLength={200}
                     />
                   </div>
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("type")}</Label>
                     <select
                       name="type"
                       defaultValue={d.type.id}
-                      className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                      className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                     >
                       {types.map((ty) => (
                         <option key={ty.id} value={ty.id}>
@@ -264,12 +264,12 @@ export function NetworkClient({
                       ))}
                     </select>
                   </div>
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("location")}</Label>
                     <select
                       name="location"
                       defaultValue={d.location.id}
-                      className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                      className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                     >
                       {locations.map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -278,7 +278,7 @@ export function NetworkClient({
                       ))}
                     </select>
                   </div>
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("mac")}</Label>
                     <Input
                       name="mac"
@@ -289,7 +289,7 @@ export function NetworkClient({
                       spellCheck={false}
                     />
                   </div>
-                  <div>
+                  <div className="grid gap-2">
                     <Label>{t("notes")}</Label>
                     <Input
                       name="notes"
@@ -303,13 +303,13 @@ export function NetworkClient({
                       id={`wake-${d.id}`}
                       name="wake_allowed"
                       defaultChecked={d.wake_allowed}
-                      className="h-4 w-4 rounded border-zinc-300"
+                      className="h-4 w-4 rounded border-input"
                     />
                     <Label htmlFor={`wake-${d.id}`} className="font-normal">
                       {t("wakeAllowlist")}
                     </Label>
                   </div>
-                  <p className="text-xs text-zinc-500 md:col-span-2">
+                  <p className="text-xs text-muted-foreground md:col-span-2">
                     {t("wakeAllowlistHint")}
                   </p>
                   <Button type="submit">{t("saveChanges")}</Button>
@@ -335,7 +335,7 @@ export function NetworkClient({
                   <li key={ty.id} className="flex justify-between gap-2">
                     <span>{ty.name}</span>
                     {ty.isSystem && (
-                      <span className="text-xs text-zinc-400">{t("system")}</span>
+                      <span className="text-xs text-muted-foreground">{t("system")}</span>
                     )}
                   </li>
                 ))}
@@ -369,7 +369,7 @@ export function NetworkClient({
                     {loc.isReserved ? (
                       <div className="flex justify-between gap-2">
                         <span>{loc.name}</span>
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-muted-foreground">
                           {t("reserved")}
                         </span>
                       </div>

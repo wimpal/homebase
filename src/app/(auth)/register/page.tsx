@@ -25,12 +25,12 @@ export default async function RegisterPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-emerald-700">{t("title")}</CardTitle>
+          <CardTitle className="text-2xl text-primary">{t("title")}</CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {params.error && (
-            <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">
+            <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {params.message || params.error}
             </p>
           )}
@@ -67,9 +67,9 @@ export default async function RegisterPage({
               {t("submit")}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-zinc-500">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("hasAccount")}{" "}
-            <Link href="/login" className="text-emerald-600 hover:underline">
+            <Link href="/login" className="text-primary hover:underline">
               {t("signIn")}
             </Link>
           </p>

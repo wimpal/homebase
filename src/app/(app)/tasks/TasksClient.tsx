@@ -99,7 +99,7 @@ export function TasksClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Tabs defaultValue="chores">
@@ -171,12 +171,12 @@ export function TasksClient({
                   <div>
                     <p className="font-medium">{chore.title}</p>
                     {dueLabel && (
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {chore.intervalDays ? tc("next") : tc("due")}: {dueLabel}
                       </p>
                     )}
                     {avg && (
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-muted-foreground">
                         {t("avg", { minutes: avg })}
                       </p>
                     )}
@@ -254,21 +254,21 @@ export function TasksClient({
               <Card key={entry.id}>
                 <CardContent className="space-y-1 p-4">
                   <p className="font-medium">{entry.title}</p>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {tc("completed")}: {formatDateTime(entry.completed_at)}
                   </p>
                   {entry.started_at && (
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {tc("started")}: {formatDateTime(entry.started_at)}
                     </p>
                   )}
                   {entry.duration_min != null && (
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       {entry.duration_min} {tc("min")}
                     </p>
                   )}
                   {entry.completed_by && (
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       {tc("by")} {entry.completed_by}
                     </p>
                   )}

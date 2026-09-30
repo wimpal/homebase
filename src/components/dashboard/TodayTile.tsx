@@ -19,31 +19,31 @@ export function TodayTile() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <CalendarDays className="h-5 w-5 text-emerald-600" />
+          <CalendarDays className="h-5 w-5 text-primary" />
           {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <p className="text-zinc-500">{t("dayOfYear")}</p>
+          <div className="rounded-lg bg-background p-3">
+            <p className="text-muted-foreground">{t("dayOfYear")}</p>
             <p className="text-2xl font-bold">{info.dayOfYear}</p>
           </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <p className="text-zinc-500">{t("weekOfYear")}</p>
+          <div className="rounded-lg bg-background p-3">
+            <p className="text-muted-foreground">{t("weekOfYear")}</p>
             <p className="text-2xl font-bold">{info.weekOfYear}</p>
           </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <p className="text-zinc-500">{t("daysLeft")}</p>
+          <div className="rounded-lg bg-background p-3">
+            <p className="text-muted-foreground">{t("daysLeft")}</p>
             <p className="text-2xl font-bold">{info.daysLeft}</p>
           </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <p className="text-zinc-500">{t("yearProgress")}</p>
+          <div className="rounded-lg bg-background p-3">
+            <p className="text-muted-foreground">{t("yearProgress")}</p>
             <p className="text-2xl font-bold">{info.percentOfYear}%</p>
           </div>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between text-xs text-zinc-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>{t("yearProgress")}</span>
             <span>{info.percentOfYear}%</span>
           </div>
@@ -60,8 +60,8 @@ export function TodayTile() {
                 startAngle={90}
                 endAngle={-270}
               >
-                <Cell fill="#059669" />
-                <Cell fill="#e4e4e7" />
+                <Cell fill="var(--chart-1)" />
+                <Cell fill="var(--muted)" />
               </Pie>
             </PieChart>
           </ResponsiveContainer>

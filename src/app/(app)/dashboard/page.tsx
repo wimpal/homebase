@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
         <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <CheckSquare className="h-5 w-5 text-emerald-600" />
+              <CheckSquare className="h-5 w-5 text-primary" />
               {t("todoList")}
             </CardTitle>
           </CardHeader>
@@ -52,25 +52,25 @@ export default async function DashboardPage() {
             }
           >
             {todos.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t("noChores")}</p>
+              <p className="text-sm text-muted-foreground">{t("noChores")}</p>
             ) : (
               <ul className="space-y-2">
                 {todos.map((chore) => (
                   <li key={chore.id}>
                     <Link
                       href="/tasks"
-                      className="flex justify-between rounded-lg border p-3 text-sm transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      className="flex justify-between rounded-lg border p-3 text-sm transition-colors hover:bg-muted"
                     >
                       <div>
                         <p className="font-medium">{chore.title}</p>
                         {chore.nextDue && (
-                          <p className="text-zinc-500">
+                          <p className="text-muted-foreground">
                             {t("due", { date: formatDate(chore.nextDue, bcp47, { dateStyle: "medium" }) })}
                           </p>
                         )}
                       </div>
                       {chore.avgDuration && (
-                        <span className="text-xs text-zinc-400">{t("avgDuration", { minutes: chore.avgDuration })}</span>
+                        <span className="text-xs text-muted-foreground">{t("avgDuration", { minutes: chore.avgDuration })}</span>
                       )}
                     </Link>
                   </li>
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
             }
           >
             {lowStock.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t("allStocked")}</p>
+              <p className="text-sm text-muted-foreground">{t("allStocked")}</p>
             ) : (
               <ul className="space-y-2">
                 {lowStock.map((p) => (

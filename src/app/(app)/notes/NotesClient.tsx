@@ -31,7 +31,7 @@ export function NotesClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
         <p className="mt-2 text-sm text-amber-800 dark:text-amber-200/90">
           {t("notPasswordManager")}
         </p>
@@ -53,11 +53,11 @@ export function NotesClient({
                 actionName="createNote"
                 className="grid gap-3"
               >
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("titleLabel")}</Label>
                   <Input name="title" maxLength={200} />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("bodyLabel")}</Label>
                   <Textarea name="body" required rows={4} maxLength={4000} />
                 </div>
@@ -79,7 +79,7 @@ export function NotesClient({
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <StickyNote className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <StickyNote className="h-4 w-4 shrink-0 text-primary" />
                     {note.title?.trim() || t("untitled")}
                   </CardTitle>
                   {canMutate && (
@@ -95,12 +95,12 @@ export function NotesClient({
                     </ConfirmFormAction>
                   )}
                 </div>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {new Date(note.created_at).toLocaleString()}
                 </p>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
+                <p className="whitespace-pre-wrap text-sm text-foreground">
                   {note.body}
                 </p>
               </CardContent>

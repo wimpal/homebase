@@ -71,23 +71,23 @@ export default async function SettingsPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">
+        <p className="text-muted-foreground">
           {household.name} · {role}
         </p>
       </div>
 
       {params.status === "account_saved" && (
-        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
           {t("account.saved")}
         </p>
       )}
       {params.status === "member_password_reset" && (
-        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
           {t("members.passwordResetDone")}
         </p>
       )}
       {params.status === "member_removed" && (
-        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
           {t("members.removed")}
         </p>
       )}
@@ -114,7 +114,7 @@ export default async function SettingsPage({
           </CardHeader>
           <CardContent className="space-y-4">
             {members.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t("members.empty")}</p>
+              <p className="text-sm text-muted-foreground">{t("members.empty")}</p>
             ) : (
               members.map((m) => (
                 <SettingsMemberRow
@@ -145,7 +145,7 @@ export default async function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {!isAdmin && (
-            <p className="text-sm text-zinc-500">{t("modules.adminOnly")}</p>
+            <p className="text-sm text-muted-foreground">{t("modules.adminOnly")}</p>
           )}
           {MODULE_REGISTRY.map((mod) => {
             const enabled = enabledIds.has(mod.id);
@@ -156,10 +156,10 @@ export default async function SettingsPage({
                 className="flex items-center justify-between rounded-lg border p-4"
               >
                 <div className="flex items-center gap-3">
-                  <Icon className="h-5 w-5 text-emerald-600" />
+                  <Icon className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">{tm(`${mod.nameKey}.name`)}</p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {tm(`${mod.descriptionKey}.description`)}
                     </p>
                   </div>
@@ -186,7 +186,7 @@ export default async function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {!isAdmin && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               {t("notifications.adminOnly")}
             </p>
           )}
@@ -201,7 +201,7 @@ export default async function SettingsPage({
                   <p className="font-medium">
                     {t(`notifications.types.${type}`)}
                   </p>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {t(`notifications.typeHints.${type}`)}
                   </p>
                 </div>
@@ -229,7 +229,7 @@ export default async function SettingsPage({
         </CardHeader>
         <CardContent>
           {!isAdmin ? (
-            <p className="text-sm text-zinc-500">{t("import.adminOnly")}</p>
+            <p className="text-sm text-muted-foreground">{t("import.adminOnly")}</p>
           ) : (
             <ImportClient
               targets={listImportTargets().map((x) => ({
@@ -254,11 +254,11 @@ export default async function SettingsPage({
               {visitorPrefs.map((vp) => (
                 <div
                   key={vp.id}
-                  className="flex items-start justify-between gap-3 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900"
+                  className="flex items-start justify-between gap-3 rounded-lg bg-background p-3 text-sm"
                 >
                   <div>
                     <p className="font-medium">{vp.visitorName}</p>
-                    <p className="text-zinc-500">
+                    <p className="text-muted-foreground">
                       {JSON.stringify(vp.preferences)}
                     </p>
                   </div>

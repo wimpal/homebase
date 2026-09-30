@@ -38,9 +38,9 @@ function NavLinks({
 
   return (
     <>
-      <div className="border-b border-zinc-200 p-6 dark:border-zinc-800">
-        <h1 className="text-xl font-bold text-emerald-700">{t("home")}</h1>
-        <p className="text-sm text-zinc-500">{householdName}</p>
+      <div className="border-b border-border p-6">
+        <h1 className="text-xl font-bold text-primary">{t("home")}</h1>
+        <p className="text-sm text-muted-foreground">{householdName}</p>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {links.map((link) => {
@@ -53,10 +53,10 @@ function NavLinks({
               href={link.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900",
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -65,15 +65,16 @@ function NavLinks({
           );
         })}
       </nav>
-      <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="border-t border-border p-4">
         <form action="/api/auth/signout" method="POST">
-          <button
+          <Button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            variant="ghost"
+            className="w-full justify-start gap-3 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           >
             <LogOut className="h-4 w-4" />
             {t("signOut")}
-          </button>
+          </Button>
         </form>
       </div>
     </>
@@ -100,7 +101,7 @@ export function Sidebar({ modules, householdName }: SidebarProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden">
         <Button
           type="button"
           variant="outline"
@@ -111,14 +112,14 @@ export function Sidebar({ modules, householdName }: SidebarProps) {
           <Menu className="h-4 w-4" />
         </Button>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-emerald-700">
+          <p className="truncate text-sm font-semibold text-primary">
             {t("home")}
           </p>
-          <p className="truncate text-xs text-zinc-500">{householdName}</p>
+          <p className="truncate text-xs text-muted-foreground">{householdName}</p>
         </div>
       </div>
 
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
         <NavLinks modules={modules} householdName={householdName} />
       </aside>
 
@@ -130,7 +131,7 @@ export function Sidebar({ modules, householdName }: SidebarProps) {
             aria-label={t("closeMenu")}
             onClick={() => setOpen(false)}
           />
-          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl dark:bg-zinc-950">
+          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col bg-card shadow-xl">
             <div className="absolute right-3 top-3 z-10">
               <Button
                 type="button"

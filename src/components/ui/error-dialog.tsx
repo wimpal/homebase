@@ -82,31 +82,31 @@ export function ErrorDialog({ error, onClose }: ErrorDialogProps) {
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription asChild>
-            <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <p>
-                <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                <span className="font-medium text-foreground">
                   {t("whyLabel")}{" "}
                 </span>
                 {copy.why}
               </p>
               <p>
-                <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                <span className="font-medium text-foreground">
                   {t("fixLabel")}{" "}
                 </span>
                 {copy.fix}
               </p>
               {!copy.known && error?.message ? (
-                <p className="rounded-md bg-zinc-100 px-2 py-1.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                <p className="rounded-md bg-muted px-2 py-1.5 font-mono text-xs text-muted-foreground">
                   {error.message}
                 </p>
               ) : null}
               {reportStatus === "sent" ? (
-                <p className="text-emerald-700 dark:text-emerald-400">
+                <p className="text-primary ">
                   {t("reportSent")}
                 </p>
               ) : null}
               {reportStatus === "failed" ? (
-                <p className="text-red-600 dark:text-red-400">
+                <p className="text-destructive ">
                   {t("reportFailed")}
                 </p>
               ) : null}

@@ -39,15 +39,15 @@ export default async function RoutinesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-zinc-500">{t("subtitle")}</p>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         {gamification.points && (
-          <div className="flex items-center gap-4 rounded-lg bg-emerald-50 px-4 py-2 dark:bg-emerald-950">
+          <div className="flex items-center gap-4 rounded-lg bg-primary/10 px-4 py-2">
             <div className="flex items-center gap-1">
               <Trophy className="h-4 w-4 text-amber-500" />
               <span className="font-bold">{gamification.points.points}</span> {tc("pts")}
             </div>
-            <div className="text-sm text-zinc-500">{t("dayStreak", { count: gamification.points.streak })}</div>
+            <div className="text-sm text-muted-foreground">{t("dayStreak", { count: gamification.points.streak })}</div>
           </div>
         )}
       </div>
@@ -72,8 +72,8 @@ export default async function RoutinesPage() {
             <CardHeader><CardTitle className="text-base">{t("createRoutine")}</CardTitle></CardHeader>
             <CardContent>
               <form action={createRoutine} className="space-y-3">
-                <div><Label>{tc("name")}</Label><Input name="name" required /></div>
-                <div><Label>{tc("description")}</Label><Textarea name="description" /></div>
+                <div className="grid gap-2"><Label>{tc("name")}</Label><Input name="name" required /></div>
+                <div className="grid gap-2"><Label>{tc("description")}</Label><Textarea name="description" /></div>
                 <Button type="submit">{tc("create")}</Button>
               </form>
             </CardContent>
@@ -105,7 +105,7 @@ export default async function RoutinesPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-base">{routine.name}</CardTitle>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {routine.members.map((m) => m.user.name).join(", ")}
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export default async function RoutinesPage() {
                 <div key={task.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="text-sm font-medium">{task.title}</p>
-                    <p className="text-xs text-zinc-500">{task.recurrence} · {task.points} {tc("pts")}</p>
+                    <p className="text-xs text-muted-foreground">{task.recurrence} · {task.points} {tc("pts")}</p>
                     {task.dependsOn.length > 0 && (
                       <p className="text-xs text-amber-600">
                         {t("dependsOn", { titles: task.dependsOn.map((d) => d.dependsOnTask.title).join(", ") })}

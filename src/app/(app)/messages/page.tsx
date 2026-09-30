@@ -40,7 +40,7 @@ export default async function MessagesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Tabs defaultValue="chat">
@@ -78,9 +78,9 @@ export default async function MessagesPage() {
                 <Card key={msg.id}>
                   <CardContent className="p-3">
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-emerald-600" />
+                      <MessageSquare className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">{msg.user.name}</span>
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-muted-foreground">
                         {formatDateTime(msg.createdAt, bcp47)}
                       </span>
                     </div>
@@ -99,7 +99,7 @@ export default async function MessagesPage() {
             </CardHeader>
             <CardContent>
               <form action={createRequest} className="space-y-3">
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("type")}</Label>
                   <select
                     name="type"
@@ -109,11 +109,11 @@ export default async function MessagesPage() {
                     <option value="TASK">{t("task")}</option>
                   </select>
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("title")}</Label>
                   <Input name="title" required />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("description")}</Label>
                   <Textarea name="description" />
                 </div>
@@ -137,7 +137,7 @@ export default async function MessagesPage() {
                       )}
                       {req.title}
                     </p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {t("byStatus", {
                         name: req.user.name ?? "",
                         status: req.status,
@@ -169,14 +169,14 @@ export default async function MessagesPage() {
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                         {req.title}
                       </p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {t("byStatus", {
                           name: req.user.name ?? "",
                           status: req.status,
                         })}
                       </p>
                       {req.description ? (
-                        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-zinc-100 p-2 font-mono text-xs dark:bg-zinc-800">
+                        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-muted p-2 font-mono text-xs">
                           {req.description}
                         </pre>
                       ) : null}

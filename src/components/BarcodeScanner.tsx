@@ -52,7 +52,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-4 dark:bg-zinc-950">
+      <div className="w-full max-w-md rounded-xl bg-card p-4">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
             <Camera className="h-5 w-5" />
@@ -63,7 +63,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           </Button>
         </div>
         {error ? (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-destructive">{error}</p>
         ) : (
           <video ref={videoRef} className="w-full rounded-lg" />
         )}

@@ -19,7 +19,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         }))}
         householdName={household.name}
       />
-      <main className="min-w-0 flex-1 overflow-auto bg-zinc-50 p-4 dark:bg-zinc-900 md:p-6">
+      <main className="min-w-0 flex-1 overflow-auto bg-background p-4 md:p-6">
         <FormErrorProvider>{children}</FormErrorProvider>
       </main>
     </div>

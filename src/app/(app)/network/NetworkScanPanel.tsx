@@ -166,10 +166,10 @@ export function NetworkScanPanel({ types, locations }: Props) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-zinc-500">{t("scanHint")}</p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <p className="text-sm text-muted-foreground">{t("scanHint")}</p>
+        {error && <p className="text-sm text-destructive">{error}</p>}
         {job && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400" aria-live="polite">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
             {running
               ? t("scanProgress", {
                   done: job.progress.done,
@@ -188,17 +188,17 @@ export function NetworkScanPanel({ types, locations }: Props) {
             {candidates.map((c) => (
               <li
                 key={c.ip}
-                className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700"
+                className="rounded-md border p-3 border-input"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">
                       {c.hostname || c.ip}
-                      <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">
                         {t(`scanStatus_${c.status}`)}
                       </span>
                     </p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {c.ip}
                       {c.mac ? ` · ${c.mac}` : ""}
                       {c.device_name ? ` · ${c.device_name}` : ""}
@@ -220,7 +220,7 @@ export function NetworkScanPanel({ types, locations }: Props) {
                       await enrollCandidate(c, fd);
                     }}
                   >
-                    <div>
+                    <div className="grid gap-2">
                       <Label>{t("name")}</Label>
                       <Input
                         name="name"
@@ -228,7 +228,7 @@ export function NetworkScanPanel({ types, locations }: Props) {
                         maxLength={200}
                       />
                     </div>
-                    <div>
+                    <div className="grid gap-2">
                       <Label>{t("mac")}</Label>
                       <Input
                         name="mac"
@@ -239,12 +239,12 @@ export function NetworkScanPanel({ types, locations }: Props) {
                         spellCheck={false}
                       />
                     </div>
-                    <div>
+                    <div className="grid gap-2">
                       <Label>{t("type")}</Label>
                       <select
                         name="type"
                         required
-                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                       >
                         {types.map((ty) => (
                           <option key={ty.id} value={ty.id}>
@@ -253,12 +253,12 @@ export function NetworkScanPanel({ types, locations }: Props) {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="grid gap-2">
                       <Label>{t("location")}</Label>
                       <select
                         name="location"
                         required
-                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        className="flex h-10 w-full rounded-md border bg-card px-3 text-sm border-input"
                       >
                         {locations.map((loc) => (
                           <option key={loc.id} value={loc.id}>

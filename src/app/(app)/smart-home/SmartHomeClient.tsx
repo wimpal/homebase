@@ -223,7 +223,7 @@ export function SmartHomeClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
@@ -257,15 +257,15 @@ export function SmartHomeClient({
           {latest && (
             <div className="grid grid-cols-3 gap-3">
               <Card><CardContent className="p-4 text-center">
-                <Thermometer className="mx-auto h-5 w-5 text-red-500" />
+                <Thermometer className="mx-auto h-5 w-5 text-destructive" />
                 <p className="text-2xl font-bold">{latest.temperature ?? tc("emDash")}°</p>
               </CardContent></Card>
               <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-zinc-500">{t("humidity")}</p>
+                <p className="text-xs text-muted-foreground">{t("humidity")}</p>
                 <p className="text-2xl font-bold">{latest.humidity ?? tc("emDash")}%</p>
               </CardContent></Card>
               <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-zinc-500">{t("airQuality")}</p>
+                <p className="text-xs text-muted-foreground">{t("airQuality")}</p>
                 <p className="text-2xl font-bold">{latest.airQuality ?? tc("emDash")}</p>
               </CardContent></Card>
             </div>
@@ -280,8 +280,18 @@ export function SmartHomeClient({
                     <XAxis dataKey="time" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="temp" stroke="#ef4444" dot={false} />
-                    <Line type="monotone" dataKey="humidity" stroke="#3b82f6" dot={false} />
+              <Line
+                type="monotone"
+                dataKey="temp"
+                stroke="var(--chart-1)"
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="humidity"
+                stroke="var(--chart-5)"
+                dot={false}
+              />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -292,7 +302,7 @@ export function SmartHomeClient({
         <TabsContent value="ikea-lights" className="space-y-4">
           {!dirigera.configured ? (
             <Card>
-              <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+              <CardContent className="p-4 text-sm text-muted-foreground">
                 <p>
                   {t.rich("dirigeraSetup", {
                     ip: () => <code className="text-xs">DIRIGERA_IP</code>,
@@ -312,7 +322,7 @@ export function SmartHomeClient({
             </Card>
           ) : dirigera.lights.length === 0 ? (
             <Card>
-              <CardContent className="p-4 text-sm text-zinc-500">
+              <CardContent className="p-4 text-sm text-muted-foreground">
                 {t("noIkeaLights")}
               </CardContent>
             </Card>
@@ -339,12 +349,12 @@ export function SmartHomeClient({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <Lightbulb
-                            className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-zinc-400"}`}
+                            className={`h-5 w-5 ${light.isOn ? "text-amber-500" : "text-muted-foreground"}`}
                           />
                           <div>
                             <span>{light.name}</span>
                             {light.room && (
-                              <span className="ml-2 text-xs text-zinc-500">{light.room}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">{light.room}</span>
                             )}
                             {!light.isReachable && (
                               <span className="ml-2 text-xs text-amber-600">{t("unreachable")}</span>
@@ -361,7 +371,7 @@ export function SmartHomeClient({
 
                       {light.isReachable && light.supportsBrightness && (
                         <label className="flex flex-wrap items-center gap-3 text-sm">
-                          <span className="w-28 text-zinc-500">{t("brightness")}</span>
+                          <span className="w-28 text-muted-foreground">{t("brightness")}</span>
                           <input
                             type="range"
                             min={0}
@@ -387,7 +397,7 @@ export function SmartHomeClient({
 
                       {light.isReachable && light.supportsColorTemp && (
                         <label className="flex flex-wrap items-center gap-3 text-sm">
-                          <span className="w-28 text-zinc-500">{t("warmth")}</span>
+                          <span className="w-28 text-muted-foreground">{t("warmth")}</span>
                           <input
                             type="range"
                             min={kelvinMin}
@@ -414,7 +424,7 @@ export function SmartHomeClient({
 
                       {light.isReachable && light.supportsColor && (
                         <div className="space-y-2 text-sm">
-                          <span className="text-zinc-500">{t("colour")}</span>
+                          <span className="text-muted-foreground">{t("colour")}</span>
                           <div className="flex flex-wrap gap-2">
                             {IKEA_CHROMATIC_PRESETS.map((preset) => {
                               const selected =
@@ -436,8 +446,8 @@ export function SmartHomeClient({
                                   className={cn(
                                     "h-8 w-8 rounded-md border-2 shadow-sm transition disabled:opacity-50",
                                     selected
-                                      ? "border-emerald-600 ring-2 ring-emerald-600/40"
-                                      : "border-zinc-300 dark:border-zinc-600",
+                                      ? "border-primary ring-2 ring-primary/40"
+                                      : "border-border",
                                   )}
                                   style={{ backgroundColor: preset.hex }}
                                 />
@@ -445,7 +455,7 @@ export function SmartHomeClient({
                             })}
                           </div>
                           {(light.colorPreset || colourValue) && (
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-muted-foreground">
                               {IKEA_CHROMATIC_PRESETS.find((p) => p.id === light.colorPreset)
                                 ?.name ?? colourValue}
                             </p>
@@ -474,7 +484,7 @@ export function SmartHomeClient({
               <CardTitle className="text-base">{t("addCamera")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-zinc-500">{t("reolinkHint")}</p>
+              <p className="text-sm text-muted-foreground">{t("reolinkHint")}</p>
               <form action={createCamera} className="grid gap-2 sm:grid-cols-2">
                 <Input
                   name="name"
@@ -528,7 +538,7 @@ export function SmartHomeClient({
                           <Camera className="h-4 w-4" /> {cam.name}
                         </p>
                         {reolinkConfig && (
-                          <p className="mt-1 text-sm text-zinc-500">
+                          <p className="mt-1 text-sm text-muted-foreground">
                             {t("cameraHostLabel")}: {reolinkConfig.host}
                           </p>
                         )}
@@ -564,11 +574,11 @@ export function SmartHomeClient({
                         className="max-h-48 rounded"
                       />
                     ) : streamConfiguredOnly ? (
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {t("legacyStreamHidden")}
                       </p>
                     ) : (
-                      <p className="text-sm text-zinc-500">{t("configureStream")}</p>
+                      <p className="text-sm text-muted-foreground">{t("configureStream")}</p>
                     )}
                   </CardContent>
                 </Card>

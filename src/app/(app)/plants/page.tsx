@@ -28,7 +28,7 @@ export default async function PlantsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <CollapsibleCreate
@@ -40,10 +40,10 @@ export default async function PlantsPage() {
           <CardHeader><CardTitle className="text-base">{t("addPlant")}</CardTitle></CardHeader>
           <CardContent>
             <form action={createPlant} className="grid gap-3 md:grid-cols-2">
-              <div><Label>{tc("name")}</Label><Input name="name" required /></div>
-              <div><Label>{t("species")}</Label><Input name="species" /></div>
-              <div><Label>{t("waterEveryDays")}</Label><Input name="wateringDays" type="number" defaultValue="7" /></div>
-              <div className="md:col-span-2"><Label>{tc("notes")}</Label><Textarea name="notes" /></div>
+              <div className="grid gap-2"><Label>{tc("name")}</Label><Input name="name" required /></div>
+              <div className="grid gap-2"><Label>{t("species")}</Label><Input name="species" /></div>
+              <div className="grid gap-2"><Label>{t("waterEveryDays")}</Label><Input name="wateringDays" type="number" defaultValue="7" /></div>
+              <div className="grid gap-2 md:col-span-2"><Label>{tc("notes")}</Label><Textarea name="notes" /></div>
               <Button type="submit">{t("addPlantBtn")}</Button>
             </form>
           </CardContent>
@@ -63,7 +63,7 @@ export default async function PlantsPage() {
                       <Droplets className="h-4 w-4 text-blue-500" />
                       {plant.name}
                     </CardTitle>
-                    {plant.species && <p className="text-sm text-zinc-500">{plant.species}</p>}
+                    {plant.species && <p className="text-sm text-muted-foreground">{plant.species}</p>}
                   </div>
                   <ConfirmForm action={deletePlant} message={t("confirmDelete")}>
                     <input type="hidden" name="id" value={plant.id} />
@@ -86,10 +86,10 @@ export default async function PlantsPage() {
                   <Button type="submit" size="sm">{t("markWatered")}</Button>
                 </form>
                 {plant.logs.map((log) => (
-                  <div key={log.id} className="rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                  <div key={log.id} className="rounded bg-background p-2 text-xs">
                     {log.photoUrl && <img src={log.photoUrl} alt="" className="mb-2 max-h-24 rounded" />}
                     {log.notes && <p>{log.notes}</p>}
-                    <p className="text-zinc-400">{formatDate(log.createdAt, bcp47, { dateStyle: "medium" })}</p>
+                    <p className="text-muted-foreground">{formatDate(log.createdAt, bcp47, { dateStyle: "medium" })}</p>
                   </div>
                 ))}
               </CardContent>

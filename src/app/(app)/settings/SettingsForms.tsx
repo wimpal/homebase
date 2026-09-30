@@ -41,7 +41,7 @@ export function SettingsAccountForm({
         email: String(fd.get("email") ?? ""),
       })}
     >
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="account-name">{t("account.displayName")}</Label>
         <Input
           id="account-name"
@@ -50,7 +50,7 @@ export function SettingsAccountForm({
           required
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="account-email">{tc("email")}</Label>
         <Input
           id="account-email"
@@ -60,7 +60,7 @@ export function SettingsAccountForm({
           required
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="account-birthday">{t("account.birthday")}</Label>
         <Input
           id="account-birthday"
@@ -68,12 +68,12 @@ export function SettingsAccountForm({
           type="date"
           defaultValue={profile.birthday ?? ""}
         />
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           {t("account.birthdayHint")}
           {birthdayDisplay ? ` · ${birthdayDisplay}` : ""}
         </p>
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="account-current-password">
           {t("account.currentPassword")}
         </Label>
@@ -83,11 +83,11 @@ export function SettingsAccountForm({
           type="password"
           autoComplete="current-password"
         />
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           {t("account.currentPasswordHint")}
         </p>
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="account-new-password">{t("account.newPassword")}</Label>
         <Input
           id="account-new-password"
@@ -127,14 +127,14 @@ export function SettingsMemberRow({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{member.name || member.email}</p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             {member.email} · {member.role}
             {isSelf ? ` · ${t("members.you")}` : ""}
           </p>
         </div>
         {!isSelf &&
           (member.isLastAdmin ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {t("members.cannotRemoveLastAdmin")}
             </p>
           ) : (
@@ -157,7 +157,7 @@ export function SettingsMemberRow({
           className="flex flex-wrap items-end gap-2"
         >
           <input type="hidden" name="userId" value={member.userId} />
-          <div className="min-w-[12rem] flex-1">
+          <div className="grid min-w-[12rem] flex-1 gap-2">
             <Label htmlFor={`reset-${member.userId}`}>
               {t("members.newPassword")}
             </Label>
@@ -192,11 +192,11 @@ export function SettingsVisitorPreferenceForm() {
         visitorName: String(fd.get("visitorName") ?? ""),
       })}
     >
-      <div>
+      <div className="grid gap-2">
         <Label>{t("visitor.visitorName")}</Label>
         <Input name="visitorName" required />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("visitor.preferencesJson")}</Label>
         <Input
           name="preferences"

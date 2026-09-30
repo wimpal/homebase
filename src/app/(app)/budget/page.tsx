@@ -27,7 +27,7 @@ export default async function BudgetPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -35,10 +35,10 @@ export default async function BudgetPage() {
           <CardHeader><CardTitle className="text-base">{t("createBudget")}</CardTitle></CardHeader>
           <CardContent>
             <form action={createBudget} className="space-y-3">
-              <div><Label>{tc("name")}</Label><Input name="name" required /></div>
-              <div><Label>{tc("category")}</Label><Input name="category" required /></div>
-              <div><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
-              <div>
+              <div className="grid gap-2"><Label>{tc("name")}</Label><Input name="name" required /></div>
+              <div className="grid gap-2"><Label>{tc("category")}</Label><Input name="category" required /></div>
+              <div className="grid gap-2"><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
+              <div className="grid gap-2">
                 <Label>{t("period")}</Label>
                 <select name="period" className="flex h-10 w-full rounded-md border px-3 text-sm">
                   <option value="monthly">{t("monthly")}</option>
@@ -55,10 +55,10 @@ export default async function BudgetPage() {
           <CardHeader><CardTitle className="text-base">{t("logExpense")}</CardTitle></CardHeader>
           <CardContent>
             <form action={addExpense} className="space-y-3">
-              <div><Label>{tc("description")}</Label><Input name="description" required /></div>
-              <div><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
-              <div><Label>{tc("category")}</Label><Input name="category" /></div>
-              <div>
+              <div className="grid gap-2"><Label>{tc("description")}</Label><Input name="description" required /></div>
+              <div className="grid gap-2"><Label>{t("amount")}</Label><Input name="amount" type="number" step="0.01" required /></div>
+              <div className="grid gap-2"><Label>{tc("category")}</Label><Input name="category" /></div>
+              <div className="grid gap-2">
                 <Label>{t("budget")}</Label>
                 <select name="budgetId" className="flex h-10 w-full rounded-md border px-3 text-sm">
                   <option value="">{tc("noneOption")}</option>
@@ -84,7 +84,7 @@ export default async function BudgetPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <CardTitle className="text-base">{budget.name}</CardTitle>
-                      <p className="text-sm text-zinc-500">{budget.category} · {budget.period}</p>
+                      <p className="text-sm text-muted-foreground">{budget.category} · {budget.period}</p>
                     </div>
                     <ConfirmForm action={deleteBudget} message={t("confirmDeleteBudget")}>
                       <input type="hidden" name="id" value={budget.id} />
@@ -98,7 +98,7 @@ export default async function BudgetPage() {
                     <span>{t("remaining", { amount: formatCurrency(remaining, bcp47) })}</span>
                   </div>
                   <Progress value={percent} />
-                  <p className="text-xs text-zinc-400">{t("budgetAmount", { amount: formatCurrency(budget.amount, bcp47) })}</p>
+                  <p className="text-xs text-muted-foreground">{t("budgetAmount", { amount: formatCurrency(budget.amount, bcp47) })}</p>
                 </CardContent>
               </Card>
             );
@@ -124,7 +124,7 @@ export default async function BudgetPage() {
                     <p className="font-medium">
                       {e.description}: {formatCurrency(e.amount, bcp47)}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       {e.budget?.name ?? tc("noneOption")}
                       {e.category ? ` · ${e.category}` : ""}
                     </p>

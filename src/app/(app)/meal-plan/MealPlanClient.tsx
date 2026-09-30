@@ -110,8 +110,8 @@ export function MealPlanClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
-        <p className="mt-1 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+        <p className="text-muted-foreground">{t("subtitle")}</p>
+        <p className="mt-1 text-sm font-medium text-foreground">
           {weekLabel}
         </p>
       </div>
@@ -154,12 +154,12 @@ export function MealPlanClient({
             </Button>
           </ConfirmFormAction>
           {surpriseFeedback && (
-            <span className="text-sm text-zinc-600 dark:text-zinc-300">
+            <span className="text-sm text-foreground">
               {surpriseFeedback}
             </span>
           )}
           {shoppingFeedback && (
-            <span className="text-sm text-zinc-600 dark:text-zinc-300">
+            <span className="text-sm text-foreground">
               {shoppingFeedback}
             </span>
           )}
@@ -222,7 +222,7 @@ function DayCard({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{weekdayLabel}</CardTitle>
-        <p className="text-xs text-zinc-500">{day.date}</p>
+        <p className="text-xs text-muted-foreground">{day.date}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {day.recipeId ? (

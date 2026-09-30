@@ -544,6 +544,7 @@
   "smartHome": {
     "title": "Smart Home",
     "subtitle": "Sensors, lights, automations, and cameras",
+    "unavailable": "Unavailable",
     "noReadings": "Add sensor readings to get recommendations.",
     "recommendations": {
       "warmAir": "Open windows for fresh air - temperature is warm and humidity is moderate.",
@@ -746,6 +747,7 @@
     "title": "Pets",
     "subtitle": "Pet care, appointments, and feeding",
     "addPet": "Add Pet",
+    "species": "Species",
     "breed": "Breed",
     "birthDate": "Birth date",
     "addPetBtn": "Add Pet",

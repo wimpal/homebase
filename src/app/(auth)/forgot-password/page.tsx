@@ -21,7 +21,7 @@ export default async function ForgotPasswordPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-emerald-700">{t("title")}</CardTitle>
+          <CardTitle className="text-2xl text-primary">{t("title")}</CardTitle>
           <CardDescription>
             {smtp ? t("descriptionSmtp") : t("descriptionNoSmtp")}
           </CardDescription>
@@ -38,12 +38,12 @@ export default async function ForgotPasswordPage({
             </p>
           )}
           {params.status === "sent" && (
-            <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+            <p className="mb-4 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
               {t("sentGeneric")}
             </p>
           )}
           {params.error && (
-            <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">
+            <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {params.message || params.error}
             </p>
           )}
@@ -58,8 +58,8 @@ export default async function ForgotPasswordPage({
               </Button>
             </form>
           )}
-          <p className="mt-4 text-center text-sm text-zinc-500">
-            <Link href="/login" className="text-emerald-600 hover:underline">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            <Link href="/login" className="text-primary hover:underline">
               {t("backToSignIn")}
             </Link>
           </p>

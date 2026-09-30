@@ -37,7 +37,7 @@ export default async function PetsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <CollapsibleCreate
@@ -49,11 +49,11 @@ export default async function PetsPage() {
           <CardHeader><CardTitle className="text-base">{t("addPet")}</CardTitle></CardHeader>
           <CardContent>
             <form action={createPet} className="grid gap-3 md:grid-cols-2">
-              <div><Label>{tc("name")}</Label><Input name="name" required /></div>
-              <div><Label>{t("species")}</Label><Input name="species" /></div>
-              <div><Label>{t("breed")}</Label><Input name="breed" /></div>
-              <div><Label>{t("birthDate")}</Label><Input name="birthDate" type="date" /></div>
-              <div className="md:col-span-2"><Label>{tc("notes")}</Label><Textarea name="notes" /></div>
+              <div className="grid gap-2"><Label>{tc("name")}</Label><Input name="name" required /></div>
+              <div className="grid gap-2"><Label>{t("species")}</Label><Input name="species" /></div>
+              <div className="grid gap-2"><Label>{t("breed")}</Label><Input name="breed" /></div>
+              <div className="grid gap-2"><Label>{t("birthDate")}</Label><Input name="birthDate" type="date" /></div>
+              <div className="grid gap-2 md:col-span-2"><Label>{tc("notes")}</Label><Textarea name="notes" /></div>
               <Button type="submit">{t("addPetBtn")}</Button>
             </form>
           </CardContent>
@@ -69,7 +69,7 @@ export default async function PetsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-base">{pet.name}</CardTitle>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {[pet.species, pet.breed].filter(Boolean).join(" · ")}
                     {stats[i]?.age != null && ` · ${tc("yearsOld", { age: stats[i].age! })}`}
                   </p>
@@ -82,17 +82,17 @@ export default async function PetsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
+                <div className="rounded-lg bg-background p-2">
                   <p className="font-bold">{stats[i]?.feedingRoutines}</p>
-                  <p className="text-zinc-500">{t("feedingRoutines")}</p>
+                  <p className="text-muted-foreground">{t("feedingRoutines")}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
+                <div className="rounded-lg bg-background p-2">
                   <p className="font-bold">{stats[i]?.upcomingAppointments}</p>
-                  <p className="text-zinc-500">{t("upcoming")}</p>
+                  <p className="text-muted-foreground">{t("upcoming")}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
+                <div className="rounded-lg bg-background p-2">
                   <p className="font-bold">{stats[i]?.totalAppointments}</p>
-                  <p className="text-zinc-500">{t("totalVisits")}</p>
+                  <p className="text-muted-foreground">{t("totalVisits")}</p>
                 </div>
               </div>
 
@@ -117,7 +117,7 @@ export default async function PetsPage() {
                   <p className="mb-1 text-sm font-medium">{t("feeding")}</p>
                   <ul className="space-y-1">
                     {pet.feedingRoutines.map((r) => (
-                      <li key={r.id} className="flex items-center justify-between gap-2 text-sm text-zinc-600">
+                      <li key={r.id} className="flex items-center justify-between gap-2 text-sm text-foreground">
                         <span>
                           {r.amount
                             ? t("atTime", { name: r.name, time: r.timeOfDay, amount: r.amount })
@@ -138,7 +138,7 @@ export default async function PetsPage() {
                   <p className="mb-1 text-sm font-medium">{t("appointments")}</p>
                   <ul className="space-y-1">
                     {pet.appointments.map((a) => (
-                      <li key={a.id} className="flex items-center justify-between gap-2 text-sm text-zinc-600">
+                      <li key={a.id} className="flex items-center justify-between gap-2 text-sm text-foreground">
                         <span>
                           {a.title} - {formatDateTime(a.date, bcp47)}
                         </span>

@@ -100,11 +100,11 @@ export function ProtocolsClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {!isAdmin && (
-        <p className="text-sm text-zinc-500">{t("adminOnly")}</p>
+        <p className="text-sm text-muted-foreground">{t("adminOnly")}</p>
       )}
 
       <Card>
@@ -113,7 +113,7 @@ export function ProtocolsClient({
             <Clapperboard className="h-4 w-4" />
             {t("cinemaTitle")}
           </CardTitle>
-          <p className="text-sm text-zinc-500">{t("cinemaHint")}</p>
+          <p className="text-sm text-muted-foreground">{t("cinemaHint")}</p>
         </CardHeader>
         <CardContent>
           {!isAdmin ? (
@@ -130,14 +130,14 @@ export function ProtocolsClient({
                 router.refresh();
               }}
             >
-              <div className="md:col-span-2">
+                <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="networkDeviceId">{t("tv")}</Label>
                 <select
                   id="networkDeviceId"
                   name="networkDeviceId"
                   value={tvId}
                   onChange={(e) => setTvId(e.target.value)}
-                  className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
                 >
                   <option value="">{t("tvNone")}</option>
                   {tvOptions.map((tv) => (
@@ -146,17 +146,17 @@ export function ProtocolsClient({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-zinc-500">{t("tvHint")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("tvHint")}</p>
               </div>
 
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor="deviceLocationId">{t("deviceLocation")}</Label>
                 <select
                   id="deviceLocationId"
                   name="deviceLocationId"
                   value={locationId}
                   onChange={(e) => setLocationId(e.target.value)}
-                  className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
                 >
                   <option value="">{t("mapNone")}</option>
                   {locations.map((loc) => (
@@ -167,14 +167,14 @@ export function ProtocolsClient({
                 </select>
               </div>
 
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor="dirigeraRoomName">{t("dirigeraRoom")}</Label>
                 <select
                   id="dirigeraRoomName"
                   name="dirigeraRoomName"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
                 >
                   <option value="">{t("mapNone")}</option>
                   {dirigeraRooms.map((room) => (
@@ -183,10 +183,10 @@ export function ProtocolsClient({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-zinc-500">{t("mapHint")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("mapHint")}</p>
               </div>
 
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor="dimBrightness">{t("dim")}</Label>
                 <Input
                   id="dimBrightness"
@@ -200,7 +200,7 @@ export function ProtocolsClient({
                 />
               </div>
 
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor="cutoffHhMm">{t("cutoff")}</Label>
                 <Input
                   id="cutoffHhMm"
@@ -210,12 +210,12 @@ export function ProtocolsClient({
                   value={cutoffHhMm}
                   onChange={(e) => setCutoffHhMm(e.target.value)}
                 />
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("cutoffHint", { timezone: settings.timezone })}
                 </p>
               </div>
 
-              <div className="md:col-span-2 space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+              <div className="md:col-span-2 space-y-3 rounded-md border border-border p-3">
                 <input
                   type="hidden"
                   name="sunsetLinkEnabled"
@@ -224,7 +224,7 @@ export function ProtocolsClient({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium">{t("sunsetLink")}</p>
-                    <p className="text-xs text-zinc-500">{t("sunsetLinkHint")}</p>
+                    <p className="text-xs text-muted-foreground">{t("sunsetLinkHint")}</p>
                   </div>
                   <Switch
                     checked={sunsetLinkEnabled}
@@ -233,7 +233,7 @@ export function ProtocolsClient({
                   />
                 </div>
                 {sunsetLinkEnabled ? (
-                  <div>
+                  <div className="grid gap-2">
                     <Label htmlFor="minutesBeforeSunset">
                       {t("minutesBeforeSunset")}
                     </Label>
@@ -256,7 +256,7 @@ export function ProtocolsClient({
                     })}
                   </p>
                 ) : settings.sunsetLastAdjustResult?.startsWith("ok:") ? (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     {t("sunsetAdjustOk", {
                       detail: settings.sunsetLastAdjustResult,
                     })}
@@ -266,11 +266,11 @@ export function ProtocolsClient({
 
               <div className="md:col-span-2">
                 <Label>{t("lamps")}</Label>
-                <p className="mb-2 text-xs text-zinc-500">{t("lampsHint")}</p>
+                <p className="mb-2 text-xs text-muted-foreground">{t("lampsHint")}</p>
                 {filteredLights.length === 0 ? (
-                  <p className="text-sm text-zinc-500">{t("noLamps")}</p>
+                  <p className="text-sm text-muted-foreground">{t("noLamps")}</p>
                 ) : (
-                  <ul className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+                  <ul className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border p-3">
                     {filteredLights.map((light) => (
                       <li key={light.id} className="flex items-center gap-2">
                         <input
@@ -279,12 +279,12 @@ export function ProtocolsClient({
                           value={light.id}
                           checked={selected.has(light.id)}
                           onChange={() => toggleLight(light.id)}
-                          className="h-4 w-4 rounded border-zinc-300"
+                          className="h-4 w-4 rounded border-input"
                         />
                         <span className="text-sm">
                           {light.name}
                           {light.room ? (
-                            <span className="text-zinc-500"> · {light.room}</span>
+                            <span className="text-muted-foreground"> · {light.room}</span>
                           ) : null}
                         </span>
                       </li>
@@ -306,7 +306,7 @@ export function ProtocolsClient({
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   {tc("save")}
                 </button>
@@ -329,21 +329,21 @@ function CinemaReadOnly({
   return (
     <dl className="grid gap-3 text-sm md:grid-cols-2">
       <div>
-        <dt className="text-zinc-500">{t("tv")}</dt>
+        <dt className="text-muted-foreground">{t("tv")}</dt>
         <dd>{settings.networkDeviceId ?? t("tvNone")}</dd>
       </div>
       <div>
-        <dt className="text-zinc-500">{t("dim")}</dt>
+        <dt className="text-muted-foreground">{t("dim")}</dt>
         <dd>{settings.dimBrightness}</dd>
       </div>
       <div>
-        <dt className="text-zinc-500">{t("cutoff")}</dt>
+        <dt className="text-muted-foreground">{t("cutoff")}</dt>
         <dd>
           {settings.cutoffHhMm} ({settings.timezone})
         </dd>
       </div>
       <div>
-        <dt className="text-zinc-500">{t("lamps")}</dt>
+        <dt className="text-muted-foreground">{t("lamps")}</dt>
         <dd>{settings.selectedLightIds.length}</dd>
       </div>
     </dl>

@@ -79,10 +79,10 @@ const GROUP_LABEL_KEYS: Record<string, string> = {
   garnish: "groupGarnish",
 };
 
-const listText = "text-sm text-zinc-700 dark:text-zinc-300";
-const optionalText = "italic text-zinc-500 dark:text-zinc-400";
-const mutedText = "text-sm text-zinc-600 dark:text-zinc-400";
-const headingText = "font-medium text-zinc-800 dark:text-zinc-200";
+const listText = "text-sm text-foreground";
+const optionalText = "italic text-muted-foreground";
+const mutedText = "text-sm text-muted-foreground";
+const headingText = "font-medium text-foreground";
 
 function resolveSteps(recipe: Recipe): { text: string; optional: boolean }[] {
   if (recipe.steps && recipe.steps.length > 0) {
@@ -226,11 +226,11 @@ function RecipeFormFields({
 
   const left = (
     <>
-      <div>
+      <div className="grid gap-2">
         <Label>{tc("title")}</Label>
         <Input name="title" required defaultValue={recipe?.title ?? ""} />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("servings")}</Label>
         <Input
           name="servings"
@@ -238,9 +238,9 @@ function RecipeFormFields({
           defaultValue={String(recipe?.servings ?? 4)}
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("ingredientsPerLine")}</Label>
-        <p className="mb-1 text-xs text-zinc-500">{t("ingredientsHint")}</p>
+        <p className="mb-1 text-xs text-muted-foreground">{t("ingredientsHint")}</p>
         <Textarea
           name="ingredients"
           rows={8}
@@ -249,9 +249,9 @@ function RecipeFormFields({
           defaultValue={ingredientForms.main || undefined}
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("optionalIngredientsLabel")}</Label>
-        <p className="mb-1 text-xs text-zinc-500">
+        <p className="mb-1 text-xs text-muted-foreground">
           {t("optionalIngredientsHint")}
         </p>
         <Textarea
@@ -262,9 +262,9 @@ function RecipeFormFields({
           defaultValue={ingredientForms.optional || undefined}
         />
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("stepsPerLine")}</Label>
-        <p className="mb-1 text-xs text-zinc-500">{t("stepsOptionalHint")}</p>
+        <p className="mb-1 text-xs text-muted-foreground">{t("stepsOptionalHint")}</p>
         <Textarea
           name="instructions"
           rows={8}
@@ -279,11 +279,11 @@ function RecipeFormFields({
 
   const right = (
     <>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("tagsLabel")}</Label>
         {chipTags.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1.5">
-            <span className="w-full text-xs text-zinc-500">
+            <span className="w-full text-xs text-muted-foreground">
               {t("existingTags")}
             </span>
             {chipTags.map((tag) => {
@@ -321,7 +321,7 @@ function RecipeFormFields({
         <input type="hidden" name="tags" value={selectedTags.join(", ")} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
+        <div className="grid gap-2">
           <Label>{t("calories")}</Label>
           <Input
             name="calories"
@@ -332,7 +332,7 @@ function RecipeFormFields({
             placeholder={t("optionalBlank")}
           />
         </div>
-        <div>
+        <div className="grid gap-2">
           <Label>{t("proteinG")}</Label>
           <Input
             name="protein_g"
@@ -343,7 +343,7 @@ function RecipeFormFields({
             placeholder={t("optionalBlank")}
           />
         </div>
-        <div>
+        <div className="grid gap-2">
           <Label>{t("carbsG")}</Label>
           <Input
             name="carbs_g"
@@ -354,7 +354,7 @@ function RecipeFormFields({
             placeholder={t("optionalBlank")}
           />
         </div>
-        <div>
+        <div className="grid gap-2">
           <Label>{t("fatG")}</Label>
           <Input
             name="fat_g"
@@ -366,7 +366,7 @@ function RecipeFormFields({
           />
         </div>
       </div>
-      <div>
+      <div className="grid gap-2">
         <Label>{t("timersPerLine")}</Label>
         <Textarea
           name="timers"
@@ -593,7 +593,7 @@ export function RecipesClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-zinc-500">{t("subtitle")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Tabs defaultValue="recipes">
@@ -632,7 +632,7 @@ export function RecipesClient({
               />
               {allTags.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-zinc-500">{t("filterByTag")}</span>
+                  <span className="text-sm text-muted-foreground">{t("filterByTag")}</span>
                   <Button
                     type="button"
                     size="sm"
@@ -676,8 +676,8 @@ export function RecipesClient({
                   }}
                   className="text-left"
                 >
-                  <Card className="h-full transition hover:border-emerald-400 hover:shadow-sm">
-                    <div className="aspect-[4/3] overflow-hidden rounded-t-lg bg-zinc-100 dark:bg-zinc-900">
+                  <Card className="h-full transition hover:border-primary hover:shadow-sm">
+                    <div className="aspect-[4/3] overflow-hidden rounded-t-lg bg-muted">
                       {recipe.thumbnailUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -686,7 +686,7 @@ export function RecipesClient({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-zinc-400">
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
                           <ImageIcon className="h-10 w-10 opacity-40" />
                         </div>
                       )}
@@ -701,7 +701,7 @@ export function RecipesClient({
                         </p>
                       )}
                       {recipe.calories != null && (
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           {t("caloriesValue", { count: recipe.calories })}
                         </p>
                       )}
@@ -720,19 +720,19 @@ export function RecipesClient({
             </CardHeader>
             <CardContent>
               <form action={addLeftover} className="grid gap-3 md:grid-cols-2">
-                <div>
+                <div className="grid gap-2">
                   <Label>{tc("name")}</Label>
                   <Input name="name" required />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("servings")}</Label>
                   <Input name="servings" type="number" defaultValue="1" />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("expires")}</Label>
                   <Input name="expiresAt" type="date" />
                 </div>
-                <div>
+                <div className="grid gap-2">
                   <Label>{t("recipe")}</Label>
                   <select
                     name="recipeId"
@@ -759,7 +759,7 @@ export function RecipesClient({
                 <CardContent className="flex items-start justify-between gap-3 p-4">
                   <div>
                     <p className="font-medium">{l.name}</p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {t("servingsFrozen", {
                         servings: l.servings,
                         date: format.dateTime(new Date(l.frozenAt), {
@@ -787,7 +787,7 @@ export function RecipesClient({
 
       <Dialog open={!!selected} onOpenChange={closeOverlay}>
         {selected && (
-          <DialogContent className="w-[min(96vw,56rem)] max-w-none">
+          <DialogContent className="w-[min(96vw,56rem)] max-w-none max-h-[90vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>{selected.title}</DialogTitle>
               <DialogDescription>
@@ -875,7 +875,7 @@ export function RecipesClient({
                 </div>
 
                 <div className="space-y-4">
-                  <div className="aspect-[16/9] overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
+                  <div className="aspect-[16/9] overflow-hidden rounded-md bg-muted">
                     {displayThumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -884,7 +884,7 @@ export function RecipesClient({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-zinc-400">
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
                         <ImageIcon className="h-12 w-12 opacity-40" />
                       </div>
                     )}
@@ -892,7 +892,7 @@ export function RecipesClient({
 
                   <div className="flex flex-wrap gap-2">
                     <label className="inline-flex cursor-pointer">
-                      <span className="inline-flex h-8 items-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900">
+                      <span className="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
                         {uploadPending
                           ? t("uploading")
                           : displayThumb
@@ -1007,7 +1007,7 @@ export function RecipesClient({
                     </div>
                   )}
 
-                  <div className="space-y-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div className="space-y-2 rounded-md border border-border p-3">
                     <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -1026,7 +1026,7 @@ export function RecipesClient({
                       {t("addToShopping")}
                     </Button>
                     {shopFeedback && (
-                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                      <p className="text-sm text-primary">
                         {shopFeedback}
                       </p>
                     )}
