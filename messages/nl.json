@@ -870,7 +870,22 @@
     "scanStatus_new": "Nieuw",
     "scanStatus_enrolled": "Geregistreerd",
     "scanStatus_ambiguous": "Twijfelachtig",
-    "scanStatus_retired": "Uitgeschakeld"
+    "scanStatus_retired": "Uitgeschakeld",
+    "dirigeraTitle": "IKEA / Dirigera-inventaris",
+    "dirigeraPreview": "Importeren uit Dirigera",
+    "dirigeraRefresh": "Lijst vernieuwen",
+    "dirigeraHint": "Toont elk apparaat op de Dirigera-hub (lampen, blinds, afstandsbedieningen, sensoren, stopcontacten, hub). Er wordt niets toegevoegd tot je bevestigt. Lampen blijven via de licht-tools bediend.",
+    "dirigeraNothing": "Geen apparaten op de hub gevonden.",
+    "dirigeraCreateLocations": "Ontbrekende locaties aanmaken uit Dirigera-kamers",
+    "dirigeraCreateLocationsHint": "Uit: niet-gematchte kamers gaan naar Onbekend. Aan: per kamernaam wordt een locatie aangemaakt.",
+    "dirigeraConfirm": "Geselecteerde importeren ({count})",
+    "dirigeraStatus_new": "Nieuw",
+    "dirigeraStatus_already_enrolled": "Al geregistreerd",
+    "dirigeraStatus_retired_match": "Uitgeschakelde match",
+    "dirigeraLocation_matched": "Kamer: {name}",
+    "dirigeraLocation_missing": "Nieuwe kamer: {name}",
+    "dirigeraLocation_none": "Geen kamer - Onbekend",
+    "dirigeraSummary": "Geïmporteerd: {created}. Overgeslagen: {enrolled} al geregistreerd, {retired} uitgeschakeld, {missing} niet op hub. Locaties aangemaakt: {locations}."
   },
   "messages": {
     "title": "Berichten",

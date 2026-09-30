@@ -31,6 +31,18 @@ export type {
   ScanJobState,
   CandidateMatchStatus,
 } from "./scan";
+export { previewDirigeraImport } from "./dirigera-import/preview";
+export { confirmDirigeraImport } from "./dirigera-import/confirm";
+export { listDirigeraHubDevices } from "./dirigera-import/list-hub-devices";
+export { mapDirigeraToNetworkTypeSlug } from "./dirigera-import/map-type";
+export type {
+  DirigeraImportCandidate,
+  DirigeraImportCandidateStatus,
+  DirigeraImportLocationStatus,
+  DirigeraImportPreview,
+  ConfirmDirigeraImportInput,
+  ConfirmDirigeraImportSummary,
+} from "./dirigera-import/types";
 export {
   goHomeNetworkDevice,
   launchAppNetworkDevice,

@@ -977,6 +977,8 @@ model NetworkDevice {
   lastSeenIp       String?
   lastSeenHostname String?
   lastSeenAt       DateTime?
+  /// Dirigera hub device id for inventory import dedupe (T-111). UI/domain only - never MCP.
+  dirigeraId       String?
   /// SSAP client key from ADMIN pair (T-112 / ADR-023). Never returned on MCP or UI after save.
   ssapClientKey    String?
   /// Optional preferred host/IP for SSAP; fall back to lastSeenIp.
@@ -993,6 +995,7 @@ model NetworkDevice {
   cinemaSettings ProtocolCinemaSettings[]
 
   @@unique([householdId, macAddress])
+  @@unique([householdId, dirigeraId])
   @@index([householdId, retiredAt])
   @@index([householdId, name])
   @@index([typeId])

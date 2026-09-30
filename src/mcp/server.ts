@@ -549,7 +549,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.devices.list",
     {
       description:
-        'List Network devices (NAS, PCs, phones, routers, …) and where they live. Use for "where\'s the NAS" or "what\'s in the office". Not for IKEA lights (homebase.lights.*) or cameras.',
+        'List Network devices (NAS, PCs, phones, routers, … and ADMIN-imported Dirigera catalogue rows) and where they live. Use for "where\'s the NAS" or "what\'s in the office". Control IKEA lights with homebase.lights.*, not this tool. Not for cameras.',
       inputSchema: {
         location: z
           .string()
@@ -578,7 +578,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.devices.get",
     {
       description:
-        "Get one Network device by id with type and Device location. Not for Dirigera lamp ids.",
+        "Get one Network device by id with type and Device location (incl. ADMIN-imported Dirigera rows; the hub id is never returned). Control Dirigera lamps via homebase.lights.*.",
       inputSchema: {
         id: z.string().describe("Network device id"),
       },
@@ -596,7 +596,7 @@ export function createMcpServer(householdId: string): McpServer {
     "homebase.devices.add",
     {
       description:
-        "Enroll a Network device (name + type + existing Device location). Duplicate names auto-suffix. Does not create locations. Never accepts MAC.",
+        "Enroll a Network device (name + type + existing Device location). Duplicate names auto-suffix. Does not create locations. Never accepts MAC or Dirigera hub ids; imported Dirigera rows come from the ADMIN Home network import.",
       inputSchema: {
         name: z.string().describe("Display name; auto-suffixed if duplicate"),
         type: z.string().describe("Existing type id or slug"),

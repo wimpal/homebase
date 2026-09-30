@@ -27,6 +27,7 @@ import type {
   NetworkDeviceUiRow,
 } from "@/domain/network";
 import { NetworkScanPanel } from "./NetworkScanPanel";
+import { NetworkDirigeraImportPanel } from "./NetworkDirigeraImportPanel";
 import { NetworkTvSsapPanel } from "./NetworkTvSsapPanel";
 
 type Props = {
@@ -67,6 +68,8 @@ export function NetworkClient({
       )}
 
       {isAdmin && <NetworkScanPanel types={types} locations={locations} />}
+
+      {isAdmin && <NetworkDirigeraImportPanel types={types} locations={locations} />}
 
       {isAdmin && (
         <CollapsibleCreate

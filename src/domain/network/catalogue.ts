@@ -13,6 +13,12 @@ export const SYSTEM_NETWORK_DEVICE_TYPES: ReadonlyArray<{
   { slug: "printer", name: "Printer" },
   { slug: "tv", name: "TV" },
   { slug: "console", name: "Console" },
+  { slug: "light", name: "Light" },
+  { slug: "blind", name: "Blind" },
+  { slug: "remote", name: "Remote" },
+  { slug: "sensor", name: "Sensor" },
+  { slug: "hub", name: "Hub" },
+  { slug: "outlet", name: "Outlet" },
   { slug: "other", name: "Other" },
 ];
 

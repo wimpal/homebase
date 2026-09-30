@@ -870,7 +870,22 @@
     "scanStatus_new": "New",
     "scanStatus_enrolled": "Enrolled",
     "scanStatus_ambiguous": "Ambiguous",
-    "scanStatus_retired": "Retired"
+    "scanStatus_retired": "Retired",
+    "dirigeraTitle": "IKEA / Dirigera inventory",
+    "dirigeraPreview": "Import from Dirigera",
+    "dirigeraRefresh": "Refresh list",
+    "dirigeraHint": "Lists every device on the Dirigera hub (lights, blinds, remotes, sensors, outlets, hub). Nothing is added until you confirm. Lights stay controlled via the lights tools.",
+    "dirigeraNothing": "No devices found on the hub.",
+    "dirigeraCreateLocations": "Create missing locations from Dirigera rooms",
+    "dirigeraCreateLocationsHint": "Off: unmatched rooms go to Unknown. On: a new location is created per room name.",
+    "dirigeraConfirm": "Import selected ({count})",
+    "dirigeraStatus_new": "New",
+    "dirigeraStatus_already_enrolled": "Already enrolled",
+    "dirigeraStatus_retired_match": "Retired match",
+    "dirigeraLocation_matched": "Room: {name}",
+    "dirigeraLocation_missing": "New room: {name}",
+    "dirigeraLocation_none": "No room - Unknown",
+    "dirigeraSummary": "Imported {created}. Skipped: {enrolled} already enrolled, {retired} retired, {missing} not on hub. Locations created: {locations}."
   },
   "messages": {
     "title": "Messages",

@@ -8,6 +8,7 @@ import {
   addNetworkDeviceType,
   cancelScanJob,
   clearNetworkDeviceSsap,
+  confirmDirigeraImport,
   getNetworkDevice,
   getScanJob,
   listDeviceLocations,
@@ -15,6 +16,7 @@ import {
   listNetworkDeviceTypes,
   listNetworkDevicesForUi,
   pairNetworkDeviceSsap,
+  previewDirigeraImport,
   renameDeviceLocation,
   restoreNetworkDevice,
   retireNetworkDevice,
@@ -23,6 +25,8 @@ import {
   updateNetworkDeviceSsapSettings,
   type CatalogueLocation,
   type CatalogueType,
+  type ConfirmDirigeraImportSummary,
+  type DirigeraImportPreview,
   type NetworkDeviceDetail,
   type NetworkDeviceUiRow,
   type ScanJobSnapshot,
@@ -207,6 +211,31 @@ export async function cancelNetworkScanAction(
     return failResult("Scan job not found.", "scan_job_not_found");
   }
   return okResult(snap);
+}
+
+// --- T-111 Dirigera inventory import ---
+
+export async function previewDirigeraImportAction(): Promise<
+  ActionResult<DirigeraImportPreview>
+> {
+  const { householdId } = await adminNetwork();
+  const result = await previewDirigeraImport(householdId);
+  if (isDomainError(result)) return fromDomainError(result);
+  return okResult(result);
+}
+
+export async function confirmDirigeraImportAction(
+  selectedDirigeraIds: string[],
+  createMissingLocations: boolean,
+): Promise<ActionResult<ConfirmDirigeraImportSummary>> {
+  const { householdId } = await adminNetwork();
+  const result = await confirmDirigeraImport(householdId, {
+    selectedDirigeraIds,
+    createMissingLocations,
+  });
+  if (isDomainError(result)) return fromDomainError(result);
+  revalidatePath("/network");
+  return okResult(result);
 }
 
 // --- T-112 webOS SSAP ---
