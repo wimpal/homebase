@@ -736,6 +736,8 @@
     "assign": "Assign",
     "change": "Change",
     "clear": "Clear",
+    "clearWeek": "Clear week",
+    "confirmClearWeek": "Remove all planned dinners for this week?",
     "emptySlot": "No dinner planned",
     "chooseRecipe": "Choose recipe",
     "noRecipes": "No recipes in the library yet"

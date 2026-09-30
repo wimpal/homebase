@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormAction } from "@/components/ui/form-action";
 import { useFormError } from "@/components/ui/form-error-context";
@@ -17,9 +18,10 @@ import {
   addWeekToShoppingAction,
   assignDinnerAction,
   clearDinnerAction,
+  clearWeekAction,
   randomFillAction,
 } from "@/modules/meal-plan/actions";
-import { Shuffle, ShoppingCart, Trash2 } from "lucide-react";
+import { CalendarX, Shuffle, ShoppingCart, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 
@@ -135,6 +137,22 @@ export function MealPlanClient({
             <ShoppingCart className="h-4 w-4" />
             {t("addMissing")}
           </Button>
+          <ConfirmFormAction
+            action={clearWeekAction}
+            actionName="clearWeek"
+            message={t("confirmClearWeek")}
+          >
+            <input type="hidden" name="weekStart" value={data.weekStart} />
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={plannedDays === 0}
+              className="gap-2"
+            >
+              <CalendarX className="h-4 w-4" />
+              {t("clearWeek")}
+            </Button>
+          </ConfirmFormAction>
           {surpriseFeedback && (
             <span className="text-sm text-zinc-600 dark:text-zinc-300">
               {surpriseFeedback}

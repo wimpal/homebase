@@ -1,6 +1,6 @@
 import { prisma } from "@/core/db";
 import { DomainError } from "@/domain/error";
-import { dateKeyToColumn, isDateKey } from "./week";
+import { dateKeyToColumn, isDateKey, weekDateKeys, weekStartKey } from "./week";
 
 /**
  * Set (or replace) the dinner for one day. One row per household per day via
@@ -37,6 +37,32 @@ export async function clearDinner(
 
   const result = await prisma.mealPlanEntry.deleteMany({
     where: { householdId, date: dateKeyToColumn(dateKey) },
+  });
+
+  return { cleared: result.count };
+}
+
+/** Remove every planned dinner in one Mon–Sun week. */
+export async function clearWeekDinners(
+  householdId: string,
+  weekStart: string,
+): Promise<{ cleared: number } | DomainError> {
+  if (!isDateKey(weekStart)) {
+    return DomainError.invalidInput(
+      "Week start must be YYYY-MM-DD.",
+      "meal_plan_bad_week",
+    );
+  }
+
+  const dates = weekDateKeys(weekStartKey(weekStart));
+  const result = await prisma.mealPlanEntry.deleteMany({
+    where: {
+      householdId,
+      date: {
+        gte: dateKeyToColumn(dates[0]),
+        lte: dateKeyToColumn(dates[6]),
+      },
+    },
   });
 
   return { cleared: result.count };

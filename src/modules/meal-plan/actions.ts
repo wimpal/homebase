@@ -6,6 +6,7 @@ import { isDomainError } from "@/domain/error";
 import {
   assignDinner,
   clearDinner,
+  clearWeekDinners,
   getMealPlan as getMealPlanWeekData,
   isDateKey,
   randomFillDinners,
@@ -68,6 +69,23 @@ export async function clearDinnerAction(
   }
 
   const result = await clearDinner(householdId, date);
+  if (isDomainError(result)) return fromDomainError(result);
+
+  revalidatePath("/meal-plan");
+  return okResult();
+}
+
+export async function clearWeekAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId } = await requireMutationAccess(ModuleId.MEAL_PLAN);
+  const weekStart = String(formData.get("weekStart") ?? "");
+
+  if (!isDateKey(weekStart)) {
+    return failResult("Week start must be YYYY-MM-DD.", "meal_plan_bad_week");
+  }
+
+  const result = await clearWeekDinners(householdId, weekStart);
   if (isDomainError(result)) return fromDomainError(result);
 
   revalidatePath("/meal-plan");

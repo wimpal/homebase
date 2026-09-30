@@ -736,6 +736,8 @@
     "assign": "Toewijzen",
     "change": "Wijzigen",
     "clear": "Wissen",
+    "clearWeek": "Week wissen",
+    "confirmClearWeek": "Alle geplande diners van deze week verwijderen?",
     "emptySlot": "Nog geen diner gepland",
     "chooseRecipe": "Kies recept",
     "noRecipes": "Nog geen recepten in de bibliotheek"

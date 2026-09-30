@@ -1,4 +1,4 @@
-export { assignDinner, clearDinner } from "./assign";
+export { assignDinner, clearDinner, clearWeekDinners } from "./assign";
 export { addWeekIngredientsToShopping } from "./add-to-shopping";
 export { getMealPlan } from "./get-week";
 export { randomFillDinners } from "./random-fill";
