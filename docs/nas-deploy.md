@@ -40,7 +40,7 @@ nano .env   # or use your NAS text editor
 | Variable | Example | Why |
 |----------|---------|-----|
 | `AUTH_SECRET` | long random string | Session security |
-| `AUTH_URL` | `http://192.168.1.50:3000` | Your NAS IP + port — **not** `localhost` |
+| `AUTH_URL` | `http://192.168.1.142:3000` | Home-network Account UI URL — **not** `localhost`. Keep the **LAN IP** so the UI works at home without Tailscale. Away (T-136): open MagicDNS / `100.x` with Tailscale on (control-repo `homebase.tailnet_host`); do not point `AUTH_URL` at MagicDNS unless you want Tailscale required at home. |
 | `POSTGRES_PASSWORD` | strong password | Database security |
 | `DATABASE_URL` | match postgres password | Only needed for local dev |
 
@@ -257,6 +257,9 @@ For `https://homebase.yourdomain.local` and PWA install on phones:
 - Set `AUTH_URL` to the public HTTPS URL (e.g. `https://homebase.home.local`)
 - Synology: Control Panel → Login Portal → Reverse Proxy
 
+Phone install steps and PWA limits (icons, offline shell, secure-context need):
+**[docs/pwa.md](pwa.md)**
+
 ---
 
 ## Backup
@@ -276,7 +279,8 @@ Full schedule, retention, restore drill, and disaster recovery:
 |---------|-----|
 | Deploy asks for SSH password | Set up SSH key auth — see **[nas-pc-setup.md](nas-pc-setup.md)** (include NAS IP in `~/.ssh/config` `Host` line) |
 | `permission denied` on `docker.sock` during deploy | Add deploy user to `docker` group on NAS — see **[nas-pc-setup.md](nas-pc-setup.md)** §4 |
-| Login redirects wrong | `AUTH_URL` must match the URL in your browser |
+| Login redirects wrong | `AUTH_URL` must match the URL in your browser (MagicDNS after M7b Away) |
+| Away UI unreachable over Tailscale | Host Tailscale on NAS (`tag:homebase`); ACL `:3000`; see control-repo `docs/runbook-tailnet.md` + ADR-028. Do not add a compose Tailscale sidecar. |
 | Build fails on NAS | NAS CPU may be slow — first build can take 10–20 min |
 | Out of memory during build | Build on your PC, push image to a registry, or increase NAS swap |
 | Scheduler not running | Ensure `worker` container is up: `docker compose ps` |

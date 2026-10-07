@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#047857" />
+    <title>HomeBase — Offline</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fafafa;
+        --fg: #18181b;
+        --muted: #52525b;
+        --primary: #047857;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #09090b;
+          --fg: #fafafa;
+          --muted: #a1a1aa;
+          --primary: #34d399;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 32rem;
+        text-align: center;
+      }
+      img {
+        width: 96px;
+        height: 96px;
+        border-radius: 20px;
+      }
+      h1 {
+        margin: 20px 0 4px;
+        font-size: 1.5rem;
+        color: var(--primary);
+      }
+      p {
+        margin: 12px 0 0;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      hr {
+        margin: 28px auto;
+        width: 40%;
+        border: none;
+        border-top: 1px solid var(--muted);
+        opacity: 0.3;
+      }
+      button {
+        margin-top: 24px;
+        padding: 10px 20px;
+        font-size: 1rem;
+        color: #ffffff;
+        background: var(--primary);
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="HomeBase" width="96" height="96" />
+      <h1>You’re offline</h1>
+      <p>
+        HomeBase needs a network connection for household data. Check Wi‑Fi or
+        Tailscale, then try again.
+      </p>
+      <hr />
+      <h1>Je bent offline</h1>
+      <p>
+        HomeBase heeft een netwerkverbinding nodig voor huishoudgegevens.
+        Controleer wifi of Tailscale en probeer opnieuw.
+      </p>
+      <button onclick="location.reload()">Try again / Probeer opnieuw</button>
+    </main>
+  </body>
+</html>

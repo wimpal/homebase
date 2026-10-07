@@ -1,7 +1,9 @@
 import { signOut } from "@/core/auth/config";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+/** Redirect to /login on the same host the browser used (LAN or Tailscale Away). */
+export async function POST(request: Request) {
   await signOut({ redirect: false });
-  return NextResponse.redirect(new URL("/login", process.env.AUTH_URL || "http://localhost:3000"));
+  const origin = new URL(request.url).origin;
+  return NextResponse.redirect(new URL("/login", origin));
 }

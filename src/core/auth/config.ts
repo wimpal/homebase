@@ -8,6 +8,8 @@ import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  // LAN AUTH_URL + Tailscale Away (MagicDNS / 100.x) — same app, different hosts (T-136).
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({

@@ -6,6 +6,8 @@ import type { NextAuthConfig } from "next-auth";
  */
 export const authConfig = {
   session: { strategy: "jwt" },
+  // Allow Account UI on LAN IP and Tailscale Away host while AUTH_URL stays LAN (T-136).
+  trustHost: true,
   pages: {
     signIn: "/login",
   },

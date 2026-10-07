@@ -23,6 +23,9 @@ export default auth((request) => {
     pathname.startsWith("/_next") ||
     pathname === "/manifest.json" ||
     pathname === "/sw.js" ||
+    pathname === "/icon.svg" ||
+    pathname.startsWith("/icons/") ||
+    pathname === "/offline.html" ||
     pathname.startsWith("/api/uploads")
   ) {
     return NextResponse.next();
