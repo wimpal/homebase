@@ -19,11 +19,15 @@ import { getCurrentWeather } from "@/domain/weather";
 
 export default async function DashboardPage() {
   const { householdId } = await requireHousehold();
+  const inventoryEnabled = await isModuleEnabled(
+    householdId,
+    ModuleId.INVENTORY,
+  );
   const [notifications, todos, lowStock, household, mealPlanEnabled] =
     await Promise.all([
       getNotifications(householdId),
       getDashboardTodos(),
-      getLowStockProducts(),
+      inventoryEnabled ? getLowStockProducts() : Promise.resolve([]),
       prisma.household.findUnique({
         where: { id: householdId },
         select: { latitude: true, longitude: true, timezone: true },
@@ -83,7 +87,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-6 ${inventoryEnabled ? "md:grid-cols-2" : ""}`}>
         <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -125,36 +129,38 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              {t("lowStock")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={
-              lowStock.length === 0 ? undefined : "min-h-0 max-h-80 overflow-y-auto"
-            }
-          >
-            {lowStock.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("allStocked")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {lowStock.map((p) => (
-                  <li key={p.id}>
-                    <Link
-                      href="/inventory"
-                      className="block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/20 dark:hover:bg-amber-950/40"
-                    >
-                      {p.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        {inventoryEnabled && (
+          <Card className="flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                {t("lowStock")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent
+              className={
+                lowStock.length === 0 ? undefined : "min-h-0 max-h-80 overflow-y-auto"
+              }
+            >
+              {lowStock.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("allStocked")}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {lowStock.map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        href="/inventory"
+                        className="block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/20 dark:hover:bg-amber-950/40"
+                      >
+                        {p.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

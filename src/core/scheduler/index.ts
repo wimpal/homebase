@@ -1,6 +1,7 @@
 import { ModuleId, NotificationType } from "@prisma/client";
 import cron from "node-cron";
 import { prisma } from "@/core/db";
+import { isModuleEnabled } from "@/core/modules/settings";
 import { notify, purgeOldNotifications } from "@/core/notifications/service";
 import {
   adjustSunsetLinkedAutomations,
@@ -125,15 +126,7 @@ async function checkLightAutomations() {
 async function checkLowStock() {
   const households = await prisma.household.findMany();
   for (const household of households) {
-    const enabled = await prisma.moduleSetting.findUnique({
-      where: {
-        householdId_moduleId: {
-          householdId: household.id,
-          moduleId: ModuleId.INVENTORY,
-        },
-      },
-    });
-    if (enabled && !enabled.enabled) continue;
+    if (!(await isModuleEnabled(household.id, ModuleId.INVENTORY))) continue;
 
     const products = await prisma.product.findMany({
       where: { householdId: household.id },
@@ -172,6 +165,8 @@ async function checkExpiringProducts() {
   const soon = addDays(new Date(), 3);
 
   for (const household of households) {
+    if (!(await isModuleEnabled(household.id, ModuleId.INVENTORY))) continue;
+
     const items = await prisma.stockItem.findMany({
       where: {
         householdId: household.id,
@@ -201,7 +196,7 @@ async function checkExpiringProducts() {
         type: NotificationType.EXPIRY,
         title: `Expiring: ${item.product.name}`,
         message: `${item.product.name} expires on ${item.expiryDate?.toLocaleDateString()}.${recipeHint}`,
-        link: "/recipes",
+        link: "/inventory",
         dedupeKey: `expiry:${item.id}`,
       });
     }

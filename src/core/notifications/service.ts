@@ -1,6 +1,8 @@
 import { NotificationType, type Notification } from "@prisma/client";
 import { requireHousehold } from "@/core/auth/session";
 import { prisma } from "@/core/db";
+import { getEnabledModules } from "@/core/modules/settings";
+import { getModuleByHref } from "@/core/modules/registry";
 import { sendWebPush } from "./push";
 
 export interface NotifyInput {
@@ -105,11 +107,25 @@ export async function createNotification(input: NotifyInput) {
 }
 
 export async function getNotifications(householdId: string, limit = 20) {
-  return prisma.notification.findMany({
+  const enabledModules = await getEnabledModules(householdId);
+  const enabledIds = new Set(enabledModules.map((m) => m.id));
+
+  // Over-fetch so notifications for disabled modules don't crowd out the feed,
+  // then drop any whose link is owned by a disabled module and slice back.
+  // lean-ctx: fixed 2x window; widen if feeds routinely exceed it.
+  const rows = await prisma.notification.findMany({
     where: { householdId },
     orderBy: { createdAt: "desc" },
-    take: limit,
+    take: limit * 2,
   });
+
+  return rows
+    .filter((n) => {
+      if (!n.link) return true;
+      const owner = getModuleByHref(n.link);
+      return !owner || enabledIds.has(owner.id);
+    })
+    .slice(0, limit);
 }
 
 export async function markNotificationRead(id: string) {

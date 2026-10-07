@@ -5,6 +5,7 @@ import { getEnabledModules, toggleModule } from "@/core/modules/settings";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
 import {
   ALL_NOTIFICATION_TYPES,
+  NOTIFICATION_TYPE_MODULE,
   getNotificationTypeSettings,
 } from "@/core/notifications/prefs";
 import { getVisitorPreferences } from "@/modules/social/actions";
@@ -40,6 +41,7 @@ async function handleToggleModule(formData: FormData) {
   const enabled = formData.get("enabled") === "true";
   await toggleModule(householdId, moduleId, enabled);
   revalidatePath("/settings");
+  revalidatePath("/dashboard");
 }
 
 export default async function SettingsPage({
@@ -203,7 +205,10 @@ export default async function SettingsPage({
               {t("notifications.adminOnly")}
             </p>
           )}
-          {ALL_NOTIFICATION_TYPES.map((type) => {
+          {ALL_NOTIFICATION_TYPES.filter((type) => {
+            const owner = NOTIFICATION_TYPE_MODULE[type];
+            return !owner || enabledIds.has(owner);
+          }).map((type) => {
             const enabled = notifSettings[type];
             return (
               <div

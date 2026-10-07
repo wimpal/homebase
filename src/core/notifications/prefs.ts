@@ -1,4 +1,4 @@
-import { NotificationType } from "@prisma/client";
+import { ModuleId, NotificationType } from "@prisma/client";
 import { prisma } from "@/core/db";
 
 export const ALL_NOTIFICATION_TYPES: NotificationType[] = [
@@ -10,6 +10,30 @@ export const ALL_NOTIFICATION_TYPES: NotificationType[] = [
   NotificationType.DELIVERY,
   NotificationType.TASK,
 ];
+
+/**
+ * Which module owns a notification type. Types absent here (INFO, WARNING,
+ * REMINDER) are cross-cutting and always shown. REMINDER is deliberately
+ * unmapped because it is shared by plants and calendar — the Home Feed
+ * resolves those by link instead.
+ */
+export const NOTIFICATION_TYPE_MODULE: Partial<
+  Record<NotificationType, ModuleId>
+> = {
+  [NotificationType.LOW_STOCK]: ModuleId.INVENTORY,
+  [NotificationType.EXPIRY]: ModuleId.INVENTORY,
+  [NotificationType.DELIVERY]: ModuleId.DELIVERY,
+  [NotificationType.TASK]: ModuleId.TASKS,
+};
+
+/** Inverse of {@link NOTIFICATION_TYPE_MODULE}: types owned by a module. */
+export function notificationTypesForModule(
+  moduleId: ModuleId,
+): NotificationType[] {
+  return ALL_NOTIFICATION_TYPES.filter(
+    (type) => NOTIFICATION_TYPE_MODULE[type] === moduleId,
+  );
+}
 
 export async function getNotificationTypeSettings(
   householdId: string,

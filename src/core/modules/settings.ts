@@ -1,5 +1,6 @@
 import { ModuleId } from "@prisma/client";
 import { prisma } from "@/core/db";
+import { notificationTypesForModule } from "@/core/notifications/prefs";
 import { ALL_MODULE_IDS, MODULE_REGISTRY } from "./registry";
 
 export async function getEnabledModules(householdId: string) {
@@ -74,4 +75,15 @@ export async function toggleModule(
     create: { householdId, moduleId, enabled },
     update: { enabled },
   });
+
+  // Disabling a module hides its surfaces; drop its stale Home Feed rows so
+  // re-enabling starts clean instead of resurfacing old alerts.
+  if (!enabled) {
+    const types = notificationTypesForModule(moduleId);
+    if (types.length > 0) {
+      await prisma.notification.deleteMany({
+        where: { householdId, type: { in: types } },
+      });
+    }
+  }
 }
