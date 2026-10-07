@@ -97,7 +97,10 @@ export default async function RoutinesPage() {
       </div>
 
       {routines.length === 0 ? (
-        <EmptyState message={t("noRoutines")} />
+        <EmptyState
+          title={t("noRoutines")}
+          description={t("noRoutinesHint")}
+        />
       ) : (
         routines.map((routine) => (
           <Card key={routine.id}>

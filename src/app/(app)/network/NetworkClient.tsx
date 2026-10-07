@@ -156,7 +156,10 @@ export function NetworkClient({
       )}
 
       {devices.length === 0 ? (
-        <EmptyState message={t("noDevices")} />
+        <EmptyState
+          title={t("noDevices")}
+          description={t("noDevicesHint")}
+        />
       ) : (
         devices.map((d) => (
           <Card key={d.id}>

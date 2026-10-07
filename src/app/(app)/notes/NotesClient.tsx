@@ -71,7 +71,10 @@ export function NotesClient({
       )}
 
       {notes.length === 0 ? (
-        <EmptyState message={t("noNotes")} />
+        <EmptyState
+          title={t("noNotes")}
+          description={t("noNotesHint")}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {notes.map((note) => (

@@ -657,7 +657,10 @@ export function AutomationsPanel({
       </CollapsibleCreate>
 
       {automations.length === 0 ? (
-        <EmptyState message={t("noAutomations")} />
+        <EmptyState
+          title={t("noAutomations")}
+          description={t("noAutomationsHint")}
+        />
       ) : null}
 
       {automations.map((rule) => {

@@ -520,7 +520,10 @@ export function SmartHomeClient({
           </Card>
 
           {cameras.length === 0 ? (
-            <EmptyState message={t("noCameras")} />
+            <EmptyState
+          title={t("noCameras")}
+          description={t("noCamerasHint")}
+        />
           ) : (
             cameras.map((cam) => {
               const reolinkConfig = isReolinkPublicConfig(cam.config)

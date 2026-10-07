@@ -71,7 +71,10 @@ export default async function MessagesPage() {
           </Card>
 
           {messages.length === 0 ? (
-            <EmptyState message={t("noMessages")} />
+            <EmptyState
+          title={t("noMessages")}
+          description={t("noMessagesHint")}
+        />
           ) : (
             <div className="space-y-2">
               {messages.map((msg) => (
@@ -123,7 +126,10 @@ export default async function MessagesPage() {
           </Card>
 
           {requests.length === 0 ? (
-            <EmptyState message={t("noRequests")} />
+            <EmptyState
+          title={t("noRequests")}
+          description={t("noRequestsHint")}
+        />
           ) : (
             requests.map((req) => (
               <Card key={req.id}>
@@ -159,7 +165,10 @@ export default async function MessagesPage() {
         {isAdmin ? (
           <TabsContent value="support" className="space-y-4">
             {supportReports.length === 0 ? (
-              <EmptyState message={t("noSupportReports")} />
+              <EmptyState
+          title={t("noSupportReports")}
+          description={t("noSupportReportsHint")}
+        />
             ) : (
               supportReports.map((req) => (
                 <Card key={req.id}>

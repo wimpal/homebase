@@ -172,7 +172,10 @@ export function InventoryClient({
                 <Button type="submit">{tc("add")}</Button>
               </form>
               {locations.length === 0 ? (
-                <EmptyState message={t("noLocations")} />
+                <EmptyState
+                  title={t("noLocations")}
+                  description={t("noLocationsHint")}
+                />
               ) : (
                 <ul className="space-y-2">
                   {locations.map((l) => (
@@ -215,9 +218,12 @@ export function InventoryClient({
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
-            <EmptyState message={t("noProducts")} />
+            <EmptyState
+              title={t("noProducts")}
+              description={t("noProductsHint")}
+            />
           ) : filtered.length === 0 ? (
-            <EmptyState message={t("noMatch")} />
+            <EmptyState title={t("noMatch")} />
           ) : (
             <div className="space-y-3">
               {filtered.map((p) => {

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "@/core/auth/auth.config";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 const { auth } = NextAuth(authConfig);
 
@@ -32,7 +33,9 @@ export default auth((request) => {
   }
 
   if (!request.auth?.user?.id && !pathname.startsWith("/api/push")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(
+      new URL("/login", getRequestOrigin(request.headers))
+    );
   }
 
   return NextResponse.next();

@@ -64,7 +64,10 @@ export function PeopleClient({
       )}
 
       {people.length === 0 ? (
-        <EmptyState message={t("noPeople")} />
+        <EmptyState
+          title={t("noPeople")}
+          description={t("noPeopleHint")}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {people.map((person) => (

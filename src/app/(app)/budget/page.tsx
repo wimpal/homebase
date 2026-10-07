@@ -72,7 +72,10 @@ export default async function BudgetPage() {
       </div>
 
       {budgets.length === 0 ? (
-        <EmptyState message={t("noBudgets")} />
+        <EmptyState
+          title={t("noBudgets")}
+          description={t("noBudgetsHint")}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {budgets.map((budget) => {
@@ -112,7 +115,10 @@ export default async function BudgetPage() {
         </CardHeader>
         <CardContent>
           {expenses.length === 0 ? (
-            <EmptyState message={t("noExpenses")} />
+            <EmptyState
+              title={t("noExpenses")}
+              description={t("noExpensesHint")}
+            />
           ) : (
             <ul className="space-y-2">
               {expenses.map((e) => (

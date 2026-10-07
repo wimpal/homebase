@@ -660,9 +660,12 @@ export function RecipesClient({
           )}
 
           {recipes.length === 0 ? (
-            <EmptyState message={t("noRecipes")} />
+            <EmptyState
+              title={t("noRecipes")}
+              description={t("noRecipesHint")}
+            />
           ) : filtered.length === 0 ? (
-            <EmptyState message={t("noMatch")} />
+            <EmptyState title={t("noMatch")} />
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filtered.map((recipe) => (
@@ -752,7 +755,10 @@ export function RecipesClient({
           </Card>
 
           {leftovers.length === 0 ? (
-            <EmptyState message={t("noLeftovers")} />
+            <EmptyState
+              title={t("noLeftovers")}
+              description={t("noLeftoversHint")}
+            />
           ) : (
             leftovers.map((l) => (
               <Card key={l.id}>

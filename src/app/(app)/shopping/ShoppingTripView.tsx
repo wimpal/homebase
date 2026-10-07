@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { FormAction } from "@/components/ui/form-action";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useFormError } from "@/components/ui/form-error-context";
 import {
   Dialog,
@@ -47,6 +48,7 @@ export function ShoppingTripView({
 }: ShoppingViewProps) {
   const t = useTranslations("shopping");
   const tc = useTranslations("common");
+  const tu = useTranslations("ui.loading");
   const { handleActionResult } = useFormError();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -239,8 +241,17 @@ export function ShoppingTripView({
         </div>
       )}
 
-      {displayItems.length === 0 ? (
-        <EmptyState message={t("nothingNeeded")} />
+      {!hydrated ? (
+        <div role="status" aria-label={tu("label")} className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : displayItems.length === 0 ? (
+        <EmptyState
+          title={t("nothingNeeded")}
+          description={t("nothingNeededHint")}
+        />
       ) : (
         <ul className="space-y-1">
           {displayItems.map((item) => (

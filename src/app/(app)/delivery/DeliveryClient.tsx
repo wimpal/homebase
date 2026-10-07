@@ -102,7 +102,10 @@ export function DeliveryClient({ deliveries }: { deliveries: Delivery[] }) {
       </CollapsibleCreate>
 
       {deliveries.length === 0 ? (
-        <EmptyState message={t("noPackages")} />
+        <EmptyState
+          title={t("noPackages")}
+          description={t("noPackagesHint")}
+        />
       ) : (
         deliveries.map((d) => (
           <Card key={d.id}>

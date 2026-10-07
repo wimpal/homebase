@@ -146,7 +146,10 @@ export function TasksClient({
           </CollapsibleCreate>
 
           {chores.length === 0 && (
-            <EmptyState message={t("noActiveChores")} />
+            <EmptyState
+              title={t("noActiveChores")}
+              description={t("noActiveChoresHint")}
+            />
           )}
 
           {chores.map((chore) => {
@@ -248,7 +251,10 @@ export function TasksClient({
 
         <TabsContent value="history" className="space-y-4">
           {history.length === 0 ? (
-            <EmptyState message={t("noHistory")} />
+            <EmptyState
+              title={t("noHistory")}
+              description={t("noHistoryHint")}
+            />
           ) : (
             history.map((entry) => (
               <Card key={entry.id}>

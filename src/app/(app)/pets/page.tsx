@@ -61,7 +61,10 @@ export default async function PetsPage() {
       </CollapsibleCreate>
 
       {pets.length === 0 ? (
-        <EmptyState message={t("noPets")} />
+        <EmptyState
+          title={t("noPets")}
+          description={t("noPetsHint")}
+        />
       ) : (
         pets.map((pet, i) => (
           <Card key={pet.id}>

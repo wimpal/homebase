@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useFormError } from "@/components/ui/form-error-context";
 import {
   addProjectUpdate,
@@ -171,7 +172,10 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
           </Button>
         </form>
         {updates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
+          <EmptyState
+            title={t("noActivity")}
+            description={t("noActivityHint")}
+          />
         ) : (
           <ul className="space-y-2">
             {updates.map((u) => (

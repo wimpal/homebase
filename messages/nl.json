@@ -7,6 +7,18 @@
     "openMenu": "Menu openen",
     "closeMenu": "Menu sluiten"
   },
+  "ui": {
+    "routeError": {
+      "title": "Er ging iets mis",
+      "description": "Een onverwachte fout verhinderde dat deze pagina kon laden. Probeer het opnieuw of ga terug.",
+      "retry": "Opnieuw proberen",
+      "home": "Terug naar dashboard",
+      "homeAuth": "Terug naar inloggen"
+    },
+    "loading": {
+      "label": "Laden"
+    }
+  },
   "modules": {
     "inventory": {
       "name": "Voorraad",
@@ -155,6 +167,7 @@
       "title": "Leden",
       "description": "Accounts in dit huishouden. Wachtwoord resetten of lid verwijderen (alleen ADMIN).",
       "empty": "Geen leden gevonden.",
+      "emptyHint": "Leden die zich bij dit huishouden aansluiten, verschijnen hier.",
       "you": "jij",
       "newPassword": "Nieuw wachtwoord",
       "resetPassword": "Wachtwoord resetten",
@@ -320,12 +333,14 @@
     "subtitle": "Je huishouden in één oogopslag",
     "todoList": "To-do lijst",
     "noChores": "Geen aankomende klussen.",
+    "noChoresHint": "Voeg klussen toe in de Taken-module om ze hier te zien.",
     "due": "Deadline: {date}",
     "avgDuration": "~{minutes} min gem.",
     "lowStock": "Lage voorraad",
     "allStocked": "Alles op voorraad!",
     "homeFeed": "Home feed",
     "noNotifications": "Nog geen meldingen.",
+    "noNotificationsHint": "Meldingen van het huishouden verschijnen hier.",
     "markRead": "Markeer als gelezen",
     "markAllRead": "Alles als gelezen markeren",
     "dismiss": "Verwijderen",
@@ -381,10 +396,12 @@
     "storeName": "Winkelnaam",
     "all": "Alle",
     "nothingNeeded": "Niets nodig op dit moment.",
+    "nothingNeededHint": "Blader door de catalogus en markeer wat je nodig hebt.",
     "markBought": "Markeer als gekocht",
     "markNeededAgain": "Opnieuw nodig",
     "autoAdded": "Automatisch toegevoegd",
     "noList": "Geen boodschappenlijst gevonden. Maak er een aan via registratie of seed de database.",
+    "noListHint": "Een lijst wordt automatisch aangemaakt voor elk huishouden.",
     "confirmRemoveItem": "Dit item van de lijst verwijderen?",
     "confirmDeleteStore": "Deze winkel verwijderen?",
     "browse": "Bladeren",
@@ -409,6 +426,7 @@
     "locationPlaceholder": "Voorraadkast, Koelkast...",
     "products": "Producten ({count})",
     "noProducts": "Nog geen producten.",
+    "noProductsHint": "Scan een barcode of voeg hierboven je eerste product toe.",
     "stock": "Voorraad: {total} (laag bij {threshold})",
     "barcodeLabel": "Barcode: {codes}",
     "addStock": "Voorraad toevoegen",
@@ -423,6 +441,7 @@
     "searchProducts": "Producten zoeken",
     "locations": "Locaties",
     "noLocations": "Nog geen locaties.",
+    "noLocationsHint": "Voeg een locatie toe om producten te ordenen.",
     "noMatch": "Geen producten gevonden"
   },
   "tasks": {
@@ -436,9 +455,11 @@
     "deadline": "Deadline",
     "addChoreBtn": "Klus toevoegen",
     "noActiveChores": "Geen actieve klussen. Voltooide items staan in Geschiedenis.",
+    "noActiveChoresHint": "Voeg hierboven een klus toe om te beginnen.",
     "avg": "Gem.: {minutes} min",
     "startTimer": "Timer starten",
     "noHistory": "Nog geen voltooide klussen.",
+    "noHistoryHint": "Rond een klus af om geschiedenis op te bouwen.",
     "newProject": "Nieuw project",
     "workItemsPlaceholder": "Verf kopen\nMuren voorbereiden\nSchilderen",
     "workItemsOnePerLine": "Werkitems (één per regel, optioneel)",
@@ -449,6 +470,7 @@
     "confirmDeleteChore": "Deze klus verwijderen?",
     "confirmDeleteProject": "Dit project en alle werkitems, bestanden, vision-pins en updates verwijderen?",
     "noProjects": "Nog geen projecten.",
+    "noProjectsHint": "Maak hierboven een project aan voor grotere klussen.",
     "filterOpen": "Actief & gepauzeerd",
     "filterDone": "Afgerond",
     "status_active": "Actief",
@@ -472,6 +494,7 @@
     "workStatus_done": "Klaar",
     "uploadFile": "Bestand uploaden",
     "noFiles": "Nog geen bestanden.",
+    "noFilesHint": "Upload foto's of documenten voor dit project.",
     "preview": "Voorbeeld",
     "confirmDeleteFile": "Dit bestand verwijderen?",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -493,7 +516,8 @@
     "visionResizeNe": "Formaat wijzigen vanaf rechterbovenhoek",
     "visionResizeSw": "Formaat wijzigen vanaf linkeronderhoek",
     "visionResizeSe": "Formaat wijzigen vanaf rechteronderhoek",
-    "noActivity": "Nog geen updates."
+    "noActivity": "Nog geen updates.",
+    "noActivityHint": "Plaats een update om iedereen op de hoogte te houden."
   },
   "recipes": {
     "title": "Recepten",
@@ -521,12 +545,14 @@
     "groupTopping": "Voor de topping",
     "groupGarnish": "Voor de garnering",
     "inStock": "(op voorraad: {name})",
-    "noRecipes": "Nog geen recepten. Voeg er een toe of vraag Mimir een recept op te slaan.",
+    "noRecipes": "Nog geen recepten.",
+    "noRecipesHint": "Voeg er een toe of vraag Mimir een recept op te slaan.",
     "trackLeftover": "Restje bijhouden",
     "expires": "Vervalt",
     "recipe": "Recept",
     "addLeftover": "Restje toevoegen",
     "noLeftovers": "Geen bevroren restjes bijgehouden.",
+    "noLeftoversHint": "Vries extra porties in en houd ze hier bij.",
     "servingsFrozen": "{servings} porties · Bevroren {date}",
     "confirmDelete": "Dit recept definitief verwijderen?",
     "confirmDeleteLeftover": "Deze restjes verwijderen?",
@@ -636,7 +662,8 @@
     "confirmDeleteAutomation": "Deze automatisering verwijderen?",
     "enabled": "Ingeschakeld",
     "disabled": "Uitgeschakeld",
-    "noAutomations": "Nog geen automatiseringen. Voeg een schema of sensorregel toe (bijv. deur open → lamp aan).",
+    "noAutomations": "Nog geen automatiseringen.",
+    "noAutomationsHint": "Voeg een schema of sensorregel toe (bijv. deur open → lamp aan).",
     "cameras": "Camera's",
     "logReading": "Waarde loggen",
     "tempPlaceholder": "Temp °C",
@@ -666,7 +693,8 @@
     "legacyStreamHidden": "Er staat een stream-URL met inloggegevens server-side opgeslagen; die tonen we niet in de browser. Voeg opnieuw toe als Reolink-camera voor een veilige snapshot.",
     "snapshotFailed": "Snapshot mislukt. Controleer RTSP, wachtwoord, en of de NAS de camera op het LAN kan bereiken. FFmpeg moet in de app-container staan.",
     "confirmDeleteDevice": "Dit apparaat verwijderen?",
-    "noCameras": "Nog geen camera's opgeslagen."
+    "noCameras": "Nog geen camera's opgeslagen.",
+    "noCamerasHint": "Voeg een camera toe met host en inloggegevens voor snapshots."
   },
   "calendar": {
     "title": "Agenda",
@@ -687,7 +715,9 @@
     "when": "Wanneer",
     "confirmDeleteEvent": "Dit evenement verwijderen?",
     "noEvents": "Geen aankomende evenementen.",
-    "noLogs": "Nog geen logboeken."
+    "noEventsHint": "Maak hierboven een evenement aan om het hier te zien.",
+    "noLogs": "Nog geen logboeken.",
+    "noLogsHint": "Log iets wat gebeurd is om een laatste-keer-historiek op te bouwen."
   },
   "plants": {
     "title": "Planten",
@@ -701,6 +731,7 @@
     "markWatered": "Markeer als bewaterd",
     "confirmDelete": "Deze plant verwijderen?",
     "noPlants": "Nog geen planten.",
+    "noPlantsHint": "Voeg hierboven een plant toe om het wateren bij te houden.",
     "quickWater": "Markeer bewaterd"
   },
   "people": {
@@ -718,7 +749,8 @@
     "notes": "Notities",
     "noDetails": "Nog geen contactgegevens.",
     "confirmDelete": "Dit contact verwijderen? Dit kan niet ongedaan worden gemaakt.",
-    "noPeople": "Nog geen contacten."
+    "noPeople": "Nog geen contacten.",
+    "noPeopleHint": "Voeg hierboven een contact toe."
   },
   "house_manual": {
     "title": "Huishandleiding",
@@ -731,7 +763,8 @@
     "makeSearchable": "Zoeken toestaan",
     "makePrivate": "Uit zoeken halen",
     "confirmDelete": "Dit document verwijderen? Dit kan niet ongedaan worden gemaakt.",
-    "noDocs": "Nog geen documenten. Upload een .txt- of .md-bestand.",
+    "noDocs": "Nog geen documenten.",
+    "noDocsHint": "Upload een .txt- of .md-bestand om het te delen met het huishouden.",
     "adminOnly": "Alleen beheerders kunnen uploaden of de zoeklijst wijzigen.",
     "pdfSkipped": "PDF wordt in v1 niet geïndexeerd — upload platte tekst of Markdown."
   },
@@ -745,7 +778,8 @@
     "bodyLabel": "Notitie",
     "untitled": "Naamloze notitie",
     "confirmDelete": "Deze notitie verwijderen? Dit kan niet ongedaan worden gemaakt.",
-    "noNotes": "Nog geen notities."
+    "noNotes": "Nog geen notities.",
+    "noNotesHint": "Voeg hierboven een notitie toe voor het huishouden."
   },
   "mealPlan": {
     "title": "Maaltijdplan",
@@ -763,7 +797,8 @@
     "confirmClearWeek": "Alle geplande diners van deze week verwijderen?",
     "emptySlot": "Nog geen diner gepland",
     "chooseRecipe": "Kies recept",
-    "noRecipes": "Nog geen recepten in de bibliotheek"
+    "noRecipes": "Nog geen recepten in de bibliotheek",
+    "noRecipesHint": "Voeg recepten toe in de Recepten-module om maaltijden te plannen."
   },
   "pets": {
     "title": "Huisdieren",
@@ -788,7 +823,8 @@
     "confirmDeletePet": "Dit huisdier verwijderen?",
     "confirmDeleteAppointment": "Deze afspraak verwijderen?",
     "confirmDeleteFeeding": "Dit voedingsritueel verwijderen?",
-    "noPets": "Nog geen huisdieren."
+    "noPets": "Nog geen huisdieren.",
+    "noPetsHint": "Voeg hierboven een huisdier toe om voeding en afspraken bij te houden."
   },
   "routines": {
     "title": "Routines",
@@ -807,7 +843,8 @@
     "dependsOn": "Afhankelijk van: {titles}",
     "confirmDeleteRoutine": "Deze routine verwijderen?",
     "confirmDeleteTask": "Deze taak verwijderen?",
-    "noRoutines": "Nog geen routines."
+    "noRoutines": "Nog geen routines.",
+    "noRoutinesHint": "Maak hierboven een routine aan of start vanaf een sjabloon."
   },
   "budget": {
     "title": "Budget",
@@ -828,7 +865,9 @@
     "confirmDeleteBudget": "Dit budget verwijderen?",
     "confirmDeleteExpense": "Deze uitgave verwijderen?",
     "noBudgets": "Nog geen budgetten.",
-    "noExpenses": "Nog geen uitgaven."
+    "noBudgetsHint": "Maak hierboven een budget aan om uitgaven te volgen.",
+    "noExpenses": "Nog geen uitgaven.",
+    "noExpensesHint": "Log hierboven een uitgave om hem hier te zien."
   },
   "delivery": {
     "title": "Pakketten volgen",
@@ -848,7 +887,8 @@
     "statusDelivered": "BEZORGD",
     "statusException": "PROBLEEM",
     "confirmDelete": "Dit pakket verwijderen?",
-    "noPackages": "Nog geen pakketten."
+    "noPackages": "Nog geen pakketten.",
+    "noPackagesHint": "Voeg hierboven een pakket toe om de bezorging te volgen."
   },
   "network": {
     "title": "Thuisnetwerk",
@@ -886,6 +926,7 @@
     "notes": "Notities",
     "notesPlaceholder": "Optionele notities",
     "noDevices": "Nog geen netwerkapparaten.",
+    "noDevicesHint": "Voeg een apparaat toe of start een scan om je inventaris op te bouwen.",
     "showRetired": "Toon uitgeschakelde",
     "hideRetired": "Verberg uitgeschakelde",
     "retired": "Uitgeschakeld",
@@ -949,8 +990,11 @@
     "submitRequest": "Verzoek indienen",
     "byStatus": "Door {name} · {status}",
     "noMessages": "Nog geen berichten.",
+    "noMessagesHint": "Start een gesprek met je huishouden.",
     "noRequests": "Nog geen verzoeken.",
-    "noSupportReports": "Nog geen supportmeldingen."
+    "noRequestsHint": "Verzoeken van leden verschijnen hier.",
+    "noSupportReports": "Nog geen supportmeldingen.",
+    "noSupportReportsHint": "Meldingen vanuit formulierfouten verschijnen hier."
   },
   "formErrors": {
     "dialogOk": "OK",
@@ -1199,6 +1243,7 @@
     "adminOnly": "Alleen beheerders kunnen Protocol-instellingen wijzigen.",
     "cinemaTitle": "Cinema",
     "cinemaHint": "Wekt de TV, start Jellyfin, en dimt optioneel geselecteerde lampen na de avondgrens. Alias: bioscoop.",
+    "emptyTitle": "Nog geen cinema-opstelling",
     "emptyHint": "Voeg een wake-capable gekoppelde TV toe onder Thuisnetwerk, en zorg dat Dirigera-lampen beschikbaar zijn.",
     "tv": "TV",
     "tvNone": "Niet ingesteld",

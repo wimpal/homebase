@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { EmptyState } from "@/components/ui/empty-state";
 import { MODULE_REGISTRY } from "@/core/modules/registry";
 import { getEnabledModules, toggleModule } from "@/core/modules/settings";
 import { requireAdmin, requireHousehold } from "@/core/auth/session";
@@ -129,7 +130,10 @@ export default async function SettingsPage({
           </CardHeader>
           <CardContent className="space-y-4">
             {members.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("members.empty")}</p>
+              <EmptyState
+                title={t("members.empty")}
+                description={t("members.emptyHint")}
+              />
             ) : (
               members.map((m) => (
                 <SettingsMemberRow

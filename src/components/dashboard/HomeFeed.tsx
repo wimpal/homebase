@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmForm } from "@/components/ui/confirm-form";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   dismissAllNotifications,
   dismissNotification,
@@ -104,7 +105,10 @@ export async function HomeFeed({
         }
       >
         {notifications.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noNotifications")}</p>
+          <EmptyState
+            title={t("noNotifications")}
+            description={t("noNotificationsHint")}
+          />
         ) : (
           <ul className="space-y-3">
             {notifications.map((n) => (

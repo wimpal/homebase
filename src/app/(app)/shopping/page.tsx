@@ -4,6 +4,8 @@ import { requireModule } from "@/core/modules/guard";
 import { ModuleId } from "@prisma/client";
 import { getCatalog, getShoppingLists, getStores } from "@/modules/shopping/actions";
 import { ShoppingClient } from "./ShoppingClient";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getTranslations } from "next-intl/server";
 
 export default async function ShoppingPage({
@@ -21,6 +23,7 @@ export default async function ShoppingPage({
   ]);
   const list = lists[0];
   const t = await getTranslations("shopping");
+  const tUi = await getTranslations("ui.loading");
 
   const items =
     list?.items.filter((i) => !storeFilter || i.storeId === storeFilter) ?? [];
@@ -32,13 +35,13 @@ export default async function ShoppingPage({
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <p className="text-sm text-muted-foreground">{t("noList")}</p>
+        <EmptyState title={t("noList")} description={t("noListHint")} />
       </div>
     );
   }
 
   return (
-    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Suspense fallback={<PageSkeleton label={tUi("label")} />}>
       <ShoppingClient
         listId={list.id}
         listName={list.name}

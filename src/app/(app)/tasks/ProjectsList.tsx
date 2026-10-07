@@ -105,7 +105,10 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
       </CollapsibleCreate>
 
       {visible.length === 0 ? (
-        <EmptyState message={t("noProjects")} />
+        <EmptyState
+          title={t("noProjects")}
+          description={t("noProjectsHint")}
+        />
       ) : (
         visible.map((project) => {
           const done = project.workItems.filter((w) => w.status === "done").length;

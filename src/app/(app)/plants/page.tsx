@@ -51,7 +51,10 @@ export default async function PlantsPage() {
       </CollapsibleCreate>
 
       {plants.length === 0 ? (
-        <EmptyState message={t("noPlants")} />
+        <EmptyState
+          title={t("noPlants")}
+          description={t("noPlantsHint")}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {plants.map((plant) => (

@@ -7,6 +7,18 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
   },
+  "ui": {
+    "routeError": {
+      "title": "Something went wrong",
+      "description": "An unexpected error stopped this page from loading. Try again, or head back home.",
+      "retry": "Try again",
+      "home": "Back to dashboard",
+      "homeAuth": "Back to sign in"
+    },
+    "loading": {
+      "label": "Loading"
+    }
+  },
   "modules": {
     "inventory": {
       "name": "Inventory",
@@ -155,6 +167,7 @@
       "title": "Members",
       "description": "Household Accounts. Reset a password or remove a member (ADMIN only).",
       "empty": "No members found.",
+      "emptyHint": "Members who join this household appear here.",
       "you": "you",
       "newPassword": "New password",
       "resetPassword": "Reset password",
@@ -320,12 +333,14 @@
     "subtitle": "Your household at a glance",
     "todoList": "To-Do List",
     "noChores": "No upcoming chores.",
+    "noChoresHint": "Add chores in the Tasks module to see them here.",
     "due": "Due: {date}",
     "avgDuration": "~{minutes} min avg",
     "lowStock": "Low Stock",
     "allStocked": "All stocked up!",
     "homeFeed": "Home Feed",
     "noNotifications": "No notifications yet.",
+    "noNotificationsHint": "Household alerts will appear here.",
     "markRead": "Mark read",
     "markAllRead": "Mark all read",
     "dismiss": "Dismiss",
@@ -381,10 +396,12 @@
     "storeName": "Store name",
     "all": "All",
     "nothingNeeded": "Nothing needed right now.",
+    "nothingNeededHint": "Browse the catalog and mark what you need.",
     "markBought": "Mark bought",
     "markNeededAgain": "Mark needed again",
     "autoAdded": "Auto-added",
     "noList": "No shopping list found. Create one by registering a household or seeding the database.",
+    "noListHint": "A list is created automatically for each household.",
     "confirmRemoveItem": "Remove this item from the list?",
     "confirmDeleteStore": "Delete this store?",
     "browse": "Browse",
@@ -409,6 +426,7 @@
     "locationPlaceholder": "Pantry, Fridge...",
     "products": "Products ({count})",
     "noProducts": "No products yet.",
+    "noProductsHint": "Scan a barcode or add your first product above.",
     "stock": "Stock: {total} (low at {threshold})",
     "barcodeLabel": "Barcode: {codes}",
     "addStock": "Add Stock",
@@ -423,6 +441,7 @@
     "searchProducts": "Search products",
     "locations": "Locations",
     "noLocations": "No locations yet.",
+    "noLocationsHint": "Add a location to organise where products live.",
     "noMatch": "No matching products"
   },
   "tasks": {
@@ -436,9 +455,11 @@
     "deadline": "Deadline",
     "addChoreBtn": "Add Chore",
     "noActiveChores": "No active chores. Completed items are in History.",
+    "noActiveChoresHint": "Add a chore above to get started.",
     "avg": "Avg: {minutes} min",
     "startTimer": "Start Timer",
     "noHistory": "No completed chores yet.",
+    "noHistoryHint": "Complete a chore to start building history.",
     "newProject": "New Project",
     "workItemsPlaceholder": "Buy paint\nPrep walls\nPaint",
     "workItemsOnePerLine": "Work items (one per line, optional)",
@@ -449,6 +470,7 @@
     "confirmDeleteChore": "Delete this chore?",
     "confirmDeleteProject": "Delete this project and all work items, files, vision pins, and updates?",
     "noProjects": "No projects yet.",
+    "noProjectsHint": "Create a project above to track bigger jobs.",
     "filterOpen": "Active & paused",
     "filterDone": "Completed",
     "status_active": "Active",
@@ -472,6 +494,7 @@
     "workStatus_done": "Done",
     "uploadFile": "Upload file",
     "noFiles": "No files yet.",
+    "noFilesHint": "Upload photos or documents for this project.",
     "preview": "Preview",
     "confirmDeleteFile": "Delete this file?",
     "openInNewTab": "Open in new tab",
@@ -493,7 +516,8 @@
     "visionResizeNe": "Resize from top-right corner",
     "visionResizeSw": "Resize from bottom-left corner",
     "visionResizeSe": "Resize from bottom-right corner",
-    "noActivity": "No updates yet."
+    "noActivity": "No updates yet.",
+    "noActivityHint": "Post an update to keep everyone in the loop."
   },
   "recipes": {
     "title": "Recipes",
@@ -521,12 +545,14 @@
     "groupTopping": "Topping",
     "groupGarnish": "Garnish",
     "inStock": "(in stock: {name})",
-    "noRecipes": "No recipes yet. Add one or ask Mimir to save a recipe.",
+    "noRecipes": "No recipes yet.",
+    "noRecipesHint": "Add one or ask Mimir to save a recipe.",
     "trackLeftover": "Track Leftover",
     "expires": "Expires",
     "recipe": "Recipe",
     "addLeftover": "Add Leftover",
     "noLeftovers": "No frozen leftovers tracked.",
+    "noLeftoversHint": "Freeze extra portions and track them here.",
     "servingsFrozen": "{servings} servings · Frozen {date}",
     "confirmDelete": "Delete this recipe permanently?",
     "confirmDeleteLeftover": "Delete this leftover?",
@@ -636,7 +662,8 @@
     "confirmDeleteAutomation": "Delete this automation?",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "noAutomations": "No automations yet. Add a schedule or a sensor rule (e.g. door opens → light on).",
+    "noAutomations": "No automations yet.",
+    "noAutomationsHint": "Add a schedule or a sensor rule (e.g. door opens → light on).",
     "cameras": "Cameras",
     "logReading": "Log Reading",
     "tempPlaceholder": "Temp °C",
@@ -666,7 +693,8 @@
     "legacyStreamHidden": "A stream URL with credentials is stored server-side and is not shown in the browser. Re-add as a Reolink camera for a safe snapshot preview.",
     "snapshotFailed": "Snapshot failed. Check RTSP, password, and that the NAS can reach the camera on the LAN. FFmpeg must be installed in the app container.",
     "confirmDeleteDevice": "Delete this device?",
-    "noCameras": "No cameras saved yet."
+    "noCameras": "No cameras saved yet.",
+    "noCamerasHint": "Add a camera with its host and credentials to view snapshots."
   },
   "calendar": {
     "title": "Calendar",
@@ -687,7 +715,9 @@
     "when": "When",
     "confirmDeleteEvent": "Delete this event?",
     "noEvents": "No upcoming events.",
-    "noLogs": "No event logs yet."
+    "noEventsHint": "Create an event above to see it here.",
+    "noLogs": "No event logs yet.",
+    "noLogsHint": "Log something that happened to build a last-time history."
   },
   "plants": {
     "title": "Plants",
@@ -701,6 +731,7 @@
     "markWatered": "Mark Watered",
     "confirmDelete": "Delete this plant?",
     "noPlants": "No plants yet.",
+    "noPlantsHint": "Add a plant above to start a watering schedule.",
     "quickWater": "Mark watered"
   },
   "people": {
@@ -718,7 +749,8 @@
     "notes": "Notes",
     "noDetails": "No contact details yet.",
     "confirmDelete": "Delete this contact? This cannot be undone.",
-    "noPeople": "No contacts yet."
+    "noPeople": "No contacts yet.",
+    "noPeopleHint": "Add a contact above to keep household people in one place."
   },
   "house_manual": {
     "title": "House manual",
@@ -731,7 +763,8 @@
     "makeSearchable": "Allow search",
     "makePrivate": "Remove from search",
     "confirmDelete": "Delete this document? This cannot be undone.",
-    "noDocs": "No documents yet. Upload a .txt or .md file.",
+    "noDocs": "No documents yet.",
+    "noDocsHint": "Upload a .txt or .md file to share it with the household.",
     "adminOnly": "Only household admins can upload or change allowlisting.",
     "pdfSkipped": "PDF is not indexed in v1 — upload plain text or Markdown."
   },
@@ -745,7 +778,8 @@
     "bodyLabel": "Note",
     "untitled": "Untitled note",
     "confirmDelete": "Remove this note? This cannot be undone.",
-    "noNotes": "No notes yet."
+    "noNotes": "No notes yet.",
+    "noNotesHint": "Add a note above to capture something for the household."
   },
   "mealPlan": {
     "title": "Meal plan",
@@ -763,7 +797,8 @@
     "confirmClearWeek": "Remove all planned dinners for this week?",
     "emptySlot": "No dinner planned",
     "chooseRecipe": "Choose recipe",
-    "noRecipes": "No recipes in the library yet"
+    "noRecipes": "No recipes in the library yet",
+    "noRecipesHint": "Add recipes in the Recipes module to start planning meals."
   },
   "pets": {
     "title": "Pets",
@@ -788,7 +823,8 @@
     "confirmDeletePet": "Delete this pet?",
     "confirmDeleteAppointment": "Delete this appointment?",
     "confirmDeleteFeeding": "Delete this feeding routine?",
-    "noPets": "No pets yet."
+    "noPets": "No pets yet.",
+    "noPetsHint": "Add a pet above to track feeding and appointments."
   },
   "routines": {
     "title": "Routines",
@@ -807,7 +843,8 @@
     "dependsOn": "Depends on: {titles}",
     "confirmDeleteRoutine": "Delete this routine?",
     "confirmDeleteTask": "Delete this task?",
-    "noRoutines": "No routines yet."
+    "noRoutines": "No routines yet.",
+    "noRoutinesHint": "Create a routine above or start from a template."
   },
   "budget": {
     "title": "Budget",
@@ -828,7 +865,9 @@
     "confirmDeleteBudget": "Delete this budget?",
     "confirmDeleteExpense": "Delete this expense?",
     "noBudgets": "No budgets yet.",
-    "noExpenses": "No expenses yet."
+    "noBudgetsHint": "Create a budget above to start tracking spending.",
+    "noExpenses": "No expenses yet.",
+    "noExpensesHint": "Log an expense above to see it here."
   },
   "delivery": {
     "title": "Delivery Tracking",
@@ -848,7 +887,8 @@
     "statusDelivered": "DELIVERED",
     "statusException": "EXCEPTION",
     "confirmDelete": "Delete this package?",
-    "noPackages": "No packages yet."
+    "noPackages": "No packages yet.",
+    "noPackagesHint": "Add a package above to track its delivery."
   },
   "network": {
     "title": "Home network",
@@ -886,6 +926,7 @@
     "notes": "Notes",
     "notesPlaceholder": "Optional notes",
     "noDevices": "No network devices yet.",
+    "noDevicesHint": "Add a device or run a scan to build your inventory.",
     "showRetired": "Show retired",
     "hideRetired": "Hide retired",
     "retired": "Retired",
@@ -949,8 +990,11 @@
     "submitRequest": "Submit Request",
     "byStatus": "By {name} · {status}",
     "noMessages": "No messages yet.",
+    "noMessagesHint": "Start a conversation with your household.",
     "noRequests": "No requests yet.",
-    "noSupportReports": "No support reports yet."
+    "noRequestsHint": "Requests from members will appear here.",
+    "noSupportReports": "No support reports yet.",
+    "noSupportReportsHint": "Reports sent from form errors will appear here."
   },
   "formErrors": {
     "dialogOk": "OK",
@@ -1199,6 +1243,7 @@
     "adminOnly": "Only household admins can change Protocol settings.",
     "cinemaTitle": "Cinema",
     "cinemaHint": "Wake the TV, launch Jellyfin, and optionally dim selected lamps after the evening cutoff. Alias: bioscoop.",
+    "emptyTitle": "No cinema setup yet",
     "emptyHint": "Add a wake-capable paired TV under Home network, and ensure Dirigera lights are available.",
     "tv": "TV",
     "tvNone": "Not set",

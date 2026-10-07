@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useFormError } from "@/components/ui/form-error-context";
 import {
   Dialog,
@@ -123,7 +124,10 @@ export function ProjectFiles({
       </form>
 
       {files.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("noFiles")}</p>
+        <EmptyState
+          title={t("noFiles")}
+          description={t("noFilesHint")}
+        />
       ) : (
         <ul className="space-y-2">
           {files.map((file) => (

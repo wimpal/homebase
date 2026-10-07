@@ -172,7 +172,10 @@ export function MealPlanClient({
       )}
 
       {data.recipes.length === 0 && (
-        <EmptyState message={t("noRecipes")} />
+        <EmptyState
+          title={t("noRecipes")}
+          description={t("noRecipesHint")}
+        />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
@@ -233,7 +236,7 @@ function DayCard({
             {day.title}
           </p>
         ) : (
-          <EmptyState message={emptyLabel} />
+          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         )}
 
         {canMutate && (

@@ -119,7 +119,10 @@ export function ProtocolsClient({
           {!isAdmin ? (
             <CinemaReadOnly settings={settings} t={t} />
           ) : tvOptions.length === 0 && lights.length === 0 ? (
-            <EmptyState message={t("emptyHint")} />
+            <EmptyState
+              title={t("emptyTitle")}
+              description={t("emptyHint")}
+            />
           ) : (
             <FormAction
               key={formKey}

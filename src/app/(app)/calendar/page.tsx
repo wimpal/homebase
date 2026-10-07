@@ -72,7 +72,10 @@ export default async function CalendarPage() {
           </CollapsibleCreate>
 
           {events.length === 0 ? (
-            <EmptyState message={t("noEvents")} />
+            <EmptyState
+              title={t("noEvents")}
+              description={t("noEventsHint")}
+            />
           ) : (
             events.map((event) => (
               <Card key={event.id}>
@@ -122,7 +125,10 @@ export default async function CalendarPage() {
           </Card>
 
           {eventLogs.length === 0 ? (
-            <EmptyState message={t("noLogs")} />
+            <EmptyState
+              title={t("noLogs")}
+              description={t("noLogsHint")}
+            />
           ) : (
             eventLogs.map((log) => (
               <Card key={log.id}>

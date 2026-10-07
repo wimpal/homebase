@@ -78,7 +78,10 @@ export function HouseManualClient({
       )}
 
       {docs.length === 0 ? (
-        <EmptyState message={t("noDocs")} />
+        <EmptyState
+          title={t("noDocs")}
+          description={t("noDocsHint")}
+        />
       ) : (
         <div className="grid gap-4">
           {docs.map((doc) => (

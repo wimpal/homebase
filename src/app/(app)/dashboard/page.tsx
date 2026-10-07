@@ -8,6 +8,7 @@ import { isModuleEnabled } from "@/core/modules/settings";
 import { prisma } from "@/core/db";
 import { getDashboardTodos } from "@/modules/tasks/actions";
 import { getLowStockProducts } from "@/modules/inventory/actions";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CheckSquare, AlertTriangle } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatDate } from "@/lib/utils";
@@ -101,7 +102,10 @@ export default async function DashboardPage() {
             }
           >
             {todos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noChores")}</p>
+              <EmptyState
+                title={t("noChores")}
+                description={t("noChoresHint")}
+              />
             ) : (
               <ul className="space-y-2">
                 {todos.map((chore) => (

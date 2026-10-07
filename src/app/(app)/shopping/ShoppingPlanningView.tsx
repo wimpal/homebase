@@ -140,7 +140,10 @@ export function ShoppingPlanningView({
       )}
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
         {items.length === 0 ? (
-          <EmptyState message={t("nothingNeeded")} />
+          <EmptyState
+            title={t("nothingNeeded")}
+            description={t("nothingNeededHint")}
+          />
         ) : (
           <ul className="divide-y divide-border">
             {items.map((item) => (
