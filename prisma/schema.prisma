@@ -192,6 +192,7 @@ model Household {
   plants           Plant[]
   pets             Pet[]
   calendarEvents   CalendarEvent[]
+  calendarSubscriptions CalendarSubscription[]
   routines         Routine[]
   routineTemplates RoutineTemplate[]
   eventLogs        EventLog[]
@@ -815,6 +816,48 @@ model EventLog {
   occurredAt  DateTime @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+/// Household-owned read-only link to an external calendar (ICS / webcal URL).
+/// T-139 / ADR-029 — occurrences live in CalendarFeedOccurrence, never in CalendarEvent.
+model CalendarSubscription {
+  id            String    @id @default(cuid())
+  householdId   String
+  name          String
+  url           String
+  /// Palette token from CALENDAR_FEED_COLORS (never a raw CSS value).
+  color         String    @default("emerald")
+  enabled       Boolean   @default(true)
+  lastSyncedAt  DateTime?
+  lastSyncError String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  household   Household                @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  occurrences CalendarFeedOccurrence[]
+
+  @@index([householdId])
+}
+
+/// One expanded occurrence of a subscribed feed inside the sync window.
+/// Sync replaces rows per subscription; native events are never touched.
+model CalendarFeedOccurrence {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  /// VEVENT UID + recurrence identity (or start+title fallback) — stable across syncs.
+  externalKey    String
+  title          String
+  description    String?
+  location       String?
+  startAt        DateTime
+  endAt          DateTime?
+  allDay         Boolean   @default(false)
+
+  subscription CalendarSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, externalKey])
+  @@index([subscriptionId, startAt])
+  @@index([startAt])
 }
 
 model UserPoints {

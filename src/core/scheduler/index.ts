@@ -7,6 +7,7 @@ import {
   adjustSunsetLinkedAutomations,
   evaluateLightAutomations,
 } from "@/domain/automations";
+import { syncCalendarFeeds } from "@/domain/calendar/sync-all";
 import { adjustSunsetLinkedCinemaCutoff } from "@/domain/protocols";
 import { markProductNeeded } from "@/domain/shopping";
 import { addDays, isBefore, subMinutes } from "date-fns";
@@ -37,6 +38,10 @@ export function startScheduler() {
   });
   cron.schedule("*/5 * * * *", () => {
     void checkDeliveryAlerts();
+  });
+  // T-139: refresh ICS calendar subscriptions hourly (module-gated inside).
+  cron.schedule("0 * * * *", () => {
+    void runCalendarFeedSync();
   });
   cron.schedule("15 3 * * *", () => {
     void runNotificationRetention();
@@ -291,6 +296,22 @@ async function checkDeliveryAlerts() {
         dedupeKey: `delivery:${delivery.id}:${delivery.earliestTime.toISOString()}`,
       });
     }
+  }
+}
+
+async function runCalendarFeedSync() {
+  try {
+    const summary = await syncCalendarFeeds();
+    if (summary.feeds > 0) {
+      console.log(
+        `[scheduler] calendar sync: feeds=${summary.feeds} synced=${summary.synced} failed=${summary.failed}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      "[scheduler] calendar sync failed:",
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 

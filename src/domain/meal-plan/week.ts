@@ -7,55 +7,23 @@
  * consumed here is `YYYY-MM-DD`, anchored at UTC midnight.
  */
 
-const DATE_KEY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+import {
+  columnToDateKey,
+  dateKeyToColumn,
+  parseDateKey,
+} from "@/lib/dates";
 
-/** True only for `YYYY-MM-DD` that maps to a real calendar date. */
-export function isDateKey(value: string): boolean {
-  const match = DATE_KEY_RE.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const asUtc = new Date(Date.UTC(year, month - 1, day));
-  return (
-    asUtc.getUTCFullYear() === year &&
-    asUtc.getUTCMonth() === month - 1 &&
-    asUtc.getUTCDate() === day
-  );
-}
-
-/** Today as `YYYY-MM-DD` in the given IANA timezone. */
-export function todayKey(timeZone: string, now: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const pick = (type: string) =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  return `${pick("year")}-${pick("month")}-${pick("day")}`;
-}
-
-/** `YYYY-MM-DD` → Date at UTC midnight (for `@db.Date` columns). */
-export function dateKeyToColumn(dateKey: string): Date {
-  return new Date(`${dateKey}T00:00:00.000Z`);
-}
-
-/** Date from a `@db.Date` column → `YYYY-MM-DD`. */
-export function columnToDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
+export {
+  columnToDateKey,
+  dateKeyToColumn,
+  isDateKey,
+  todayKey,
+} from "@/lib/dates";
 
 /** Monday of the week containing `dateKey` (UTC arithmetic, no local getters). */
 export function weekStartKey(dateKey: string): string {
-  const match = DATE_KEY_RE.exec(dateKey);
-  if (!match) {
-    throw new Error(`Invalid date key: ${dateKey}`);
-  }
-  const asUtc = new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
-  );
+  const { year, month, day } = parseDateKey(dateKey);
+  const asUtc = new Date(Date.UTC(year, month - 1, day));
   const mondayOffset = (asUtc.getUTCDay() + 6) % 7;
   asUtc.setUTCDate(asUtc.getUTCDate() - mondayOffset);
   return columnToDateKey(asUtc);
