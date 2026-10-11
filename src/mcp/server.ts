@@ -21,6 +21,7 @@ import {
   wakeNetworkDevice,
 } from "@/domain/network";
 import { addChore, completeChoreDomain, listChores } from "@/domain/tasks";
+import { getCalendarAgenda } from "@/domain/calendar";
 import {
   addDelivery,
   listDeliveries,
@@ -308,6 +309,43 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ id }) => {
       const result = await completeChoreDomain(householdId, { id });
+      if (isDomainError(result)) {
+        return toolError(result);
+      }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.calendar.agenda",
+    {
+      description:
+        "Read the household calendar agenda for one day (date) or an inclusive date range (start + end): native Homebase events plus synced read-only ICS feed occurrences. Household-local day boundaries; dates are YYYY-MM-DD. Read-only: no writes, no feed sync, no subscription management. Deadline Chores are NOT included here - use homebase.tasks.list for tasks. Never returns feed URLs or credentials. When event_count is 0 the day/range is genuinely clear; events are never omitted to look calm.",
+      inputSchema: {
+        date: z
+          .string()
+          .optional()
+          .describe(
+            "Single day YYYY-MM-DD in the household timezone. Use instead of start/end.",
+          ),
+        start: z
+          .string()
+          .optional()
+          .describe("Inclusive range start YYYY-MM-DD; requires end."),
+        end: z
+          .string()
+          .optional()
+          .describe("Inclusive range end YYYY-MM-DD; requires start."),
+        sources: z
+          .array(z.enum(["events", "feeds"]))
+          .optional()
+          .describe(
+            "Layers to include; default both. events = native Homebase events, feeds = subscribed ICS calendars.",
+          ),
+      },
+    },
+    async (input) => {
+      const result = await getCalendarAgenda(householdId, input);
       if (isDomainError(result)) {
         return toolError(result);
       }

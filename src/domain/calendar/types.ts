@@ -85,3 +85,47 @@ export type ParsedFeedOccurrence = {
 export type SyncFeedResult =
   | { ok: true; count: number }
   | { ok: false; error: string };
+
+/** Requested agenda layers over MCP (T-140); item-level `source` is singular. */
+export const CALENDAR_AGENDA_SOURCES = ["events", "feeds"] as const;
+
+export type CalendarAgendaSourceFilter = (typeof CALENDAR_AGENDA_SOURCES)[number];
+
+export function isCalendarAgendaSourceFilter(
+  value: unknown,
+): value is CalendarAgendaSourceFilter {
+  return (
+    typeof value === "string" &&
+    (CALENDAR_AGENDA_SOURCES as readonly string[]).includes(value)
+  );
+}
+
+/** One Mimir-groundable agenda row (native event or feed occurrence). */
+export interface CalendarAgendaItem {
+  source: "event" | "feed";
+  id: string;
+  title: string;
+  /** ISO instant. */
+  start: string;
+  /** ISO instant; omitted for open-ended rows. */
+  end?: string;
+  all_day: boolean;
+  /** "Homebase" for native events; the subscription name for feeds. */
+  calendar_name: string;
+  /** Palette token: "emerald" for native events; a feed colour token. */
+  calendar_color: string;
+}
+
+/** Stable read payload for `homebase.calendar.agenda`. */
+export interface CalendarAgenda {
+  /** Inclusive household-local date keys (`YYYY-MM-DD`). */
+  range: { start: string; end: string };
+  event_count: number;
+  events: CalendarAgendaItem[];
+  /** Reference-only spoken fragments (T-028); never paste as JSON escapes. */
+  schedule_lines: string[];
+  /** True when a requested feed is showing a sync error. */
+  stale?: boolean;
+  /** Per-feed sync problems; `source` is the feed name, never the URL. */
+  errors?: Array<{ source: string; message: string }>;
+}

@@ -13,6 +13,14 @@ import {
   normalizeFeedUrl,
   parseFeedOccurrences,
 } from "../src/domain/calendar/ics";
+import {
+  AGENDA_NATIVE_CALENDAR_COLOR,
+  AGENDA_NATIVE_CALENDAR_NAME,
+  CALENDAR_AGENDA_MAX_DAYS,
+  agendaDayKeys,
+  agendaTimeLabel,
+  formatAgendaScheduleLine,
+} from "../src/domain/calendar/agenda-format";
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) throw new Error(msg);
@@ -209,6 +217,70 @@ assert(addMonthsKey("2026-01", -1) === "2025-12", "year back-roll");
     WINDOW,
   );
   assert(empty.length === 0, "empty calendar should yield no occurrences");
+}
+
+// --- T-140 agenda range + schedule-line helpers (pure) ----------------------
+{
+  const days = agendaDayKeys("2026-10-05", "2026-10-07");
+  assert(
+    days.join(",") === "2026-10-05,2026-10-06,2026-10-07",
+    `agendaDayKeys: inclusive range, got ${days.join(",")}`,
+  );
+  assert(
+    agendaDayKeys("2026-01-01", "2026-12-31").length ===
+      CALENDAR_AGENDA_MAX_DAYS,
+    "agendaDayKeys: caps at CALENDAR_AGENDA_MAX_DAYS",
+  );
+
+  const native = {
+    source: "event" as const,
+    id: "e1",
+    title: "Dentist",
+    start: "2026-10-05T07:30:00.000Z",
+    end: "2026-10-05T08:30:00.000Z",
+    all_day: false,
+    calendar_name: AGENDA_NATIVE_CALENDAR_NAME,
+    calendar_color: AGENDA_NATIVE_CALENDAR_COLOR,
+  };
+  assert(
+    agendaTimeLabel(native.start, "Europe/Amsterdam") === "09:30",
+    "agendaTimeLabel: renders in the household timezone",
+  );
+  assert(
+    formatAgendaScheduleLine(native, "Europe/Amsterdam") ===
+      "Dentist, from 09:30 to 10:30 (Homebase)",
+    "formatAgendaScheduleLine: timed range",
+  );
+
+  const allDay = { ...native, title: "Holiday", all_day: true };
+  assert(
+    formatAgendaScheduleLine(allDay, "Europe/Amsterdam") ===
+      "Holiday, all day (Homebase)",
+    "formatAgendaScheduleLine: all day",
+  );
+
+  const point = { ...native, end: undefined, title: "Call" };
+  assert(
+    formatAgendaScheduleLine(point, "Europe/Amsterdam") ===
+      "Call, at 09:30 (Homebase)",
+    "formatAgendaScheduleLine: single instant",
+  );
+
+  const unlabeled = { ...point, calendar_name: "" };
+  assert(
+    formatAgendaScheduleLine(unlabeled, "Europe/Amsterdam") ===
+      "Call, at 09:30",
+    "formatAgendaScheduleLine: omits empty calendar name",
+  );
+
+  const lines = [
+    formatAgendaScheduleLine(native, "Europe/Amsterdam"),
+    formatAgendaScheduleLine(allDay, "Europe/Amsterdam"),
+  ];
+  assert(
+    lines.every((line) => !/[^\x00-\x7F]/.test(line)),
+    "schedule lines stay ASCII-safe",
+  );
 }
 
 console.log("calendar selftest OK");
