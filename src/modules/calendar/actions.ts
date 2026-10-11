@@ -118,10 +118,10 @@ export async function updateCalendarSubscription(
 
 export async function setCalendarSubscriptionEnabled(
   formData: FormData,
-): Promise<void> {
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
   const id = (formData.get("id") as string) || "";
-  if (!id) return;
+  if (!id) return failResult("Subscription not found", "feed_not_found");
   const enabled = formData.get("enabled") === "true";
 
   const result = await setCalendarSubscriptionEnabledDomain(
@@ -130,26 +130,28 @@ export async function setCalendarSubscriptionEnabled(
     enabled,
   );
   if (result) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
 
   if (enabled) {
     await syncCalendarSubscription(id);
   }
   revalidatePath("/calendar");
+  return okResult();
 }
 
 export async function deleteCalendarSubscription(
   formData: FormData,
-): Promise<void> {
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
   const id = (formData.get("id") as string) || "";
-  if (!id) return;
+  if (!id) return failResult("Subscription not found", "feed_not_found");
   const result = await removeCalendarSubscription(householdId, id);
   if (result) {
-    throw new Error(result.message);
+    return fromDomainError(result);
   }
   revalidatePath("/calendar");
+  return okResult();
 }
 
 export async function syncCalendarSubscriptionNow(

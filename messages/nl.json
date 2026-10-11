@@ -702,6 +702,7 @@
     "events": "Evenementen",
     "lastTime": "Laatste keer",
     "createEvent": "Evenement aanmaken",
+    "addEvent": "Evenement toevoegen",
     "start": "Start",
     "end": "Einde",
     "reminderMinutes": "Herinnering (minuten van tevoren)",

@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useFormError } from "@/components/ui/form-error-context";
 import type { ActionResult } from "@/lib/action-result";
 
@@ -11,6 +13,13 @@ type FormActionProps = {
   className?: string;
   diagnosticsFromForm?: (formData: FormData) => Record<string, string> | undefined;
   onSuccess?: () => void;
+  /**
+   * Re-fetch the current route after a successful action so changed server
+   * data is visible without a manual page reload. Opt-in: default false.
+   */
+  refreshOnSuccess?: boolean;
+  /** Clear the form fields after a successful action. */
+  resetOnSuccess?: boolean;
   /** Return a confirm message to gate submit, or null to proceed. */
   confirmIf?: (formData: FormData) => string | null;
 };
@@ -23,8 +32,12 @@ export function FormAction({
   className,
   diagnosticsFromForm,
   onSuccess,
+  refreshOnSuccess = false,
+  resetOnSuccess = false,
   confirmIf,
 }: FormActionProps) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const { handleActionResult } = useFormError();
 
   async function wrapped(formData: FormData): Promise<void> {
@@ -43,10 +56,16 @@ export function FormAction({
       return;
     }
     onSuccess?.();
+    if (resetOnSuccess) {
+      formRef.current?.reset();
+    }
+    if (refreshOnSuccess) {
+      router.refresh();
+    }
   }
 
   return (
-    <form action={wrapped} className={className}>
+    <form ref={formRef} action={wrapped} className={className}>
       {children}
     </form>
   );

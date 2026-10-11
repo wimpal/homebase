@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { setCalendarLayerPreference } from "@/modules/calendar/actions";
 import { cn } from "@/lib/utils";
@@ -22,14 +23,17 @@ const LAYER_DOT_CLASSES: Record<CalendarLayer, string> = {
 export function LayerToggles({ initial, labels, legend }: LayerTogglesProps) {
   const [prefs, setPrefs] = useState(initial);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
   function toggle(layer: CalendarLayer, enabled: boolean) {
     setPrefs((current) => ({ ...current, [layer]: enabled }));
     const formData = new FormData();
     formData.set("layer", layer);
     formData.set("enabled", enabled ? "true" : "false");
-    startTransition(() => {
-      void setCalendarLayerPreference(formData);
+    startTransition(async () => {
+      await setCalendarLayerPreference(formData);
+      // Re-render the month grid / day panel for the new layer set.
+      router.refresh();
     });
   }
 

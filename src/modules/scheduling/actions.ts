@@ -8,6 +8,8 @@ import {
 } from "@/core/tenancy/assertHouseholdResource";
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { zonedDateTimeToInstant } from "@/lib/dates";
+import { type ActionResult, failResult, okResult } from "@/lib/action-result";
 
 export async function getCalendarEvents() {
   const { householdId } = await requireHousehold();
@@ -18,12 +20,36 @@ export async function getCalendarEvents() {
   });
 }
 
-export async function createCalendarEvent(formData: FormData) {
-  const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
+export async function createCalendarEvent(
+  formData: FormData,
+): Promise<ActionResult> {
+  const { householdId, household } = await requireMutationAccess(
+    ModuleId.CALENDAR,
+  );
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
-  const startAt = new Date(formData.get("startAt") as string);
-  const endAt = formData.get("endAt") ? new Date(formData.get("endAt") as string) : undefined;
+  // datetime-local posts a zone-less wall clock; interpret it in the
+  // household timezone, not the (UTC) server timezone.
+  const startAt = zonedDateTimeToInstant(
+    formData.get("startAt") as string,
+    household.timezone,
+  );
+  if (!startAt) {
+    return failResult(
+      "Enter a valid start date and time.",
+      "calendar_invalid_datetime",
+    );
+  }
+  const endRaw = (formData.get("endAt") as string) || "";
+  const endAt = endRaw
+    ? zonedDateTimeToInstant(endRaw, household.timezone)
+    : null;
+  if (endRaw && !endAt) {
+    return failResult(
+      "Enter a valid end date and time.",
+      "calendar_invalid_datetime",
+    );
+  }
   const atHome = formData.get("atHome") === "on";
   const reminderMinutes = parseInt((formData.get("reminderMinutes") as string) || "60", 10);
   const itemsNeeded = ((formData.get("itemsNeeded") as string) || "")
@@ -41,7 +67,7 @@ export async function createCalendarEvent(formData: FormData) {
       title,
       description,
       startAt,
-      endAt,
+      endAt: endAt ?? undefined,
       atHome,
       reminderMinutes,
       itemsNeeded,
@@ -49,6 +75,7 @@ export async function createCalendarEvent(formData: FormData) {
     },
   });
   revalidatePath("/calendar");
+  return okResult();
 }
 
 export async function getRoutines() {
@@ -204,19 +231,30 @@ export async function getEventLogs() {
   });
 }
 
-export async function logEvent(formData: FormData) {
-  const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
+export async function logEvent(formData: FormData): Promise<ActionResult> {
+  const { householdId, household } = await requireMutationAccess(
+    ModuleId.CALENDAR,
+  );
+  const occurredRaw = (formData.get("occurredAt") as string) || "";
+  const occurredAt = occurredRaw
+    ? zonedDateTimeToInstant(occurredRaw, household.timezone)
+    : new Date();
+  if (!occurredAt) {
+    return failResult(
+      "Enter a valid date and time.",
+      "calendar_invalid_datetime",
+    );
+  }
   await prisma.eventLog.create({
     data: {
       householdId,
       title: formData.get("title") as string,
       description: (formData.get("description") as string) || undefined,
-      occurredAt: formData.get("occurredAt")
-        ? new Date(formData.get("occurredAt") as string)
-        : new Date(),
+      occurredAt,
     },
   });
   revalidatePath("/calendar");
+  return okResult();
 }
 
 export async function getUserGamification() {
@@ -229,15 +267,20 @@ export async function getUserGamification() {
   return { points, badges };
 }
 
-export async function deleteCalendarEvent(formData: FormData) {
+export async function deleteCalendarEvent(
+  formData: FormData,
+): Promise<ActionResult> {
   const { householdId } = await requireMutationAccess(ModuleId.CALENDAR);
   const id = formData.get("id") as string;
-  if (!id) return;
+  if (!id) return failResult("Event not found", "event_not_found");
   const result = await prisma.calendarEvent.deleteMany({
     where: { id, householdId },
   });
-  if (result.count === 0) throw new Error("Calendar event not found");
+  if (result.count === 0) {
+    return failResult("Calendar event not found", "event_not_found");
+  }
   revalidatePath("/calendar");
+  return okResult();
 }
 
 export async function deleteRoutine(formData: FormData) {

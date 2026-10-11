@@ -13,6 +13,7 @@ import {
   normalizeFeedUrl,
   parseFeedOccurrences,
 } from "../src/domain/calendar/ics";
+import { zonedDateTimeToInstant } from "../src/lib/dates";
 import {
   AGENDA_NATIVE_CALENDAR_COLOR,
   AGENDA_NATIVE_CALENDAR_NAME,
@@ -280,6 +281,52 @@ assert(addMonthsKey("2026-01", -1) === "2025-12", "year back-roll");
   assert(
     lines.every((line) => !/[^\x00-\x7F]/.test(line)),
     "schedule lines stay ASCII-safe",
+  );
+}
+
+// --- Wall-clock parsed in the household timezone (calendar forms) -----------
+{
+  const summer = zonedDateTimeToInstant("2026-10-05T09:00", "Europe/Amsterdam");
+  assert(
+    summer?.toISOString() === "2026-10-05T07:00:00.000Z",
+    `CEST wall clock: got ${summer?.toISOString()}`,
+  );
+  const winter = zonedDateTimeToInstant("2026-01-15T09:00", "Europe/Amsterdam");
+  assert(
+    winter?.toISOString() === "2026-01-15T08:00:00.000Z",
+    `CET wall clock: got ${winter?.toISOString()}`,
+  );
+  const withSeconds = zonedDateTimeToInstant(
+    "2026-10-05T09:30:15",
+    "Europe/Amsterdam",
+  );
+  assert(
+    withSeconds?.toISOString() === "2026-10-05T07:30:15.000Z",
+    `with seconds: got ${withSeconds?.toISOString()}`,
+  );
+  const explicit = zonedDateTimeToInstant(
+    "2026-10-05T09:00:00.000Z",
+    "Europe/Amsterdam",
+  );
+  assert(
+    explicit?.toISOString() === "2026-10-05T09:00:00.000Z",
+    "explicit Z is parsed as-is",
+  );
+  assert(
+    zonedDateTimeToInstant("not a date", "Europe/Amsterdam") === null,
+    "garbage rejected",
+  );
+  assert(
+    zonedDateTimeToInstant("2026-02-30T09:00", "Europe/Amsterdam") === null,
+    "impossible calendar date rejected",
+  );
+  assert(
+    zonedDateTimeToInstant("2026-10-05T25:00", "Europe/Amsterdam") === null,
+    "out-of-range hour rejected",
+  );
+  assert(
+    zonedDateTimeToInstant("2026-10-05T09:00", "Not/AZone") === null,
+    "unknown timezone rejected",
   );
 }
 

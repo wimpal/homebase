@@ -76,3 +76,81 @@ export function dateKeyInTimeZone(instant: Date, timeZone: string): string {
 export function todayKey(timeZone: string, now: Date = new Date()): string {
   return dateKeyInTimeZone(now, timeZone);
 }
+
+const DATE_TIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/;
+const EXPLICIT_OFFSET_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/** Offset of `instant` in `timeZone`, in milliseconds (local minus UTC). */
+function zoneOffsetMs(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  const pick = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const asIfUtc = Date.UTC(
+    pick("year"),
+    pick("month") - 1,
+    pick("day"),
+    pick("hour"),
+    pick("minute"),
+    pick("second"),
+  );
+  return asIfUtc - instant.getTime();
+}
+
+/**
+ * Wall-clock `YYYY-MM-DDTHH:mm[:ss]` interpreted in `timeZone` -> UTC instant.
+ *
+ * `<input type="datetime-local">` posts a zone-less string; without this it is
+ * parsed in the *server* timezone (UTC in Docker), shifting every time. Values
+ * that already carry a zone (`Z` / `+HH:MM`) are parsed directly. Returns null
+ * for missing/invalid input or an unknown timezone.
+ */
+export function zonedDateTimeToInstant(
+  value: string | null | undefined,
+  timeZone: string,
+): Date | null {
+  const text = (value ?? "").trim();
+  if (!text) return null;
+
+  if (EXPLICIT_OFFSET_RE.test(text)) {
+    const direct = new Date(text);
+    return Number.isNaN(direct.getTime()) ? null : direct;
+  }
+
+  const match = DATE_TIME_RE.exec(text);
+  if (!match) return null;
+  const [, ys, ms, ds, hs, mins, ss] = match;
+  if (!isDateKey(`${ys}-${ms}-${ds}`)) return null;
+  const hour = Number(hs);
+  const minute = Number(mins);
+  const second = ss ? Number(ss) : 0;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+
+  const wallAsUtc = Date.UTC(
+    Number(ys),
+    Number(ms) - 1,
+    Number(ds),
+    hour,
+    minute,
+    second,
+  );
+  try {
+    // Two passes: the offset can differ across a DST boundary.
+    let offset = zoneOffsetMs(new Date(wallAsUtc), timeZone);
+    let instant = new Date(wallAsUtc - offset);
+    offset = zoneOffsetMs(instant, timeZone);
+    instant = new Date(wallAsUtc - offset);
+    return Number.isNaN(instant.getTime()) ? null : instant;
+  } catch {
+    return null;
+  }
+}

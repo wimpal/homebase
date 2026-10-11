@@ -702,6 +702,7 @@
     "events": "Events",
     "lastTime": "Last Time",
     "createEvent": "Create Event",
+    "addEvent": "Add event",
     "start": "Start",
     "end": "End",
     "reminderMinutes": "Reminder (minutes before)",

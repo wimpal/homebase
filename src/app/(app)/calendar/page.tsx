@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { FormAction } from "@/components/ui/form-action";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   createCalendarEvent,
@@ -42,6 +43,7 @@ import {
 } from "@/domain/calendar/dates";
 import { isLocale, localeToBcp47 } from "@/i18n/config";
 import { DayAgenda } from "./DayAgenda";
+import { EventFields } from "./EventFields";
 import { FeedsPanel } from "./FeedsPanel";
 import { LayerToggles } from "./LayerToggles";
 import { MonthGrid } from "./MonthGrid";
@@ -277,51 +279,18 @@ export default async function CalendarPage({
                 <CardTitle className="text-base">{t("createEvent")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <form
+                <FormAction
                   action={createCalendarEvent}
+                  actionName="calendar.createEvent"
+                  refreshOnSuccess
+                  resetOnSuccess
                   className="grid gap-3 md:grid-cols-2"
                 >
-                  <div className="grid gap-2">
-                    <Label>{tc("title")}</Label>
-                    <Input name="title" required />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>{t("start")}</Label>
-                    <Input name="startAt" type="datetime-local" required />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>{t("end")}</Label>
-                    <Input name="endAt" type="datetime-local" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>{t("reminderMinutes")}</Label>
-                    <Input
-                      name="reminderMinutes"
-                      type="number"
-                      defaultValue="60"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" name="atHome" id="atHome" defaultChecked />
-                    <Label htmlFor="atHome">{tc("atHome")}</Label>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>{t("itemsNeeded")}</Label>
-                    <Input
-                      name="itemsNeeded"
-                      placeholder={t("itemsPlaceholder")}
-                    />
-                  </div>
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>{tc("description")}</Label>
-                    <Textarea name="description" />
-                  </div>
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>{t("guestsOnePerLine")}</Label>
-                    <Textarea name="guests" />
-                  </div>
-                  <Button type="submit">{t("createEventBtn")}</Button>
-                </form>
+                  <EventFields
+                    idPrefix="event"
+                    submitLabel={t("createEventBtn")}
+                  />
+                </FormAction>
               </CardContent>
             </Card>
           </CollapsibleCreate>
@@ -365,15 +334,17 @@ export default async function CalendarPage({
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <Calendar className="h-5 w-5 text-primary" />
-                      <ConfirmForm
+                      <ConfirmFormAction
                         action={deleteCalendarEvent}
+                        actionName="calendar.deleteEvent"
                         message={t("confirmDeleteEvent")}
+                        refreshOnSuccess
                       >
                         <input type="hidden" name="id" value={event.id} />
                         <Button type="submit" variant="destructive" size="sm">
                           {tc("delete")}
                         </Button>
-                      </ConfirmForm>
+                      </ConfirmFormAction>
                     </div>
                   </div>
                 </CardContent>
@@ -388,7 +359,13 @@ export default async function CalendarPage({
               <CardTitle className="text-base">{t("logEvent")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={logEvent} className="space-y-3">
+              <FormAction
+                action={logEvent}
+                actionName="calendar.logEvent"
+                refreshOnSuccess
+                resetOnSuccess
+                className="space-y-3"
+              >
                 <div className="grid gap-2">
                   <Label>{t("whatHappened")}</Label>
                   <Input
@@ -406,7 +383,7 @@ export default async function CalendarPage({
                   <Textarea name="description" />
                 </div>
                 <Button type="submit">{tc("log")}</Button>
-              </form>
+              </FormAction>
             </CardContent>
           </Card>
 

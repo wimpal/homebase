@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CollapsibleCreate } from "@/components/ui/collapsible-create";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormAction } from "@/components/ui/form-action";
 import { Input } from "@/components/ui/input";
@@ -85,6 +85,7 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
             <FormAction
               action={createCalendarSubscription}
               actionName="calendar.createSubscription"
+              refreshOnSuccess
               className="grid gap-3 md:grid-cols-2"
             >
               <div className="grid gap-2">
@@ -168,6 +169,7 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                 <FormAction
                   action={syncCalendarSubscriptionNow}
                   actionName="calendar.syncNow"
+                  refreshOnSuccess
                 >
                   <input type="hidden" name="id" value={subscription.id} />
                   <Button type="submit" variant="outline" size="sm">
@@ -175,7 +177,11 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                   </Button>
                 </FormAction>
 
-                <form action={setCalendarSubscriptionEnabled}>
+                <FormAction
+                  action={setCalendarSubscriptionEnabled}
+                  actionName="calendar.setSubscriptionEnabled"
+                  refreshOnSuccess
+                >
                   <input type="hidden" name="id" value={subscription.id} />
                   <input
                     type="hidden"
@@ -185,17 +191,19 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                   <Button type="submit" variant="outline" size="sm">
                     {subscription.enabled ? t("feedDisable") : t("feedEnable")}
                   </Button>
-                </form>
+                </FormAction>
 
-                <ConfirmForm
+                <ConfirmFormAction
                   action={deleteCalendarSubscription}
+                  actionName="calendar.deleteSubscription"
                   message={t("confirmDeleteSubscription")}
+                  refreshOnSuccess
                 >
                   <input type="hidden" name="id" value={subscription.id} />
                   <Button type="submit" variant="destructive" size="sm">
                     {tc("delete")}
                   </Button>
-                </ConfirmForm>
+                </ConfirmFormAction>
               </div>
 
               <details className="rounded-md border p-3">
@@ -205,6 +213,7 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                 <FormAction
                   action={updateCalendarSubscription}
                   actionName="calendar.updateSubscription"
+                  refreshOnSuccess
                   className="mt-3 grid gap-3 md:grid-cols-2"
                 >
                   <input type="hidden" name="id" value={subscription.id} />

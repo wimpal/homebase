@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ConfirmForm } from "@/components/ui/confirm-form";
+import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormAction } from "@/components/ui/form-action";
 import { completeCalendarChore } from "@/modules/calendar/actions";
@@ -8,6 +8,7 @@ import { deleteCalendarEvent } from "@/modules/scheduling/actions";
 import { formatDateTime } from "@/lib/utils";
 import { Home, MapPin } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { DayAgendaCreate } from "./DayAgendaCreate";
 import { feedChipClass, feedDotClass, CHORE_DOT_CLASS, NATIVE_DOT_CLASS } from "./feed-colors";
 import { dayHeading } from "./format";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <DayAgendaCreate dayKey={dayKey} />
         {items.length === 0 ? (
           <EmptyState title={t("dayEmpty")} description={t("dayEmptyHint")} />
         ) : (
@@ -89,15 +91,17 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
                       </p>
                     )}
                   </div>
-                  <ConfirmForm
+                  <ConfirmFormAction
                     action={deleteCalendarEvent}
+                    actionName="calendar.deleteEvent"
                     message={t("confirmDeleteEvent")}
+                    refreshOnSuccess
                   >
                     <input type="hidden" name="id" value={item.id} />
                     <Button type="submit" variant="destructive" size="sm">
                       {tc("delete")}
                     </Button>
-                  </ConfirmForm>
+                  </ConfirmFormAction>
                 </div>
               );
             }
@@ -164,6 +168,7 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
                 <FormAction
                   action={completeCalendarChore}
                   actionName="calendar.completeChore"
+                  refreshOnSuccess
                 >
                   <input type="hidden" name="choreId" value={item.id} />
                   <Button type="submit" variant="outline" size="sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ConfirmForm } from "@/components/ui/confirm-form";
 import { useFormError } from "@/components/ui/form-error-context";
 import type { ActionResult } from "@/lib/action-result";
@@ -14,10 +15,15 @@ type ConfirmFormActionProps = {
   className?: string;
   diagnosticsFromForm?: (formData: FormData) => Record<string, string> | undefined;
   onSuccess?: () => void;
+  /**
+   * Re-fetch the current route after a successful action so changed server
+   * data is visible without a manual page reload. Opt-in: default false.
+   */
+  refreshOnSuccess?: boolean;
 };
 
 /**
- * ConfirmForm wired to FormErrorProvider — use for destructive mutations
+ * ConfirmForm wired to FormErrorProvider - use for destructive mutations
  * that return ActionResult instead of throwing.
  */
 export function ConfirmFormAction({
@@ -28,7 +34,9 @@ export function ConfirmFormAction({
   className,
   diagnosticsFromForm,
   onSuccess,
+  refreshOnSuccess = false,
 }: ConfirmFormActionProps) {
+  const router = useRouter();
   const { handleActionResult } = useFormError();
 
   async function wrapped(formData: FormData): Promise<void> {
@@ -43,6 +51,9 @@ export function ConfirmFormAction({
       return;
     }
     onSuccess?.();
+    if (refreshOnSuccess) {
+      router.refresh();
+    }
   }
 
   return (
