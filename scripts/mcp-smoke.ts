@@ -297,6 +297,7 @@ async function main() {
   const tools = listJson.result?.tools ?? [];
   const names = tools.map((t) => t.name).sort();
   const expected = [
+    "homebase.calendar.agenda",
     "homebase.changes.list",
     "homebase.changes.revert",
     "homebase.delivery.add",
@@ -336,10 +337,50 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 38 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 39 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 38 homebase tools");
+  ok("tools/list returns exactly 39 homebase tools");
+
+  // T-140: read-only agenda (Calendar module default-on). Shape only — no writes.
+  // Use the smoke runner's local calendar day (not UTC) so it matches a European
+  // household TZ for daytime deploys.
+  const agendaNow = new Date();
+  const agendaDate = [
+    agendaNow.getFullYear(),
+    String(agendaNow.getMonth() + 1).padStart(2, "0"),
+    String(agendaNow.getDate()).padStart(2, "0"),
+  ].join("-");
+  const agendaResult = await callTool(80, "homebase.calendar.agenda", {
+    date: agendaDate,
+  });
+  if (agendaResult.isError) {
+    fail(
+      `homebase.calendar.agenda tool error: ${agendaResult.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const agenda = parseToolPayload(agendaResult) as {
+    range?: { start?: string; end?: string };
+    event_count?: number;
+    events?: unknown[];
+    schedule_lines?: unknown[];
+  };
+  if (
+    !agenda.range ||
+    agenda.range.start !== agendaDate ||
+    agenda.range.end !== agendaDate ||
+    typeof agenda.event_count !== "number" ||
+    !Array.isArray(agenda.events) ||
+    !Array.isArray(agenda.schedule_lines) ||
+    agenda.event_count !== agenda.events.length
+  ) {
+    fail(`calendar.agenda unexpected payload: ${JSON.stringify(agenda)}`);
+  }
+  const agendaBlob = JSON.stringify(agenda);
+  if (/https?:\/\//i.test(agendaBlob) || /webcal:/i.test(agendaBlob)) {
+    fail("calendar.agenda must not leak feed URLs");
+  }
+  ok("homebase.calendar.agenda (today)");
 
   const invListResult = await callTool(3, "homebase.inventory.list", {
     low_stock_only: true,
