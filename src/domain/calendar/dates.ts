@@ -121,3 +121,10 @@ export function overlappingDayKeys(
   }
   return keys;
 }
+
+/** `MM-DD` of a date-only value (`@db.Date`), read in UTC — no timezone shift. */
+export function birthdayMonthDay(value: Date): string {
+  const m = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(value.getUTCDate()).padStart(2, "0");
+  return `${m}-${d}`;
+}

@@ -20,9 +20,20 @@ change `AUTH_URL` or force an HTTPS cutover; that is an operator decision.
 
 ## Install
 
+**Which URL to open before Add to Home Screen.** The PWA is pinned to that
+**origin**. Preferred dual-IP shape (control-repo `docs/runbook-tailnet.md`):
+
+| Icon | Open this URL first | When |
+|---|---|---|
+| Home | `http://192.168.1.142:3000` | Home Wi‑Fi, Tailscale off |
+| Away | `http://100.123.134.120:3000` | Mobile data, Tailscale on, Use Tailscale DNS **off** |
+
+Two icons (or Away in the browser). Do not expect one install to cover both —
+LAN and `100.x` are different origins (separate cookies). Always use `http://`.
+
 ### iOS Safari
 
-1. Open the HomeBase URL in Safari.
+1. Open the HomeBase URL in Safari (Home or Away URL from the table above).
 2. Tap **Share** → **Add to Home Screen**.
 3. Confirm the icon and name (**HomeBase**), then **Add**.
 4. Launch from the home screen — it opens standalone at `/dashboard` (or the

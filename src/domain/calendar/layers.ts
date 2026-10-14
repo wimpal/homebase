@@ -15,6 +15,7 @@ export const CALENDAR_LAYER_PREF_KEYS: Record<CalendarLayer, string> = {
   native: "calendar.layer.native",
   feeds: "calendar.layer.feeds",
   chores: "calendar.layer.chores",
+  birthdays: "calendar.layer.birthdays",
 };
 
 export async function getCalendarLayerPrefs(

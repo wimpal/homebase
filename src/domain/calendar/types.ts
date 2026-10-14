@@ -24,7 +24,12 @@ export function isCalendarFeedColor(value: unknown): value is CalendarFeedColor 
   );
 }
 
-export const CALENDAR_LAYERS = ["native", "feeds", "chores"] as const;
+export const CALENDAR_LAYERS = [
+  "native",
+  "feeds",
+  "chores",
+  "birthdays",
+] as const;
 
 export type CalendarLayer = (typeof CALENDAR_LAYERS)[number];
 
@@ -41,6 +46,7 @@ export const DEFAULT_CALENDAR_LAYER_PREFS: CalendarLayerPrefs = {
   native: true,
   feeds: true,
   chores: true,
+  birthdays: true,
 };
 
 export const CALENDAR_FEED_NAME_MAX = 80;

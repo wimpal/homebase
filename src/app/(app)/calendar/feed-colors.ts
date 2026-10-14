@@ -22,6 +22,7 @@ export const FEED_CHIP_CLASSES: Record<string, string> = {
 
 export const NATIVE_DOT_CLASS = "bg-emerald-600";
 export const CHORE_DOT_CLASS = "bg-amber-600";
+export const BIRTHDAY_DOT_CLASS = "bg-pink-500";
 
 export function feedDotClass(color: string): string {
   return FEED_DOT_CLASSES[color] ?? "bg-zinc-400";
@@ -34,5 +35,6 @@ export function feedChipClass(color: string): string {
 export function itemDotClass(item: CalendarDayItem): string {
   if (item.kind === "native") return NATIVE_DOT_CLASS;
   if (item.kind === "chore") return CHORE_DOT_CLASS;
+  if (item.kind === "birthday") return BIRTHDAY_DOT_CLASS;
   return feedDotClass(item.feedColor);
 }

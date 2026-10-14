@@ -391,7 +391,10 @@ export function ShoppingPlanningView({
   );
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col">
+    <div
+      className="flex min-h-[20rem] flex-col"
+      style={{ height: "calc(var(--shell-vh, 100dvh) - 12rem)" }}
+    >
       <div className="mb-3 flex gap-1 rounded-lg bg-muted p-1 lg:hidden">
         <button
           type="button"

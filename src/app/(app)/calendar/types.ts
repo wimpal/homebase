@@ -33,4 +33,13 @@ export type CalendarDayItem =
       endAt: null;
       allDay: false;
       deadline: Date;
+    }
+  | {
+      kind: "birthday";
+      id: string;
+      title: string;
+      startAt: Date;
+      endAt: null;
+      allDay: true;
+      href: string;
     };

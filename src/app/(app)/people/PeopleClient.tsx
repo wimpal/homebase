@@ -71,7 +71,7 @@ export function PeopleClient({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {people.map((person) => (
-            <Card key={person.id}>
+            <Card key={person.id} id={`person-${person.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <div>

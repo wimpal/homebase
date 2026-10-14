@@ -4,11 +4,12 @@ HomeBase runs as four Docker containers: **app**, **worker**, **postgres**, and 
 
 ## Prerequisites
 
-- NAS with **Docker** support (Synology Container Manager, QNAP Container Station, TrueNAS SCALE, or plain Linux + Docker)
+- **This household:** UGREEN DXP 4800 Plus running **UGOS Pro** + Docker (control-repo ADR-030). Not Synology.
+- Other platforms with Docker also work (generic notes below).
 - **Git** on the NAS (or clone from your PC and copy the folder)
-- SSH access (recommended for easy redeploys)
+- SSH access (recommended for easy redeploys) — enable in UGOS Control Panel → Terminal if needed
 
-**Home LAN (this household):** Zyxel T-56 (`192.168.1.0/24`, gateway `192.168.1.1`). TP-Link Archer BE230 is in **Access Point** mode (office Wi‑Fi / switch). NAS default LAN IP: **`192.168.1.142`** — reserve it on T-56 DHCP. Dirigera hub and TV are on the same flat network.
+**Home LAN (this household):** Zyxel T-56 (`192.168.1.0/24`, gateway `192.168.1.1`). TP-Link Archer BE230 is in **Access Point** mode (office Wi‑Fi / switch). UGREEN NAS LAN IP: **`192.168.1.142`** — reserve it on T-56 DHCP. Dirigera hub and TV are on the same flat network. UGOS web UI is commonly on **`:9999`**.
 
 ---
 
@@ -19,14 +20,14 @@ HomeBase runs as four Docker containers: **app**, **worker**, **postgres**, and 
 SSH into your NAS (or use its terminal):
 
 ```bash
-# Example paths — adjust for your NAS
+# UGREEN / UGOS — adjust shared-folder path if yours differs
 mkdir -p /volume1/docker
 cd /volume1/docker
 git clone <your-repo-url> homebase
 cd homebase
 ```
 
-Synology: you can also put the folder under `/volume1/docker/` and use **Container Manager → Project** with the `docker-compose.yml` file.
+UGOS Docker / Compose UI can also point a project at this folder’s `docker-compose.yml`.
 
 ### 2. Create production `.env`
 
@@ -236,18 +237,18 @@ row older than 90 days). New schema fields (`Notification.dedupeKey`,
 
 ---
 
-## Synology (Container Manager)
+## UGREEN (UGOS Pro) — this household
 
-1. Install **Container Manager** from Package Center
-2. Enable SSH (Control Panel → Terminal & SNMP)
-3. Clone repo to e.g. `/volume1/docker/homebase`
-4. Create `.env` as above
-5. In Container Manager → **Project** → Create → path to folder → use existing `docker-compose.yml`
-6. For updates: SSH in and run `./scripts/deploy.sh`, or recreate the project after git pull
+1. Enable Docker (and SSH if you prefer CLI deploys)
+2. Clone repo to e.g. `/volume1/docker/homebase`
+3. Create `.env` as above
+4. Deploy via SSH (`docker compose up -d --build` / `./scripts/deploy.sh`) or UGOS Docker project UI
+5. Host Tailscale for Away UI: see control-repo `docs/runbook-tailnet.md` + ADR-028 / ADR-030 (not a compose sidecar)
 
-## QNAP (Container Station)
+## Other NAS vendors (optional)
 
-Same flow as Synology: clone to a shared folder, add `.env`, run `docker compose up -d --build` via SSH.
+- **Synology Container Manager / QNAP Container Station:** same idea — clone to a shared folder, `.env`, compose up via SSH or the vendor UI.
+- Not used by this household; do not assume DSM Package Center steps apply here.
 
 ## Reverse proxy + HTTPS (optional)
 
@@ -255,7 +256,7 @@ For `https://homebase.yourdomain.local` and PWA install on phones:
 
 - Put **Nginx**, **Caddy**, or your NAS reverse proxy in front of port 3000
 - Set `AUTH_URL` to the public HTTPS URL (e.g. `https://homebase.home.local`)
-- Synology: Control Panel → Login Portal → Reverse Proxy
+- UGOS: use the NAS reverse-proxy / app gateway UI if you enable HTTPS locally
 
 Phone install steps and PWA limits (icons, offline shell, secure-context need):
 **[docs/pwa.md](pwa.md)**
@@ -280,7 +281,7 @@ Full schedule, retention, restore drill, and disaster recovery:
 | Deploy asks for SSH password | Set up SSH key auth — see **[nas-pc-setup.md](nas-pc-setup.md)** (include NAS IP in `~/.ssh/config` `Host` line) |
 | `permission denied` on `docker.sock` during deploy | Add deploy user to `docker` group on NAS — see **[nas-pc-setup.md](nas-pc-setup.md)** §4 |
 | Login redirects wrong | `AUTH_URL` must match the URL in your browser (MagicDNS after M7b Away) |
-| Away UI unreachable over Tailscale | Host Tailscale on NAS (`tag:homebase`); ACL `:3000`; see control-repo `docs/runbook-tailnet.md` + ADR-028. Do not add a compose Tailscale sidecar. |
+| Away UI unreachable over Tailscale | Host Tailscale on UGREEN NAS (`tag:homebase`); ACL `:3000`; see control-repo `docs/runbook-tailnet.md` + ADR-028 / ADR-030. Do not add a compose Tailscale sidecar. |
 | Build fails on NAS | NAS CPU may be slow — first build can take 10–20 min |
 | Out of memory during build | Build on your PC, push image to a registry, or increase NAS swap |
 | Scheduler not running | Ensure `worker` container is up: `docker compose ps` |

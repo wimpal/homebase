@@ -27,14 +27,14 @@ Rules:
 
 Nothing is written to the database until you click enroll on a candidate.
 
-## Docker / Synology LAN reachability
+## Docker / UGREEN (UGOS) LAN reachability
 
 The `app` service stays on the Compose **bridge** network so it can resolve
 `postgres` by DNS. Do **not** set `network_mode: host` on `app` by default —
 that breaks the database URL.
 
-Outbound pings from the container to your LAN usually work on Synology. If scan
-reports “Network unreachable”:
+Outbound pings from the container to your LAN usually work on UGOS Docker. If
+scan reports “Network unreachable”:
 
 1. Confirm `HOME_NETWORK_SCAN_CIDR` matches the household LAN
 2. Confirm the NAS can reach that subnet (same class of issue as Dirigera —

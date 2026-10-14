@@ -74,6 +74,68 @@ export async function getCalendarDeadlineChores(fromIso: string, toIso: string) 
     }));
 }
 
+export type CalendarBirthdayRow = {
+  id: string;
+  source: "account" | "person";
+  name: string;
+  birthday: Date;
+};
+
+/**
+ * Birthdays across the household: Account (`User.birthday`) always;
+ * People (`Person.birthday`) only while the People module is enabled.
+ */
+export async function getCalendarBirthdays(): Promise<CalendarBirthdayRow[]> {
+  const { householdId } = await requireHousehold();
+
+  const memberships = await prisma.membership.findMany({
+    where: { householdId },
+    select: {
+      user: {
+        select: { id: true, name: true, email: true, birthday: true },
+      },
+    },
+  });
+
+  const accounts: CalendarBirthdayRow[] = memberships.flatMap(({ user }) =>
+    user.birthday
+      ? [
+          {
+            id: user.id,
+            source: "account" as const,
+            name: user.name ?? user.email,
+            birthday: user.birthday,
+          },
+        ]
+      : [],
+  );
+
+  if (!(await isModuleEnabled(householdId, ModuleId.PEOPLE))) return accounts;
+
+  const people = await prisma.person.findMany({
+    where: { householdId, birthday: { not: null } },
+    select: { id: true, name: true, familyName: true, birthday: true },
+  });
+
+  return [
+    ...accounts,
+    ...people.flatMap((person) =>
+      person.birthday
+        ? [
+            {
+              id: person.id,
+              source: "person" as const,
+              name: person.familyName?.trim()
+                ? `${person.name} ${person.familyName.trim()}`
+                : person.name,
+              birthday: person.birthday,
+            },
+          ]
+        : [],
+    ),
+  ];
+}
+
 export async function getMyCalendarLayerPrefs() {
   const { householdId, userId } = await requireHousehold();
   await requireModule(householdId, ModuleId.CALENDAR);

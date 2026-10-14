@@ -5,6 +5,7 @@
  */
 import {
   addMonthsKey,
+  birthdayMonthDay,
   isMonthKey,
   monthGridDateKeys,
   overlappingDayKeys,
@@ -327,6 +328,22 @@ assert(addMonthsKey("2026-01", -1) === "2025-12", "year back-roll");
   assert(
     zonedDateTimeToInstant("2026-10-05T09:00", "Not/AZone") === null,
     "unknown timezone rejected",
+  );
+}
+
+// --- T-141 birthday month-day projection ------------------------------------
+{
+  assert(
+    birthdayMonthDay(new Date("1990-04-17T00:00:00.000Z")) === "04-17",
+    "birthdayMonthDay: regular date",
+  );
+  assert(
+    birthdayMonthDay(new Date("2000-02-29T00:00:00.000Z")) === "02-29",
+    "birthdayMonthDay: leap day",
+  );
+  assert(
+    birthdayMonthDay(new Date(Date.UTC(1985, 11, 1))) === "12-01",
+    "birthdayMonthDay: UTC month padding",
   );
 }
 

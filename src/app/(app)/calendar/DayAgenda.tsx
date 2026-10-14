@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmFormAction } from "@/components/ui/confirm-form-action";
@@ -9,7 +10,7 @@ import { formatDateTime } from "@/lib/utils";
 import { Home, MapPin } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { DayAgendaCreate } from "./DayAgendaCreate";
-import { feedChipClass, feedDotClass, CHORE_DOT_CLASS, NATIVE_DOT_CLASS } from "./feed-colors";
+import { feedChipClass, feedDotClass, BIRTHDAY_DOT_CLASS, CHORE_DOT_CLASS, NATIVE_DOT_CLASS } from "./feed-colors";
 import { dayHeading } from "./format";
 import { cn } from "@/lib/utils";
 import type { CalendarDayItem } from "./types";
@@ -148,6 +149,28 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
                     </p>
                   )}
                 </div>
+              );
+            }
+
+            if (item.kind === "birthday") {
+              return (
+                <Link
+                  key={`birthday-${item.id}-${index}`}
+                  href={item.href}
+                  className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-accent"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="flex items-center gap-1.5 font-medium">
+                      <span
+                        className={cn("size-2 rounded-full", BIRTHDAY_DOT_CLASS)}
+                      />
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("birthday")}
+                    </p>
+                  </div>
+                </Link>
               );
             }
 

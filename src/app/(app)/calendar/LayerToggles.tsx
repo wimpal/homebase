@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { setCalendarLayerPreference } from "@/modules/calendar/actions";
 import { cn } from "@/lib/utils";
 import type { CalendarLayer, CalendarLayerPrefs } from "@/domain/calendar/types";
-import { CHORE_DOT_CLASS, NATIVE_DOT_CLASS, feedDotClass } from "./feed-colors";
+import { BIRTHDAY_DOT_CLASS, CHORE_DOT_CLASS, NATIVE_DOT_CLASS, feedDotClass } from "./feed-colors";
 
 type LayerTogglesProps = {
   initial: CalendarLayerPrefs;
@@ -18,6 +18,7 @@ const LAYER_DOT_CLASSES: Record<CalendarLayer, string> = {
   native: NATIVE_DOT_CLASS,
   feeds: feedDotClass("sky"),
   chores: CHORE_DOT_CLASS,
+  birthdays: BIRTHDAY_DOT_CLASS,
 };
 
 export function LayerToggles({ initial, labels, legend }: LayerTogglesProps) {

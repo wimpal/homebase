@@ -438,7 +438,7 @@ Verify changes with `npm run build` — TypeScript is strict about server action
     self-cleans; purge CLI exits nonzero on residual rows or a nonexistent
     `MCP_HOUSEHOLD_ID`. Fast `deploy:nas` skips smoke and purge. Do not weaken
     residual verify, skip household existence checks, or fall back to a local
-    Windows `.env` household id for remote smoke. Never Synology `tr -d "\r"`
+    Windows `.env` household id for remote smoke. Never busybox/UGOS `tr -d "\r"`
     (double quotes) — it can strip `r` from cuids. Manual: `docs/nas-deploy.md`
     § Purge MCP smoke leftovers. Skip only with `HOMEBASE_SMOKE_KEEP_DATA=1`
     (debug).

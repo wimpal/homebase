@@ -17,6 +17,7 @@ import {
   deleteCalendarEvent,
 } from "@/modules/scheduling/actions";
 import {
+  getCalendarBirthdays,
   getCalendarDeadlineChores,
   getCalendarOccurrences,
   getCalendarSubscriptions,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/dates";
 import {
   addMonthsKey,
+  birthdayMonthDay,
   isMonthKey,
   monthGridDateKeys,
   monthKeyFromDateKey,
@@ -89,7 +91,7 @@ export default async function CalendarPage({
     getMyCalendarLayerPrefs(),
   ]);
 
-  const [occurrences, chores] = await Promise.all([
+  const [occurrences, chores, birthdays] = await Promise.all([
     layerPrefs.feeds
       ? getCalendarOccurrences(
           gridRange.from.toISOString(),
@@ -102,6 +104,7 @@ export default async function CalendarPage({
           gridRange.to.toISOString(),
         )
       : Promise.resolve([]),
+    layerPrefs.birthdays ? getCalendarBirthdays() : Promise.resolve([]),
   ]);
 
   const visibleDays = new Set(gridKeys);
@@ -117,6 +120,17 @@ export default async function CalendarPage({
       }
     }
   };
+
+  const dayKeysByMonthDay = new Map<string, string[]>();
+  for (const key of gridKeys) {
+    const monthDay = key.slice(5);
+    const list = dayKeysByMonthDay.get(monthDay);
+    if (list) {
+      list.push(key);
+    } else {
+      dayKeysByMonthDay.set(monthDay, [key]);
+    }
+  }
 
   if (layerPrefs.native) {
     for (const event of events) {
@@ -178,6 +192,25 @@ export default async function CalendarPage({
       );
     }
   }
+  if (layerPrefs.birthdays) {
+    for (const birthday of birthdays) {
+      pushItem(
+        {
+          kind: "birthday",
+          id: birthday.id,
+          title: birthday.name,
+          startAt: birthday.birthday,
+          endAt: null,
+          allDay: true,
+          href:
+            birthday.source === "person"
+              ? `/people#person-${birthday.id}`
+              : "/settings",
+        },
+        dayKeysByMonthDay.get(birthdayMonthDay(birthday.birthday)) ?? [],
+      );
+    }
+  }
 
   for (const list of buckets.values()) {
     list.sort((a, b) => {
@@ -232,6 +265,7 @@ export default async function CalendarPage({
                 native: t("layerNative"),
                 feeds: t("layerFeeds"),
                 chores: t("layerChores"),
+                birthdays: t("layerBirthdays"),
               }}
               legend={t("legend")}
             />
