@@ -37,6 +37,7 @@ export function SettingsAccountForm({
       action={updateAccountAction}
       actionName="updateAccount"
       className="space-y-3"
+      refreshOnSuccess={false}
       diagnosticsFromForm={(fd) => ({
         email: String(fd.get("email") ?? ""),
       })}
@@ -142,6 +143,7 @@ export function SettingsMemberRow({
               action={adminRemoveMemberAction}
               actionName="adminRemoveMember"
               message={t("members.confirmRemove")}
+              refreshOnSuccess={false}
             >
               <input type="hidden" name="userId" value={member.userId} />
               <Button type="submit" variant="destructive" size="sm">
@@ -155,6 +157,7 @@ export function SettingsMemberRow({
           action={adminResetMemberPasswordAction}
           actionName="adminResetMemberPassword"
           className="flex flex-wrap items-end gap-2"
+          refreshOnSuccess={false}
         >
           <input type="hidden" name="userId" value={member.userId} />
           <div className="grid min-w-[12rem] flex-1 gap-2">

@@ -99,7 +99,6 @@ export function ProjectFiles({
   function handleDeleteSuccess(id: string) {
     setFiles((prev) => prev.filter((file) => file.id !== id));
     if (preview?.id === id) setPreview(null);
-    router.refresh();
   }
 
   return (

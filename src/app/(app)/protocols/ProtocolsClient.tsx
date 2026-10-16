@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Clapperboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +46,6 @@ export function ProtocolsClient({
 }: Props) {
   const t = useTranslations("protocols");
   const tc = useTranslations("common");
-  const router = useRouter();
   const formKey = settingsFingerprint(settings);
 
   const [sunsetLinkEnabled, setSunsetLinkEnabled] = useState(
@@ -129,9 +127,6 @@ export function ProtocolsClient({
               action={saveCinemaSettingsAction}
               actionName="saveCinemaSettings"
               className="grid gap-4 md:grid-cols-2"
-              onSuccess={() => {
-                router.refresh();
-              }}
             >
                 <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="networkDeviceId">{t("tv")}</Label>

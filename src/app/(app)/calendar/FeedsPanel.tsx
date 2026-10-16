@@ -85,7 +85,6 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
             <FormAction
               action={createCalendarSubscription}
               actionName="calendar.createSubscription"
-              refreshOnSuccess
               className="grid gap-3 md:grid-cols-2"
             >
               <div className="grid gap-2">
@@ -169,7 +168,6 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                 <FormAction
                   action={syncCalendarSubscriptionNow}
                   actionName="calendar.syncNow"
-                  refreshOnSuccess
                 >
                   <input type="hidden" name="id" value={subscription.id} />
                   <Button type="submit" variant="outline" size="sm">
@@ -180,7 +178,6 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                 <FormAction
                   action={setCalendarSubscriptionEnabled}
                   actionName="calendar.setSubscriptionEnabled"
-                  refreshOnSuccess
                 >
                   <input type="hidden" name="id" value={subscription.id} />
                   <input
@@ -197,7 +194,6 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                   action={deleteCalendarSubscription}
                   actionName="calendar.deleteSubscription"
                   message={t("confirmDeleteSubscription")}
-                  refreshOnSuccess
                 >
                   <input type="hidden" name="id" value={subscription.id} />
                   <Button type="submit" variant="destructive" size="sm">
@@ -213,7 +209,6 @@ export async function FeedsPanel({ subscriptions, tz, bcp47 }: FeedsPanelProps) 
                 <FormAction
                   action={updateCalendarSubscription}
                   actionName="calendar.updateSubscription"
-                  refreshOnSuccess
                   className="mt-3 grid gap-3 md:grid-cols-2"
                 >
                   <input type="hidden" name="id" value={subscription.id} />

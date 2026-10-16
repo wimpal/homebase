@@ -1019,7 +1019,6 @@ export function ProjectVisionBoard({
     );
     if (connectDraftRef.current?.fromPinId === id) cancelConnectGesture();
     if (lightbox?.id === id) setLightbox(null);
-    router.refresh();
   }
 
   const board = (

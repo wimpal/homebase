@@ -43,7 +43,6 @@ export function DayAgendaCreate({ dayKey }: DayAgendaCreateProps) {
         <FormAction
           action={createCalendarEvent}
           actionName="calendar.createEvent"
-          refreshOnSuccess
           resetOnSuccess
           onSuccess={() => setOpen(false)}
           className="grid gap-3 md:grid-cols-2"

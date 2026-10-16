@@ -373,7 +373,6 @@ export function ProjectKanban({
 
   function handleDeleteSuccess(id: string) {
     setItems((prev) => prev.filter((item) => item.id !== id));
-    router.refresh();
   }
 
   async function handleSave(formData: FormData) {

@@ -93,6 +93,7 @@ export function ProjectDetailClient({ project }: { project: ProjectDetail }) {
           actionName="deleteProject"
           message={t("confirmDeleteProject")}
           onSuccess={() => router.push("/tasks")}
+          refreshOnSuccess={false}
         >
           <input type="hidden" name="id" value={project.id} />
           <Button type="submit" variant="destructive" size="sm">

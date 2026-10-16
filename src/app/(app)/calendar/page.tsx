@@ -316,7 +316,6 @@ export default async function CalendarPage({
                 <FormAction
                   action={createCalendarEvent}
                   actionName="calendar.createEvent"
-                  refreshOnSuccess
                   resetOnSuccess
                   className="grid gap-3 md:grid-cols-2"
                 >
@@ -372,7 +371,6 @@ export default async function CalendarPage({
                         action={deleteCalendarEvent}
                         actionName="calendar.deleteEvent"
                         message={t("confirmDeleteEvent")}
-                        refreshOnSuccess
                       >
                         <input type="hidden" name="id" value={event.id} />
                         <Button type="submit" variant="destructive" size="sm">
@@ -396,7 +394,6 @@ export default async function CalendarPage({
               <FormAction
                 action={logEvent}
                 actionName="calendar.logEvent"
-                refreshOnSuccess
                 resetOnSuccess
                 className="space-y-3"
               >

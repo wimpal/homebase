@@ -96,7 +96,6 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
                     action={deleteCalendarEvent}
                     actionName="calendar.deleteEvent"
                     message={t("confirmDeleteEvent")}
-                    refreshOnSuccess
                   >
                     <input type="hidden" name="id" value={item.id} />
                     <Button type="submit" variant="destructive" size="sm">
@@ -191,7 +190,6 @@ export async function DayAgenda({ dayKey, items, tz, bcp47 }: DayAgendaProps) {
                 <FormAction
                   action={completeCalendarChore}
                   actionName="calendar.completeChore"
-                  refreshOnSuccess
                 >
                   <input type="hidden" name="choreId" value={item.id} />
                   <Button type="submit" variant="outline" size="sm">

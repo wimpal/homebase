@@ -15,7 +15,8 @@ type FormActionProps = {
   onSuccess?: () => void;
   /**
    * Re-fetch the current route after a successful action so changed server
-   * data is visible without a manual page reload. Opt-in: default false.
+   * data is visible without a manual page reload. Default true; pass false
+   * when the form navigates away or the action redirects.
    */
   refreshOnSuccess?: boolean;
   /** Clear the form fields after a successful action. */
@@ -32,7 +33,7 @@ export function FormAction({
   className,
   diagnosticsFromForm,
   onSuccess,
-  refreshOnSuccess = false,
+  refreshOnSuccess = true,
   resetOnSuccess = false,
   confirmIf,
 }: FormActionProps) {

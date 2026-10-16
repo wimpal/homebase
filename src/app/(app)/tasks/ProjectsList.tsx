@@ -137,7 +137,6 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
                     action={deleteProject}
                     actionName="deleteProject"
                     message={t("confirmDeleteProject")}
-                    onSuccess={() => router.refresh()}
                   >
                     <input type="hidden" name="id" value={project.id} />
                     <Button type="submit" variant="destructive" size="sm">
