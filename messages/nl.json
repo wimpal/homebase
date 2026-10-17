@@ -587,7 +587,11 @@
     "addTagPlaceholder": "Nieuwe tag…",
     "addTag": "Toevoegen",
     "changePhoto": "Foto wijzigen",
-    "removePhoto": "Foto verwijderen"
+    "removePhoto": "Foto verwijderen",
+    "photo": "Foto",
+    "details": "Details",
+    "timers": "Timers",
+    "shoppingList": "Boodschappenlijst"
   },
   "smartHome": {
     "title": "Smart Home",

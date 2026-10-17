@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,6 +178,28 @@ function IngredientList({
         );
       })}
     </ul>
+  );
+}
+
+function RecipeSection({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-lg border border-border bg-card/50 p-4",
+        className,
+      )}
+    >
+      <h3 className="mb-3 text-sm font-semibold text-foreground">{title}</h3>
+      {children}
+    </section>
   );
 }
 
@@ -793,9 +816,11 @@ export function RecipesClient({
 
       <Dialog open={!!selected} onOpenChange={closeOverlay}>
         {selected && (
-          <DialogContent className="w-[min(96vw,56rem)] max-w-none max-h-[90vh] overflow-auto">
-            <DialogHeader>
-              <DialogTitle>{selected.title}</DialogTitle>
+          <DialogContent className="w-[min(96vw,80rem)] max-h-[90vh] overflow-y-auto sm:max-w-none">
+            <DialogHeader className="pr-8">
+              <DialogTitle className="text-xl leading-snug">
+                {selected.title}
+              </DialogTitle>
               <DialogDescription>
                 {t("servingsCount", { count: selected.servings })}
                 {selected.calories != null
@@ -829,214 +854,214 @@ export function RecipesClient({
                 </div>
               </form>
             ) : (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid items-start gap-4 lg:grid-cols-3">
                 <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium">{t("ingredients")}</p>
+                  <RecipeSection title={t("ingredients")}>
                     <IngredientList
                       ingredients={selected.ingredients}
                       showOptionalOnly={false}
                     />
-                  </div>
+                  </RecipeSection>
                   {selected.ingredients.some((ing) => ing.optional) && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {t("optionalIngredientsLabel")}
-                      </p>
+                    <RecipeSection title={t("optionalIngredientsLabel")}>
                       <IngredientList
                         ingredients={selected.ingredients}
                         showOptionalOnly
                       />
-                    </div>
+                    </RecipeSection>
                   )}
-                  <div>
-                    <p className="text-sm font-medium">{t("steps")}</p>
-                    {(() => {
-                      const steps = resolveSteps(selected);
-                      if (steps.length === 0) {
-                        return (
-                          <p className={mutedText}>{tc("emDash")}</p>
-                        );
-                      }
-                      return (
-                        <ol
-                          className={cn(
-                            "list-decimal space-y-1 pl-5",
-                            listText,
-                          )}
-                        >
-                          {steps.map((step, i) => (
-                            <li
-                              key={i}
-                              className={cn(step.optional && optionalText)}
-                            >
-                              {step.text}
-                              {step.optional ? ` ${t("optionalMark")}` : ""}
-                            </li>
-                          ))}
-                        </ol>
-                      );
-                    })()}
-                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="aspect-[16/9] overflow-hidden rounded-md bg-muted">
-                    {displayThumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={displayThumb}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-muted-foreground">
-                        <ImageIcon className="h-12 w-12 opacity-40" />
-                      </div>
-                    )}
-                  </div>
+                <RecipeSection title={t("steps")}>
+                  {(() => {
+                    const steps = resolveSteps(selected);
+                    if (steps.length === 0) {
+                      return <p className={mutedText}>{tc("emDash")}</p>;
+                    }
+                    return (
+                      <ol
+                        className={cn("list-decimal space-y-2 pl-5", listText)}
+                      >
+                        {steps.map((step, i) => (
+                          <li
+                            key={i}
+                            className={cn(step.optional && optionalText)}
+                          >
+                            {step.text}
+                            {step.optional ? ` ${t("optionalMark")}` : ""}
+                          </li>
+                        ))}
+                      </ol>
+                    );
+                  })()}
+                </RecipeSection>
 
-                  <div className="flex flex-wrap gap-2">
-                    <label className="inline-flex cursor-pointer">
-                      <span className="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
-                        {uploadPending
-                          ? t("uploading")
-                          : displayThumb
-                            ? t("changePhoto")
-                            : t("uploadPhoto")}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        disabled={uploadPending}
-                        onChange={(e) => {
-                          onUploadThumbnail(e.target.files?.[0] ?? null);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    {displayThumb && (
+                <div className="space-y-4">
+                  <RecipeSection title={t("photo")}>
+                    <div className="aspect-[16/9] overflow-hidden rounded-md bg-muted">
+                      {displayThumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={displayThumb}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                          <ImageIcon className="h-12 w-12 opacity-40" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <label className="inline-flex cursor-pointer">
+                        <span className="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
+                          {uploadPending
+                            ? t("uploading")
+                            : displayThumb
+                              ? t("changePhoto")
+                              : t("uploadPhoto")}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          disabled={uploadPending}
+                          onChange={(e) => {
+                            onUploadThumbnail(e.target.files?.[0] ?? null);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      {displayThumb && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploadPending}
+                          onClick={onRemoveThumbnail}
+                        >
+                          {t("removePhoto")}
+                        </Button>
+                      )}
+                    </div>
+                  </RecipeSection>
+
+                  <RecipeSection title={t("details")}>
+                    {(selected.tags?.length ?? 0) > 0 && (
+                      <p className={mutedText}>{selected.tags.join(" · ")}</p>
+                    )}
+
+                    {(selected.calories != null ||
+                      selected.proteinG != null ||
+                      selected.carbsG != null ||
+                      selected.fatG != null) && (
+                      <p className={cn(mutedText, "mt-2")}>
+                        {[
+                          selected.calories != null
+                            ? t("caloriesValue", { count: selected.calories })
+                            : null,
+                          selected.proteinG != null
+                            ? `${t("proteinG")}: ${selected.proteinG}`
+                            : null,
+                          selected.carbsG != null
+                            ? `${t("carbsG")}: ${selected.carbsG}`
+                            : null,
+                          selected.fatG != null
+                            ? `${t("fatG")}: ${selected.fatG}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={uploadPending}
-                        onClick={onRemoveThumbnail}
+                        onClick={() => setEditing(true)}
                       >
-                        {t("removePhoto")}
+                        {t("editRecipe")}
                       </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing(true)}
-                    >
-                      {t("editRecipe")}
-                    </Button>
-                    <ConfirmForm
-                      action={deleteRecipe}
-                      message={t("confirmDelete")}
-                    >
-                      <input type="hidden" name="id" value={selected.id} />
-                      <Button type="submit" variant="destructive" size="sm">
-                        {t("deleteRecipe")}
-                      </Button>
-                    </ConfirmForm>
-                  </div>
-
-                  {(selected.tags?.length ?? 0) > 0 && (
-                    <p className={mutedText}>{selected.tags.join(" · ")}</p>
-                  )}
-
-                  {(selected.calories != null ||
-                    selected.proteinG != null ||
-                    selected.carbsG != null ||
-                    selected.fatG != null) && (
-                    <p className={mutedText}>
-                      {[
-                        selected.calories != null
-                          ? t("caloriesValue", { count: selected.calories })
-                          : null,
-                        selected.proteinG != null
-                          ? `${t("proteinG")}: ${selected.proteinG}`
-                          : null,
-                        selected.carbsG != null
-                          ? `${t("carbsG")}: ${selected.carbsG}`
-                          : null,
-                        selected.fatG != null
-                          ? `${t("fatG")}: ${selected.fatG}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
+                      <ConfirmForm
+                        action={deleteRecipe}
+                        message={t("confirmDelete")}
+                      >
+                        <input type="hidden" name="id" value={selected.id} />
+                        <Button type="submit" variant="destructive" size="sm">
+                          {t("deleteRecipe")}
+                        </Button>
+                      </ConfirmForm>
+                    </div>
+                  </RecipeSection>
 
                   {selected.timers.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selected.timers.map((timer) => {
-                        const running = activeTimers[timer.id] != null;
-                        return (
-                          <div key={timer.id} className="flex gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                startTimer(timer.id, timer.minutes)
-                              }
-                              disabled={running}
-                            >
-                              <Timer className="mr-1 h-3 w-3" />
-                              {timer.label} (
-                              {running
-                                ? formatTimer(activeTimers[timer.id])
-                                : `${timer.minutes}m`}
-                              )
-                            </Button>
-                            {running && (
+                    <RecipeSection title={t("timers")}>
+                      <div className="flex flex-wrap gap-2">
+                        {selected.timers.map((timer) => {
+                          const running = activeTimers[timer.id] != null;
+                          return (
+                            <div key={timer.id} className="flex gap-1">
                               <Button
                                 type="button"
-                                variant="secondary"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => stopTimer(timer.id)}
+                                onClick={() =>
+                                  startTimer(timer.id, timer.minutes)
+                                }
+                                disabled={running}
                               >
-                                <X className="mr-1 h-3 w-3" />
-                                {t("stopTimer")}
+                                <Timer className="mr-1 h-3 w-3" />
+                                {timer.label} (
+                                {running
+                                  ? formatTimer(activeTimers[timer.id])
+                                  : `${timer.minutes}m`}
+                                )
                               </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                              {running && (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => stopTimer(timer.id)}
+                                >
+                                  <X className="mr-1 h-3 w-3" />
+                                  {t("stopTimer")}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </RecipeSection>
                   )}
 
-                  <div className="space-y-2 rounded-md border border-border p-3">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={includeOptional}
-                        onChange={(e) => setIncludeOptional(e.target.checked)}
-                      />
-                      {t("includeOptional")}
-                    </label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={shopPending}
-                      onClick={onAddToShopping}
-                    >
-                      <ShoppingCart className="mr-1 h-3 w-3" />
-                      {t("addToShopping")}
-                    </Button>
-                    {shopFeedback && (
-                      <p className="text-sm text-primary">
-                        {shopFeedback}
-                      </p>
-                    )}
-                  </div>
+                  <RecipeSection title={t("shoppingList")}>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={includeOptional}
+                          onChange={(e) => setIncludeOptional(e.target.checked)}
+                        />
+                        {t("includeOptional")}
+                      </label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={shopPending}
+                        onClick={onAddToShopping}
+                      >
+                        <ShoppingCart className="mr-1 h-3 w-3" />
+                        {t("addToShopping")}
+                      </Button>
+                      {shopFeedback && (
+                        <p className="text-sm text-primary">{shopFeedback}</p>
+                      )}
+                    </div>
+                  </RecipeSection>
                 </div>
               </div>
             )}
