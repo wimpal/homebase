@@ -3,7 +3,13 @@ import { z } from "zod";
 import { DomainError, isDomainError } from "@/domain/error";
 import { listMcpChanges, revertMcpChange } from "@/domain/changes";
 import { getInventory, listInventory, updateInventory } from "@/domain/inventory";
-import { addRecipe, getRecipe, searchRecipes, updateRecipe } from "@/domain/recipes";
+import {
+  addRecipe,
+  getRecipe,
+  listRecipeTags,
+  searchRecipes,
+  updateRecipe,
+} from "@/domain/recipes";
 import { addShoppingListItem, completeShoppingItem, listShoppingItems } from "@/domain/shopping";
 import { listDirigeraLights, runDirigeraPartyMode, setDirigeraLightState } from "@/domain/smarthome";
 import {
@@ -456,6 +462,19 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async (input) => {
       const items = await searchRecipes(householdId, input);
+      return toolJson(items);
+    },
+  );
+
+  server.registerTool(
+    "homebase.recipe_tags.list",
+    {
+      description:
+        'List every distinct recipe tag used in this household with how many recipes carry it. Use to pick tags for a new recipe from the household\'s own vocabulary (tags may be Dutch, e.g. "avond eten"). Not for finding recipes (use homebase.recipes.search).',
+      inputSchema: {},
+    },
+    async () => {
+      const items = await listRecipeTags(householdId);
       return toolJson(items);
     },
   );

@@ -330,6 +330,7 @@ async function main() {
     "homebase.recipes.get",
     "homebase.recipes.search",
     "homebase.recipes.update",
+    "homebase.recipe_tags.list",
     "homebase.shopping_list.add_item",
     "homebase.shopping_list.complete_item",
     "homebase.shopping_list.list",
@@ -337,10 +338,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 39 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== 40 || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 39 homebase tools");
+  ok("tools/list returns exactly 40 homebase tools");
 
   // T-140: read-only agenda (Calendar module default-on). Shape only — no writes.
   // Use the smoke runner's local calendar day (not UTC) so it matches a European
@@ -716,6 +717,26 @@ async function main() {
     console.log("NOTE: household has no recipes — search/get skipped");
     ok("homebase.recipes.search (no matches in household)");
   }
+
+  const recipeTagsResult = await callTool(81, "homebase.recipe_tags.list", {});
+  if (recipeTagsResult.isError) {
+    fail("homebase.recipe_tags.list tool error");
+  }
+  const recipeTags = parseToolPayload(recipeTagsResult) as unknown;
+  const recipeTagsValid =
+    Array.isArray(recipeTags) &&
+    recipeTags.every(
+      (row) =>
+        typeof row === "object" &&
+        row !== null &&
+        typeof (row as { tag?: unknown }).tag === "string" &&
+        Number.isInteger((row as { count?: unknown }).count) &&
+        ((row as { count: number }).count ?? 0) >= 1,
+    );
+  if (!recipeTagsValid) {
+    fail("recipe_tags.list must return an array of {tag, count}");
+  }
+  ok("recipe_tags.list shape");
 
   const smokeRecipeTitle = `Smoke Add ${Date.now()}`;
   const smokeSteps = [
