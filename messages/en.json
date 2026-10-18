@@ -92,6 +92,10 @@
       "name": "Meal plan",
       "description": "Plan dinners for the week"
     },
+    "media": {
+      "name": "Media",
+      "description": "Play Jellyfin films and series on the TV"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -194,6 +198,11 @@
       "title": "Modules",
       "description": "Toggle features on or off for your household",
       "adminOnly": "Only household admins can change module toggles."
+    },
+    "media": {
+      "jellyfinConnected": "Jellyfin connected",
+      "jellyfinNotConfigured": "Jellyfin not configured (set JELLYFIN_URL, JELLYFIN_API_KEY and JELLYFIN_USER_ID in the Homebase env)",
+      "jellyfinUnreachable": "Jellyfin unreachable, or the API key was rejected"
     },
     "push": {
       "title": "Push Notifications",
@@ -1312,5 +1321,11 @@
     "lamps": "Lamps",
     "lampsHint": "Convenience-filtered to the mapped Dirigera room. Empty selection skips lights (TV still runs).",
     "noLamps": "No lamps match the mapped room (or Dirigera is unavailable)."
+  },
+  "media": {
+    "title": "Media",
+    "subtitle": "Jellyfin on the TV",
+    "remoteLaterTitle": "The Media remote comes in a later update",
+    "remoteLaterHint": "For now, ask Mimir to play a film or series on the TV."
   }
 }

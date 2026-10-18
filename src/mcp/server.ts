@@ -39,6 +39,7 @@ import {
   searchHouseManual,
 } from "@/domain/house-manual";
 import { addNote, listNotes, removeNote } from "@/domain/notes";
+import { pickEpisodeForSeries, playOnTv } from "@/domain/media";
 
 function toolJson(value: unknown) {
   return {
@@ -848,6 +849,51 @@ export function createMcpServer(householdId: string): McpServer {
       if (isDomainError(result)) {
         return toolError(result);
       }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.pick_episode",
+    {
+      description:
+        "Choose the episode of a Jellyfin series to play: the named season/episode, or the next unplayed one (Jellyfin NextUp first). Read-only; does not play. Returns {series, episode | null, reason, availability}.",
+      inputSchema: {
+        series_id: z.string().describe("Jellyfin series id"),
+        season: z.number().optional().describe("Season number"),
+        episode: z.number().optional().describe("Episode number"),
+      },
+    },
+    async ({ series_id, season, episode }) => {
+      const result = await pickEpisodeForSeries(householdId, {
+        seriesId: series_id,
+        season,
+        episode,
+      });
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  // Blocks up to wake (≤90s) + session wait (≤45s). Mimir uses a 150s timeout.
+  server.registerTool(
+    "homebase.media.play",
+    {
+      description:
+        "Start one Jellyfin film or episode on a paired LG webOS TV: optional wake, launch Jellyfin, wait for exactly one Jellyfin-for-webOS session, PlayNow. TV only. Write: run only after the user confirms.",
+      inputSchema: {
+        device_id: z.string().describe("Network device id (tv_capable) from devices.list"),
+        item_id: z.string().describe("Jellyfin item id of a Movie or Episode"),
+        wake_if_needed: z.boolean().optional().describe("WoL then wait for SSAP, as devices.launch_app"),
+      },
+    },
+    async ({ device_id, item_id, wake_if_needed }) => {
+      const result = await playOnTv(householdId, {
+        deviceId: device_id,
+        itemId: item_id,
+        wakeIfNeeded: Boolean(wake_if_needed),
+      });
+      if (isDomainError(result)) return toolError(result);
       return toolJson(result);
     },
   );

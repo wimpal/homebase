@@ -6,6 +6,7 @@ import {
   ChefHat,
   Clapperboard,
   Dog,
+  Film,
   Flower2,
   Home,
   Lightbulb,
@@ -179,6 +180,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     icon: UtensilsCrossed,
     href: "/meal-plan",
     defaultEnabled: true,
+  },
+  {
+    id: ModuleId.MEDIA,
+    nameKey: "media",
+    descriptionKey: "media",
+    icon: Film,
+    href: "/media",
+    defaultEnabled: false,
   },
 ];
 

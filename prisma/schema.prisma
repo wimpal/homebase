@@ -32,6 +32,7 @@ enum ModuleId {
   HOUSE_MANUAL
   NOTES
   MEAL_PLAN
+  MEDIA
 }
 
 enum NotificationType {

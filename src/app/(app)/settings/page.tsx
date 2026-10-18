@@ -33,7 +33,14 @@ import { AppearanceToggle } from "@/components/settings/AppearanceToggle";
 import { ModuleToggle } from "@/components/settings/ModuleToggle";
 import { NotificationTypeToggle } from "@/components/settings/NotificationTypeToggle";
 import { listImportTargets } from "@/domain/import";
+import { getJellyfinStatus } from "@/domain/media";
 import { isLocale } from "@/i18n/config";
+
+const JELLYFIN_STATUS_KEY = {
+  connected: "jellyfinConnected",
+  not_configured: "jellyfinNotConfigured",
+  unreachable: "jellyfinUnreachable",
+} as const;
 
 async function handleToggleModule(formData: FormData) {
   "use server";
@@ -60,6 +67,7 @@ export default async function SettingsPage({
   const profile = isDomainError(profileResult) ? null : profileResult;
   const themePreference = await getThemePreference(userId);
   const members = isAdmin ? await listMembers(householdId) : [];
+  const jellyfinStatus = isAdmin ? await getJellyfinStatus() : null;
   const t = await getTranslations("settings");
   const tm = await getTranslations("modules");
   const localeRaw = await getLocale();
@@ -181,6 +189,11 @@ export default async function SettingsPage({
                     <p className="text-sm text-muted-foreground">
                       {tm(`${mod.descriptionKey}.description`)}
                     </p>
+                    {mod.id === ModuleId.MEDIA && jellyfinStatus && (
+                      <p className="text-sm text-muted-foreground">
+                        {t(`media.${JELLYFIN_STATUS_KEY[jellyfinStatus]}`)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {isAdmin ? (

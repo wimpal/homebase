@@ -321,6 +321,8 @@ async function main() {
     "homebase.lights.list",
     "homebase.lights.party_mode",
     "homebase.lights.set_state",
+    "homebase.media.pick_episode",
+    "homebase.media.play",
     "homebase.notes.add",
     "homebase.notes.list",
     "homebase.notes.remove",
@@ -338,10 +340,10 @@ async function main() {
     "homebase.tasks.complete",
     "homebase.tasks.list",
   ];
-  if (names.length !== 40 || !expected.every((n) => names.includes(n))) {
+  if (names.length !== expected.length || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
   }
-  ok("tools/list returns exactly 40 homebase tools");
+  ok(`tools/list returns exactly ${expected.length} homebase tools`);
 
   // T-140: read-only agenda (Calendar module default-on). Shape only — no writes.
   // Use the smoke runner's local calendar day (not UTC) so it matches a European

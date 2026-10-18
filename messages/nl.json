@@ -92,6 +92,10 @@
       "name": "Maaltijdplan",
       "description": "Plan het avondeten voor de week"
     },
+    "media": {
+      "name": "Media",
+      "description": "Speel Jellyfin-films en -series af op de TV"
+    },
     "home": {
       "name": "Home",
       "description": "Dashboard"
@@ -194,6 +198,11 @@
       "title": "Modules",
       "description": "Functies in- of uitschakelen voor je huishouden",
       "adminOnly": "Alleen huishoud-admins kunnen modules in- of uitschakelen."
+    },
+    "media": {
+      "jellyfinConnected": "Jellyfin verbonden",
+      "jellyfinNotConfigured": "Jellyfin niet ingesteld (zet JELLYFIN_URL, JELLYFIN_API_KEY en JELLYFIN_USER_ID in de Homebase-env)",
+      "jellyfinUnreachable": "Jellyfin onbereikbaar, of de API-sleutel is geweigerd"
     },
     "push": {
       "title": "Pushmeldingen",
@@ -1312,5 +1321,11 @@
     "lamps": "Lampen",
     "lampsHint": "Ter gemak gefilterd op de gemapte Dirigera-kamer. Lege selectie slaat lampen over (TV draait nog steeds).",
     "noLamps": "Geen lampen matchen de gemapte kamer (of Dirigera is niet beschikbaar)."
+  },
+  "media": {
+    "title": "Media",
+    "subtitle": "Jellyfin op de TV",
+    "remoteLaterTitle": "De Media-afstandsbediening komt in een latere update",
+    "remoteLaterHint": "Vraag Mimir voorlopig om een film of serie op de TV af te spelen."
   }
 }
