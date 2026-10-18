@@ -1,16 +1,30 @@
 /**
- * Self-test for media episode pick + webOS session matching (no live Jellyfin).
+ * Self-test for media episode pick + webOS session matching + T-150 shaping (no live Jellyfin).
  * Usage: npm run media:selftest
  */
+import { isDomainError } from "../src/domain/error";
+import {
+  shapeContinueWatching,
+} from "../src/domain/media/continue-watching";
 import {
   episodeAvailability,
   pickEpisode,
 } from "../src/domain/media/episodes";
 import {
+  publicRow,
+  shapeFindPayload,
+  sortExactFirst,
+} from "../src/domain/media/find";
+import {
   matchWebosControllableSessions,
   waitForUniqueTvSession,
 } from "../src/domain/media/sessions";
+import {
+  resolveStatsWindow,
+  shapeStats,
+} from "../src/domain/media/stats";
 import type { JellyfinItem, JellyfinSession } from "../src/domain/media/types";
+import { normalizeJellyfinDate } from "../src/domain/media/util";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -145,6 +159,179 @@ async function main() {
     });
     assert("reason" in waited && waited.reason === "none", "18: none after timeout");
   }
+
+  // --- T-150 find shaping ---
+  const dune156: JellyfinItem = {
+    Id: "m1",
+    Name: "Dune",
+    Type: "Movie",
+    ProductionYear: 2021,
+    RunTimeTicks: 93_600_000_000,
+    UserData: { Played: true },
+  };
+  {
+    const row = publicRow(dune156);
+    assert(
+      JSON.stringify(row) ===
+        JSON.stringify({
+          kind: "movie",
+          id: "m1",
+          title: "Dune",
+          year: 2021,
+          runtime_minutes: 156,
+          played: true,
+        }),
+      "F1: movie publicRow",
+    );
+  }
+  {
+    const row = publicRow({
+      Id: "s1",
+      Name: "Dune: Prophecy",
+      Type: "Series",
+      ProductionYear: 2024,
+      UserData: { Played: false },
+    });
+    assert(row !== null && row.kind === "series", "F2: series kind");
+    assert(row !== null && !("played" in row), "F2: no played");
+    assert(row !== null && !("total_runtime_minutes" in row), "F2: no total_runtime_minutes");
+  }
+  {
+    assert(publicRow({ Id: "e1", Name: "Ep", Type: "Episode" }) === null, "F3: episode null");
+  }
+  {
+    const shaped = shapeFindPayload([dune156], false, null, 120);
+    assert(shaped.count === 0, "F4: ceiling-only drops over-limit");
+  }
+  {
+    const shaped = shapeFindPayload([dune156], false, "dune", 120);
+    assert(shaped.count === 1, "F5: title+ceiling keeps row");
+    assert(shaped.results[0]?.within_max_minutes === false, "F5: within_max_minutes false");
+    assert(shaped.notes.length === 3, "F5: three notes");
+  }
+  {
+    const ordered = sortExactFirst(
+      [{ Name: "Dune Part Two" }, { Name: "Dune" }],
+      "dune",
+    );
+    assert(ordered[0]?.Name === "Dune", "F6: exact title first");
+  }
+
+  // --- T-150 continue watching ---
+  {
+    const shaped = shapeContinueWatching(
+      [
+        {
+          Id: "m1",
+          Name: "Dune",
+          Type: "Movie",
+          UserData: {
+            PlaybackPositionTicks: 5000,
+            LastPlayedDate: "2026-10-01T20:00:00Z",
+          },
+        },
+      ],
+      [
+        {
+          Id: "e1",
+          Name: "System",
+          Type: "Episode",
+          SeriesId: "s1",
+          SeriesName: "The Bear",
+          ParentIndexNumber: 2,
+          IndexNumber: 1,
+          UserData: { LastPlayedDate: "2026-10-05T20:00:00Z" },
+        },
+      ],
+    );
+    const first = shaped.results[0];
+    const second = shaped.results[1];
+    assert(first?.kind === "series", "C1: series first by last played");
+    assert(
+      first !== undefined && "next_episode" in first && first.next_episode.label === "S2E1",
+      "C1: S2E1 label",
+    );
+    assert(
+      second?.kind === "movie" && second.resume_position_ticks === 5000,
+      "C1: movie resume ticks",
+    );
+    assert(shaped.empty === false, "C1: not empty");
+  }
+  {
+    const shaped = shapeContinueWatching([], []);
+    assert(shaped.empty === true, "C2: empty");
+    assert(shaped.notes.includes("nothing part-watched"), "C2: empty note");
+  }
+
+  // --- T-150 stats ---
+  {
+    const w = resolveStatsWindow({}, "Europe/Amsterdam", new Date("2026-10-17T10:00:00Z"));
+    assert(!isDomainError(w), "S1: window resolves");
+    if (!isDomainError(w)) {
+      const shaped = shapeStats([], false, w);
+      assert(shaped.window.since === "2026-01-01", "S1: since");
+      assert(shaped.window.until === "2027-01-01", "S1: until");
+      assert(shaped.window.timezone === "Europe/Amsterdam", "S1: timezone");
+    }
+  }
+  {
+    const err = resolveStatsWindow(
+      { period: "custom", since: "2026-05-02", until: "2026-05-01" },
+      "Europe/Amsterdam",
+    );
+    assert(isDomainError(err) && err.message === "since must not be after until", "S2: since after until");
+  }
+  {
+    const err = resolveStatsWindow({ period: "weekly" }, "UTC");
+    assert(
+      isDomainError(err) && err.message.startsWith("period must be one of"),
+      "S3: invalid period",
+    );
+  }
+  {
+    const w = resolveStatsWindow({}, "Europe/Amsterdam", new Date("2026-10-17T10:00:00Z"));
+    assert(!isDomainError(w), "S4: window for shape");
+    if (!isDomainError(w)) {
+      const shaped = shapeStats(
+        [
+          {
+            Id: "a",
+            Name: "A",
+            Type: "Movie",
+            UserData: { LastPlayedDate: "2025-12-31T23:30:00Z" },
+          },
+          {
+            Id: "a",
+            Name: "A",
+            Type: "Movie",
+            UserData: { LastPlayedDate: "2026-03-01T10:00:00Z" },
+          },
+          { Id: "b", Name: "B", Type: "Movie" },
+          {
+            Id: "s",
+            Name: "S",
+            Type: "Series",
+            UserData: { LastPlayedDate: "2026-03-01T10:00:00Z" },
+          },
+        ],
+        false,
+        w,
+      );
+      assert(shaped.counts.films_last_played_in_window === 1, "S4: count one (first id a)");
+      assert(shaped.watch_history === false, "S4: watch_history false");
+    }
+  }
+
+  // --- T-150 date normalize ---
+  assert(
+    normalizeJellyfinDate("2026-10-06T19:22:11.1234567Z") === "2026-10-06T19:22:11Z",
+    "D1: truncate fractional",
+  );
+  assert(
+    normalizeJellyfinDate("2026-10-06T19:22:11") === "2026-10-06T19:22:11Z",
+    "D2: bare assumes Z",
+  );
+  assert(normalizeJellyfinDate("bad") === null, "D3: bad null");
 
   console.log("OK: media selftest");
 }

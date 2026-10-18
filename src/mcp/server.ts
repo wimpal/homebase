@@ -39,7 +39,13 @@ import {
   searchHouseManual,
 } from "@/domain/house-manual";
 import { addNote, listNotes, removeNote } from "@/domain/notes";
-import { pickEpisodeForSeries, playOnTv } from "@/domain/media";
+import {
+  findMedia,
+  getContinueWatching,
+  getMediaStats,
+  pickEpisodeForSeries,
+  playOnTv,
+} from "@/domain/media";
 
 function toolJson(value: unknown) {
   return {
@@ -893,6 +899,58 @@ export function createMcpServer(householdId: string): McpServer {
         itemId: item_id,
         wakeIfNeeded: Boolean(wake_if_needed),
       });
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.find",
+    {
+      description:
+        'Live Jellyfin library lookup with runtime: "do we have X?", "a movie under N minutes". At least one of title / max_minutes. Films and series in one labelled list. Read-only.',
+      inputSchema: {
+        title: z.string().optional().describe("Title to look up (film or series)"),
+        max_minutes: z.number().optional().describe("Runtime ceiling in minutes; filters films only"),
+      },
+    },
+    async (input) => {
+      const result = await findMedia(householdId, input);
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.continue_watching",
+    {
+      description:
+        "Live continue-watching list: part-watched films plus each series' next unplayed episode. Read-only; never starts playback.",
+      inputSchema: {},
+    },
+    async () => {
+      const result = await getContinueWatching(householdId);
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.stats",
+    {
+      description:
+        "Count of films whose last play fell in a window (default this calendar year). Rewatches count once; series are not counted; never times or hours watched.",
+      inputSchema: {
+        period: z
+          .string()
+          .optional()
+          .describe("this_year | last_year | last_month | last_7_days | last_30_days | custom"),
+        since: z.string().optional().describe("YYYY-MM-DD inclusive; period=custom only"),
+        until: z.string().optional().describe("YYYY-MM-DD inclusive; period=custom only"),
+      },
+    },
+    async (input) => {
+      const result = await getMediaStats(householdId, input);
       if (isDomainError(result)) return toolError(result);
       return toolJson(result);
     },
