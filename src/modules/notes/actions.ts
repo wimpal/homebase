@@ -3,9 +3,11 @@
 import { requireHousehold, requireMutationAccess } from "@/core/auth/session";
 import {
   addNote,
+  isNoteTypeWire,
   listNotes,
   removeNote,
   type NoteListItem,
+  type NoteTypeWire,
 } from "@/domain/notes";
 import { isDomainError } from "@/domain/error";
 import {
@@ -17,9 +19,11 @@ import {
 import { ModuleId } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-export async function getNotes(): Promise<NoteListItem[]> {
+export async function getNotes(
+  type?: NoteTypeWire,
+): Promise<NoteListItem[]> {
   const { householdId } = await requireHousehold();
-  const result = await listNotes(householdId);
+  const result = await listNotes(householdId, type ? { type } : {});
   if (isDomainError(result)) return [];
   return result;
 }
@@ -31,8 +35,10 @@ export async function createNoteAction(
   const body = String(formData.get("body") ?? "");
   const titleRaw = String(formData.get("title") ?? "").trim();
   const title = titleRaw === "" ? undefined : titleRaw;
+  const typeRaw = String(formData.get("type") ?? "").trim();
+  const type = isNoteTypeWire(typeRaw) ? typeRaw : undefined;
 
-  const result = await addNote(householdId, { body, title });
+  const result = await addNote(householdId, { body, title, type });
   if (isDomainError(result)) return fromDomainError(result);
   revalidatePath("/notes");
   return okResult();

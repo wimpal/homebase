@@ -182,6 +182,18 @@ export async function createRecipe(formData: FormData): Promise<ActionResult> {
     return failResult("Invalid recipe payload", "empty_ingredients");
   }
 
+  const file = formData.get("file");
+  let uploadedUrl: string | undefined;
+  if (file instanceof File && file.size > 0) {
+    const saved = await saveUpload(file, {
+      householdId,
+      subdir: "recipes",
+    });
+    uploadedUrl = saved.url;
+  }
+
+  const thumbnail_url = uploadedUrl ?? parsed.thumbnail_url;
+
   const result = await addRecipe(householdId, {
     title: parsed.title,
     servings: parsed.servings,
@@ -193,10 +205,13 @@ export async function createRecipe(formData: FormData): Promise<ActionResult> {
     protein_g: parsed.protein_g,
     carbs_g: parsed.carbs_g,
     fat_g: parsed.fat_g,
-    thumbnail_url: parsed.thumbnail_url,
+    thumbnail_url,
   });
 
   if (isDomainError(result)) {
+    if (uploadedUrl) {
+      await deleteUploadByUrl(uploadedUrl);
+    }
     return fromDomainError(result);
   }
 

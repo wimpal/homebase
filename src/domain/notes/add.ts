@@ -1,10 +1,10 @@
 import { prisma } from "@/core/db";
 import { DomainError } from "@/domain/error";
-import { toNoteListItem } from "./map";
+import { noteTypeFromWire, toNoteListItem } from "./map";
 import { assertNotesEnabled } from "./module-gate";
 import { rejectSecretLikeContent } from "./secrets";
-import type { AddNoteInput, NoteListItem } from "./types";
-import { NOTE_BODY_MAX, NOTE_TITLE_MAX } from "./types";
+import type { AddNoteInput, NoteListItem, NoteTypeWire } from "./types";
+import { isNoteTypeWire, NOTE_BODY_MAX, NOTE_TITLE_MAX } from "./types";
 
 export async function addNote(
   householdId: string,
@@ -33,6 +33,17 @@ export async function addNote(
     );
   }
 
+  let typeWire: NoteTypeWire = "note";
+  if (input.type !== undefined) {
+    if (!isNoteTypeWire(input.type)) {
+      return DomainError.invalidInput(
+        'type must be "note" or "feature_request".',
+        "invalid_type",
+      );
+    }
+    typeWire = input.type;
+  }
+
   const secret = rejectSecretLikeContent(title, body);
   if (secret) return secret;
 
@@ -41,6 +52,7 @@ export async function addNote(
       householdId,
       title,
       body,
+      type: noteTypeFromWire(typeWire),
     },
   });
 

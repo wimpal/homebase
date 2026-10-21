@@ -1,6 +1,7 @@
 import { ModuleId } from "@prisma/client";
 import {
   BookOpen,
+  BookUser,
   Box,
   Calendar,
   ChefHat,
@@ -16,7 +17,6 @@ import {
   Repeat,
   ShoppingCart,
   StickyNote,
-  Users,
   UtensilsCrossed,
   Wallet,
   Wrench,
@@ -153,7 +153,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: ModuleId.PEOPLE,
     nameKey: "people",
     descriptionKey: "people",
-    icon: Users,
+    icon: BookUser,
     href: "/people",
     defaultEnabled: false,
   },

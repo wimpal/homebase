@@ -77,8 +77,8 @@
       "description": "Genoemde huishoudrituelen zoals Cinema"
     },
     "people": {
-      "name": "Mensen",
-      "description": "Directory van vrienden en familie"
+      "name": "Telefoonboek",
+      "description": "Contactenboek voor vrienden en familie"
     },
     "house_manual": {
       "name": "Huishandleiding",
@@ -254,7 +254,7 @@
       "comingSoon": "binnenkort",
       "targets": {
         "products": "Boodschappencatalogus (Producten)",
-        "people": "Mensen / contacten"
+        "people": "Telefoonboek / contacten"
       },
       "file": "Notion CSV-bestand",
       "fileRequired": "Kies eerst een CSV-bestand.",
@@ -793,7 +793,7 @@
     "quickWater": "Markeer bewaterd"
   },
   "people": {
-    "title": "Mensen",
+    "title": "Telefoonboek",
     "subtitle": "Vrienden en familie die geen huishoudaccounts zijn",
     "addPerson": "Contact toevoegen",
     "addPersonBtn": "Contact toevoegen",
@@ -808,7 +808,7 @@
     "noDetails": "Nog geen contactgegevens.",
     "confirmDelete": "Dit contact verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "noPeople": "Nog geen contacten.",
-    "noPeopleHint": "Voeg hierboven een contact toe."
+    "noPeopleHint": "Voeg hierboven een contact toe aan het telefoonboek."
   },
   "house_manual": {
     "title": "Huishandleiding",
@@ -834,6 +834,11 @@
     "addNoteBtn": "Notitie toevoegen",
     "titleLabel": "Titel (optioneel)",
     "bodyLabel": "Notitie",
+    "typeLabel": "Type",
+    "typeNote": "Notitie",
+    "typeFeatureRequest": "Feature request",
+    "filterByType": "Filter op type",
+    "filterAll": "Alles",
     "untitled": "Naamloze notitie",
     "confirmDelete": "Deze notitie verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "noNotes": "Nog geen notities.",

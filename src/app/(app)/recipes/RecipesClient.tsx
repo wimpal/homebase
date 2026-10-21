@@ -209,12 +209,14 @@ function RecipeFormFields({
   allTags,
   thumbnailUrl,
   layout = "stacked",
+  showPhotoUpload = false,
 }: {
   recipe?: Recipe;
   timersDefault?: string;
   allTags: string[];
   thumbnailUrl?: string | null;
   layout?: "stacked" | "split";
+  showPhotoUpload?: boolean;
 }) {
   const t = useTranslations("recipes");
   const tc = useTranslations("common");
@@ -397,6 +399,18 @@ function RecipeFormFields({
           defaultValue={timersDefault}
         />
       </div>
+      {showPhotoUpload && (
+        <div className="grid gap-2">
+          <Label htmlFor="recipe-create-photo">{t("photo")}</Label>
+          <Input
+            id="recipe-create-photo"
+            name="file"
+            type="file"
+            accept="image/*"
+          />
+          <p className="text-xs text-muted-foreground">{t("uploadPhoto")}</p>
+        </div>
+      )}
       <input type="hidden" name="thumbnailUrl" value={thumbnailUrl ?? ""} />
     </>
   );
@@ -637,7 +651,11 @@ export function RecipesClient({
               </CardHeader>
               <CardContent>
                 <form onSubmit={onCreateRecipe} className="space-y-3">
-                  <RecipeFormFields allTags={allTags} thumbnailUrl={null} />
+                  <RecipeFormFields
+                    allTags={allTags}
+                    thumbnailUrl={null}
+                    showPhotoUpload
+                  />
                   <Button type="submit" disabled={createPending}>
                     {t("saveRecipe")}
                   </Button>

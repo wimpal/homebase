@@ -77,8 +77,8 @@
       "description": "Named household rituals like Cinema"
     },
     "people": {
-      "name": "People",
-      "description": "Friends and relatives directory"
+      "name": "Phonebook",
+      "description": "Contacts directory for friends and relatives"
     },
     "house_manual": {
       "name": "House manual",
@@ -254,7 +254,7 @@
       "comingSoon": "coming soon",
       "targets": {
         "products": "Shopping catalog (Products)",
-        "people": "People / contacts"
+        "people": "Phonebook / contacts"
       },
       "file": "Notion CSV file",
       "fileRequired": "Choose a CSV file first.",
@@ -793,7 +793,7 @@
     "quickWater": "Mark watered"
   },
   "people": {
-    "title": "People",
+    "title": "Phonebook",
     "subtitle": "Friends and relatives who are not household accounts",
     "addPerson": "Add contact",
     "addPersonBtn": "Add contact",
@@ -808,7 +808,7 @@
     "noDetails": "No contact details yet.",
     "confirmDelete": "Delete this contact? This cannot be undone.",
     "noPeople": "No contacts yet.",
-    "noPeopleHint": "Add a contact above to keep household people in one place."
+    "noPeopleHint": "Add a contact above to keep the phonebook in one place."
   },
   "house_manual": {
     "title": "House manual",
@@ -834,6 +834,11 @@
     "addNoteBtn": "Add note",
     "titleLabel": "Title (optional)",
     "bodyLabel": "Note",
+    "typeLabel": "Type",
+    "typeNote": "Note",
+    "typeFeatureRequest": "Feature request",
+    "filterByType": "Filter by type",
+    "filterAll": "All",
     "untitled": "Untitled note",
     "confirmDelete": "Remove this note? This cannot be undone.",
     "noNotes": "No notes yet.",

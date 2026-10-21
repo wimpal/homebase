@@ -15,7 +15,7 @@ import {
   updatePersonAction,
   type PersonListItem,
 } from "@/modules/people/actions";
-import { Users } from "lucide-react";
+import { BookUser } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -76,7 +76,7 @@ export function PeopleClient({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-4 w-4 text-primary" />
+                      <BookUser className="h-4 w-4 text-primary" />
                       {person.displayName}
                     </CardTitle>
                     {person.birthday && (

@@ -1568,9 +1568,13 @@ async function main() {
     id?: string;
     body?: string;
     title?: string;
+    type?: string;
   };
   if (!addedNote.id || addedNote.body !== smokeNoteBody) {
     fail(`notes.add unexpected payload shape`);
+  }
+  if (addedNote.type !== "note") {
+    fail(`notes.add default type expected "note", got ${JSON.stringify(addedNote.type)}`);
   }
   ok("homebase.notes.add creates non-secret note");
 
@@ -1585,11 +1589,64 @@ async function main() {
   const listedNotes = parseToolPayload(notesList) as {
     id: string;
     body: string;
+    type?: string;
   }[];
   if (!Array.isArray(listedNotes) || !listedNotes.some((n) => n.id === addedNote.id)) {
     fail("notes.add row missing from notes.list");
   }
+  const listedHit = listedNotes.find((n) => n.id === addedNote.id);
+  if (listedHit?.type !== "note") {
+    fail(`notes.list expected type "note", got ${JSON.stringify(listedHit?.type)}`);
+  }
   ok("homebase.notes.list finds added note");
+
+  const smokeFrBody = `mcp-smoke-feature-request-${Date.now()}`;
+  const notesFrAdd = await callTool(76, "homebase.notes.add", {
+    title: "mcp-smoke feature request",
+    body: smokeFrBody,
+    type: "feature_request",
+  });
+  if (notesFrAdd.isError) {
+    fail(
+      `homebase.notes.add feature_request tool error: ${notesFrAdd.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const addedFr = parseToolPayload(notesFrAdd) as {
+    id?: string;
+    body?: string;
+    type?: string;
+  };
+  if (!addedFr.id || addedFr.body !== smokeFrBody || addedFr.type !== "feature_request") {
+    fail(`notes.add feature_request unexpected payload shape`);
+  }
+  ok("homebase.notes.add creates feature_request");
+
+  const notesFrList = await callTool(77, "homebase.notes.list", {
+    type: "feature_request",
+    query: "mcp-smoke-feature-request",
+  });
+  if (notesFrList.isError) {
+    fail(
+      `homebase.notes.list type=feature_request tool error: ${notesFrList.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
+  const listedFr = parseToolPayload(notesFrList) as { id: string; type?: string }[];
+  if (!Array.isArray(listedFr) || !listedFr.some((n) => n.id === addedFr.id)) {
+    fail("notes.add feature_request row missing from typed notes.list");
+  }
+  if (listedFr.some((n) => n.type && n.type !== "feature_request")) {
+    fail("notes.list type=feature_request returned non-feature_request rows");
+  }
+  ok("homebase.notes.list filters feature_request");
+
+  const notesFrRemove = await callTool(78, "homebase.notes.remove", {
+    id: addedFr.id!,
+  });
+  if (notesFrRemove.isError) {
+    fail(
+      `homebase.notes.remove feature_request tool error: ${notesFrRemove.content?.[0]?.text ?? "unknown"}`,
+    );
+  }
 
   const notesSecret = await callTool(73, "homebase.notes.add", {
     body: "mcp-smoke wifi password: hunter2-not-real",

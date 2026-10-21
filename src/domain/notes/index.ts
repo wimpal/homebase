@@ -7,7 +7,15 @@ export type {
   AddNoteInput,
   ListNotesInput,
   NoteListItem,
+  NoteTypeWire,
   RemoveNoteInput,
   RemoveNoteResult,
 } from "./types";
-export { NOTE_BODY_MAX, NOTE_LIST_CAP, NOTE_TITLE_MAX } from "./types";
+export {
+  isNoteTypeWire,
+  NOTE_BODY_MAX,
+  NOTE_LIST_CAP,
+  NOTE_TITLE_MAX,
+  NOTE_TYPE_WIRE_VALUES,
+} from "./types";
+export { noteTypeFromWire, noteTypeToWire } from "./map";
