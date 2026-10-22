@@ -23,6 +23,7 @@ import {
   resolveStatsWindow,
   shapeStats,
 } from "../src/domain/media/stats";
+import { favouriteFlag } from "../src/domain/media/favourite";
 import type { JellyfinItem, JellyfinSession } from "../src/domain/media/types";
 import { normalizeJellyfinDate } from "../src/domain/media/util";
 
@@ -332,6 +333,16 @@ async function main() {
     "D2: bare assumes Z",
   );
   assert(normalizeJellyfinDate("bad") === null, "D3: bad null");
+
+  // --- T-151 favouriteFlag ---
+  assert(favouriteFlag({ IsFavorite: true }) === true, "F1: top-level true");
+  assert(favouriteFlag({ UserData: { IsFavorite: false } }) === false, "F2: UserData false");
+  assert(favouriteFlag(null) === null, "F3: null body");
+  assert(favouriteFlag({}) === null, "F4: empty object");
+  assert(
+    favouriteFlag({ IsFavorite: false, UserData: { IsFavorite: true } }) === false,
+    "F5: top level wins",
+  );
 
   console.log("OK: media selftest");
 }

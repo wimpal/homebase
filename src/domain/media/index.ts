@@ -16,3 +16,5 @@ export { getContinueWatching } from "./continue-watching";
 export type { ContinueWatchingPayload } from "./continue-watching";
 export { getMediaStats } from "./stats";
 export type { MediaStatsPayload } from "./stats";
+export { setFavourite, favouriteFlag } from "./favourite";
+export type { FavouriteResult } from "./favourite";

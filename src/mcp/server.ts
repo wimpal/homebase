@@ -50,6 +50,7 @@ import {
   getMediaStats,
   pickEpisodeForSeries,
   playOnTv,
+  setFavourite,
 } from "@/domain/media";
 
 function toolJson(value: unknown) {
@@ -956,6 +957,23 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async (input) => {
       const result = await getMediaStats(householdId, input);
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.set_favourite",
+    {
+      description:
+        "Mark (favourite: true) or unmark (favourite: false) one Jellyfin item as a favourite. Write: run only after the user confirms. Returns the state Jellyfin reports. Not audited in homebase.changes v1.",
+      inputSchema: {
+        item_id: z.string().describe("Jellyfin item id from homebase.media.find"),
+        favourite: z.boolean().describe("true = mark, false = unmark"),
+      },
+    },
+    async ({ item_id, favourite }) => {
+      const result = await setFavourite(householdId, { itemId: item_id, favourite });
       if (isDomainError(result)) return toolError(result);
       return toolJson(result);
     },

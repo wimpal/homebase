@@ -325,6 +325,7 @@ async function main() {
     "homebase.media.find",
     "homebase.media.pick_episode",
     "homebase.media.play",
+    "homebase.media.set_favourite",
     "homebase.media.stats",
     "homebase.notes.add",
     "homebase.notes.list",
