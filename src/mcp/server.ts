@@ -53,6 +53,7 @@ import {
   readLibraryPage,
   setFavourite,
 } from "@/domain/media";
+import { getWeatherForecast } from "@/domain/weather";
 
 function toolJson(value: unknown) {
   return {
@@ -369,6 +370,20 @@ export function createMcpServer(householdId: string): McpServer {
       if (isDomainError(result)) {
         return toolError(result);
       }
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.weather.forecast",
+    {
+      description:
+        "Current conditions and a short forecast for the household home location (Open-Meteo, KNMI HARMONIE model): now, today, tomorrow, day parts (morning/afternoon/evening/night) and the next hours. No arguments. stale: true means the provider is down and this is the last good forecast (at most 1 hour old).",
+      inputSchema: {},
+    },
+    async () => {
+      const result = await getWeatherForecast(householdId);
+      if (isDomainError(result)) return toolError(result);
       return toolJson(result);
     },
   );

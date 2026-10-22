@@ -344,6 +344,7 @@ async function main() {
     "homebase.tasks.add",
     "homebase.tasks.complete",
     "homebase.tasks.list",
+    "homebase.weather.forecast",
   ];
   if (names.length !== expected.length || !expected.every((n) => names.includes(n))) {
     fail(`expected tools ${expected.join(", ")}, got ${names.join(", ")}`);
