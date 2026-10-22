@@ -24,6 +24,7 @@ import {
   shapeStats,
 } from "../src/domain/media/stats";
 import { favouriteFlag } from "../src/domain/media/favourite";
+import { libraryFilmRow } from "../src/domain/media/library";
 import type { JellyfinItem, JellyfinSession } from "../src/domain/media/types";
 import { normalizeJellyfinDate } from "../src/domain/media/util";
 
@@ -343,6 +344,50 @@ async function main() {
     favouriteFlag({ IsFavorite: false, UserData: { IsFavorite: true } }) === false,
     "F5: top level wins",
   );
+
+  // --- T-152 libraryFilmRow ---
+  {
+    const row = libraryFilmRow({
+      Id: "1",
+      Name: "Heat",
+      ProductionYear: 1995,
+      Overview: "x",
+      Genres: ["Crime", " "],
+      People: [
+        { Name: "Michael Mann", Type: "Director" },
+        { Name: "A", Type: "Actor" },
+        { Name: "B", Type: "Actor" },
+        { Name: "C", Type: "Actor" },
+        { Name: "D", Type: "Actor" },
+        { Name: "E", Type: "Actor" },
+        { Name: "F", Type: "Actor" },
+      ],
+      CommunityRating: 8.3,
+      OfficialRating: "R",
+      UserData: {
+        Played: true,
+        PlaybackPositionTicks: 0,
+        LastPlayedDate: "2026-10-06T19:22:11.1234567Z",
+      },
+    });
+    assert(row !== null, "L1: row not null");
+    assert(row!.director === "Michael Mann", "L1: director");
+    assert(row!.cast.length === 5 && row!.cast.join("") === "ABCDE", "L1: cast A..E");
+    assert(row!.genres.length === 1 && row!.genres[0] === "Crime", "L1: genres");
+    assert(row!.community_rating === 8.3, "L1: community_rating");
+    assert(row!.played === true, "L1: played");
+    assert(row!.last_played_at === "2026-10-06T19:22:11Z", "L1: last_played_at");
+  }
+  {
+    const row = libraryFilmRow({ Id: "2", Name: "Solo" });
+    assert(row !== null, "L2: row not null");
+    assert(row!.played === false, "L2: played false");
+    assert(row!.playback_position_ticks === 0, "L2: ticks 0");
+    assert(row!.last_played_at === null, "L2: last_played_at null");
+    assert(row!.year === null, "L2: year null");
+    assert(row!.overview === null, "L2: overview null");
+  }
+  assert(libraryFilmRow({ Name: "No id" }) === null, "L3: missing id → null");
 
   console.log("OK: media selftest");
 }

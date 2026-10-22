@@ -50,6 +50,7 @@ import {
   getMediaStats,
   pickEpisodeForSeries,
   playOnTv,
+  readLibraryPage,
   setFavourite,
 } from "@/domain/media";
 
@@ -974,6 +975,27 @@ export function createMcpServer(householdId: string): McpServer {
     },
     async ({ item_id, favourite }) => {
       const result = await setFavourite(householdId, { itemId: item_id, favourite });
+      if (isDomainError(result)) return toolError(result);
+      return toolJson(result);
+    },
+  );
+
+  server.registerTool(
+    "homebase.media.library",
+    {
+      description:
+        "Paged read of the Jellyfin film library for Mimir's catalogue sync. kind films = film rows; kind box_sets = box sets with member film ids. Pass next_cursor back until it is null. Homebase stores no copy.",
+      inputSchema: {
+        kind: z.string().describe("films | box_sets"),
+        cursor: z.string().optional().describe("next_cursor from the previous page"),
+        page_size: z
+          .number()
+          .optional()
+          .describe("films default 100 max 200; box_sets default 25 max 50"),
+      },
+    },
+    async (input) => {
+      const result = await readLibraryPage(householdId, input);
       if (isDomainError(result)) return toolError(result);
       return toolJson(result);
     },

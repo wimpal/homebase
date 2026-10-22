@@ -18,3 +18,5 @@ export { getMediaStats } from "./stats";
 export type { MediaStatsPayload } from "./stats";
 export { setFavourite, favouriteFlag } from "./favourite";
 export type { FavouriteResult } from "./favourite";
+export { readLibraryPage, libraryFilmRow } from "./library";
+export type { LibraryPage, LibraryFilmRow, LibraryBoxSetRow } from "./library";

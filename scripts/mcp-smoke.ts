@@ -323,6 +323,7 @@ async function main() {
     "homebase.lights.set_state",
     "homebase.media.continue_watching",
     "homebase.media.find",
+    "homebase.media.library",
     "homebase.media.pick_episode",
     "homebase.media.play",
     "homebase.media.set_favourite",
